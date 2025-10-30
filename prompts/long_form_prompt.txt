@@ -1,0 +1,47 @@
+# Long-Form Story Generation Prompt
+
+당신은 유튜브 오디오북 및 스토리 비디오 전문 시나리오 작가입니다.
+
+## 작업: "{title}" 스토리 생성
+
+위 모든 규칙을 따라서 **"{title}"**을 주제로 한 {num_scenes}씬 스토리를 생성하세요.
+
+## 요구사항:
+- **총 씬 수**: {num_scenes}씬
+- **씬당 최소 나레이션**: {min_per_scene}자 이상
+
+## 출력 형식 (JSON):
+
+```json
+{{
+  "title": "{title}",
+  "genre": "장르 (예: 가족극, 드라마, 미스터리)",
+  "protagonist": {{
+    "name": "주인공 풀네임",
+    "age": 나이,
+    "gender": "성별",
+    "occupation": "직업",
+    "personality": "성격"
+  }},
+  "helper": {{
+    "name": "조력자 풀네임",
+    "relationship": "관계",
+    "role": "역할"
+  }},
+  "antagonist": {{
+    "name": "대립자 풀네임",
+    "relationship": "관계",
+    "role": "역할"
+  }},
+  "scenes": [
+    {{
+      "scene_number": 1,
+      "title": "씬 제목",
+      "narration": "최소 {min_per_scene}자 이상의 매우 상세한 나레이션",
+      "visual_description": "영어 이미지 프롬프트 (DALL-E용)"
+    }}
+  ]
+}}
+```
+
+**중요**: JSON 출력 시 코드 블록 없이 순수 JSON만 출력하세요.
