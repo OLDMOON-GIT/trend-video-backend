@@ -9,14 +9,14 @@ import os
 import uuid
 import shutil
 from playwright.async_api import async_playwright
-from agents import ChatGPTAgent, ClaudeAgent, GeminiAgent
-from aggregator import ResponseAggregator
+from .agents import ChatGPTAgent, ClaudeAgent, GeminiAgent
+from .aggregator import ResponseAggregator
 from colorama import Fore, Style, init
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
-from queue_manager import QueueManager
+from .queue_manager import QueueManager
 
 # Fix Windows console encoding
 if sys.platform == 'win32':

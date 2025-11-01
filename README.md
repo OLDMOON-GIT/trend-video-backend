@@ -140,25 +140,51 @@ python video_merge.py config.json
 
 ### AI 스크립트 생성 (Multi-AI Aggregator)
 
+**간편한 실행 방법 (추천):**
 ```bash
-cd src/ai_aggregator
-python main.py -q "중년층을 위한 감동적인 스토리 아이디어 3개 알려줘"
+# Python 스크립트로 실행
+python run_ai_aggregator.py -q "중년층을 위한 감동적인 스토리 아이디어 3개 알려줘" -a claude
+
+# PowerShell 스크립트로 실행 (Windows)
+.\run_ai_aggregator.ps1 -q "중년층을 위한 감동적인 스토리 아이디어 3개 알려줘" -a claude
+```
+
+**여러 AI 동시 실행:**
+```bash
+python run_ai_aggregator.py -q "효과적인 숏폼 비디오 전략은?" -a claude,chatgpt,gemini
+```
+
+**프롬프트 파일 사용:**
+```bash
+python run_ai_aggregator.py -f "prompts/story_prompt.txt" -a claude
 ```
 
 **인터랙티브 모드:**
 ```bash
-cd src/ai_aggregator
-python main.py -i
+python run_ai_aggregator.py -i
 ```
 
-**특정 AI만 사용:**
+**고급 사용법 (모듈로 직접 실행):**
 ```bash
-python main.py -q "질문" -a chatgpt,claude
+python -m src.ai_aggregator.main -q "질문" -a claude
 ```
 
 **Playwright 브라우저 설치 (최초 1회):**
 ```bash
 playwright install chromium
+```
+
+**Python 코드에서 사용:**
+```python
+import asyncio
+from src.ai_aggregator.main import main
+
+# Claude에게 질문
+asyncio.run(main(
+    question="비디오 스크립트 작성해줘",
+    agents_to_use=['claude'],
+    headless=True
+))
 ```
 
 ## 🎨 주요 옵션

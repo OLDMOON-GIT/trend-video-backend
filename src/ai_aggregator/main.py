@@ -2,8 +2,8 @@ import asyncio
 import sys
 import os
 from playwright.async_api import async_playwright
-from agents import ChatGPTAgent, ClaudeAgent, GeminiAgent, GrokAgent
-from aggregator import ResponseAggregator
+from .agents import ChatGPTAgent, ClaudeAgent, GeminiAgent, GrokAgent
+from .aggregator import ResponseAggregator
 from colorama import Fore, Style, init
 import argparse
 
