@@ -7,24 +7,15 @@ from .aggregator import ResponseAggregator
 from colorama import Fore, Style, init
 import argparse
 
-# Fix Windows console encoding
+# Fix Windows console encoding - use environment variables instead of wrapping streams
 if sys.platform == 'win32':
-    import io
-    # Only wrap if not already wrapped and buffer exists
-    try:
-        if hasattr(sys.stdout, 'buffer') and (not isinstance(sys.stdout, io.TextIOWrapper) or sys.stdout.encoding != 'utf-8'):
-            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
-    except (AttributeError, ValueError):
-        pass
+    # Set UTF-8 encoding via environment variables (safer than wrapping streams)
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ['PYTHONUTF8'] = '1'
 
+    # Set console to UTF-8
     try:
-        if hasattr(sys.stderr, 'buffer') and (not isinstance(sys.stderr, io.TextIOWrapper) or sys.stderr.encoding != 'utf-8'):
-            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace', line_buffering=True)
-    except (AttributeError, ValueError):
-        pass
-
-    try:
-        os.system('chcp 65001 > nul')
+        os.system('chcp 65001 > nul 2>&1')
     except:
         pass
 
