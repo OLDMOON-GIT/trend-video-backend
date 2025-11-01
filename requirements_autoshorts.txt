@@ -1,0 +1,28 @@
+# Video Processing
+moviepy>=1.0.3
+opencv-python>=4.8.0
+scenedetect[opencv]>=0.6.2
+ffmpeg-python>=0.2.0
+
+# AI & ML
+openai>=1.10.0  # Optional: for GPT narration script generation
+openai-whisper  # Whisper for transcription (FREE)
+edge-tts>=6.1.0  # Free Microsoft TTS (HIGH QUALITY)
+gTTS>=2.5.0  # Free Google TTS (backup)
+transformers>=4.30.0  # For vision AI (BLIP) - FREE
+torch>=2.0.0  # PyTorch for transformers - FREE
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+pillow>=10.0.0
+requests>=2.31.0  # For Ollama API and Google Image Search
+
+# Configuration
+pyyaml>=6.0
+
+# Google Custom Search (Optional - 하루 100회 무료)
+google-api-python-client>=2.0.0  # Google Custom Search API
+
+# Web Interface
+gradio>=4.0.0  # Web UI for file upload

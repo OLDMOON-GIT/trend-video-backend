@@ -1,0 +1,128 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Virtual environments
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Output files
+output/*
+!output/.gitkeep
+input/*
+!input/.gitkeep
+
+# Logs
+logs/*.log
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+nul
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.webm
+
+# Audio files
+*.mp3
+*.wav
+*.aac
+*.ogg
+
+# Image files (except sample)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+!sample*.jpg
+!sample*.png
+
+# Subtitle files
+*.srt
+*.ass
+*.vtt
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.pytest_cache/
+nosetests.xml
+coverage.xml
+
+# Backup files
+*.bak
+*.backup
+backups/
+backup/
+
+# Config files with secrets
+config/secrets.json
+config/api_keys.json
+
+# Large files
+*.zip
+*.tar.gz
+*.rar
+
+# Node modules (if any)
+node_modules/
+
+# Generated documentation
+docs/_build/
+
+# FFmpeg temp files
+*TEMP_MPY_wvf_snd.mp4
