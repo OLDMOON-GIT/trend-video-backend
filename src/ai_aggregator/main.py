@@ -10,18 +10,23 @@ import argparse
 # Fix Windows console encoding
 if sys.platform == 'win32':
     import io
-    # Only wrap if not already wrapped
-    if not isinstance(sys.stdout, io.TextIOWrapper) or sys.stdout.encoding != 'utf-8':
-        try:
-            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-        except:
-            pass
-    if not isinstance(sys.stderr, io.TextIOWrapper) or sys.stderr.encoding != 'utf-8':
-        try:
-            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-        except:
-            pass
-    os.system('chcp 65001 > nul')
+    # Only wrap if not already wrapped and buffer exists
+    try:
+        if hasattr(sys.stdout, 'buffer') and (not isinstance(sys.stdout, io.TextIOWrapper) or sys.stdout.encoding != 'utf-8'):
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
+    except (AttributeError, ValueError):
+        pass
+
+    try:
+        if hasattr(sys.stderr, 'buffer') and (not isinstance(sys.stderr, io.TextIOWrapper) or sys.stderr.encoding != 'utf-8'):
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace', line_buffering=True)
+    except (AttributeError, ValueError):
+        pass
+
+    try:
+        os.system('chcp 65001 > nul')
+    except:
+        pass
 
 # Initialize colorama
 init(autoreset=True)
@@ -56,75 +61,35 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
         import os
         import pathlib
 
-        # Use automation profile (same as refine_and_send.py and setup_login.py)
-        automation_profile = os.path.join(os.getcwd(), '.chrome-automation-profile')
-        pathlib.Path(automation_profile).mkdir(exist_ok=True)
+        print(f"{Fore.GREEN}[INFO] Launching browser...{Style.RESET_ALL}\n")
 
-        print(f"{Fore.YELLOW}[INFO] Using automation profile: {automation_profile}{Style.RESET_ALL}")
-        if use_real_chrome:
-            print(f"{Fore.GREEN}[INFO] Using saved login sessions (run setup_login.py if not logged in){Style.RESET_ALL}\n")
-        else:
-            print(f"{Fore.CYAN}[TIP] Run setup_login.py first to save your login sessions{Style.RESET_ALL}\n")
+        # Launch browser without persistent context to avoid profile lock issues
+        browser = await p.chromium.launch(
+            headless=headless,
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--disable-features=IsolateOrigins,site-per-process',
+                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            ],
+            timeout=60000,
+        )
 
-        try:
-            context = await p.chromium.launch_persistent_context(
-                automation_profile,
-                headless=headless,
-                channel='chrome' if use_real_chrome else None,
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--disable-dev-shm-usage',
-                    '--no-first-run',
-                    '--no-default-browser-check',
-                    '--disable-features=IsolateOrigins,site-per-process',
-                    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-                ],
-                accept_downloads=True,
-                ignore_https_errors=True,
-                timeout=60000,
-            )
+        # Create a new context
+        context = await browser.new_context(
+            viewport={'width': 1920, 'height': 1080},
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            ignore_https_errors=True,
+        )
 
-            # Remove navigator.webdriver flag
-            await context.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                });
-            """)
-
-            browser = context
-        except Exception as e:
-            print(f"{Fore.YELLOW}[WARN] Could not launch with Chrome, using Chromium: {e}{Style.RESET_ALL}")
-            context = await p.chromium.launch_persistent_context(
-                automation_profile,
-                headless=headless,
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--disable-dev-shm-usage',
-                    '--no-first-run',
-                    '--no-default-browser-check',
-                    '--disable-features=IsolateOrigins,site-per-process',
-                    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-                ],
-                accept_downloads=True,
-                ignore_https_errors=True,
-                timeout=60000,
-            )
-
-            # Remove navigator.webdriver flag
-            await context.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                });
-            """)
-
-            browser = context
-
-        # Close the default blank page that opens automatically
-        if len(browser.pages) > 0:
-            try:
-                await browser.pages[0].close()
-            except:
-                pass
+        # Remove navigator.webdriver flag
+        await context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+        """)
 
         # Default to all agents if none specified
         if agents_to_use is None:
@@ -139,15 +104,16 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
             'grok': GrokAgent
         }
 
-        # Check if user wants to skip login check (faster for repeated use)
-        skip_login = use_real_chrome  # If using real Chrome profile, assume already logged in
+        # No skip login - always check login status
+        skip_login = False
 
         for agent_name in agents_to_use:
             if agent_name.lower() in agent_map:
-                agents.append(agent_map[agent_name.lower()](browser, headless, skip_login))
+                agents.append(agent_map[agent_name.lower()](context, headless, skip_login))
 
         if not agents:
             print(f"{Fore.RED}No valid agents selected!{Style.RESET_ALL}")
+            await context.close()
             await browser.close()
             return
 
