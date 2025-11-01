@@ -61,6 +61,21 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
         print(f"{Fore.CYAN}[INFO] Chrome 프로필 사용: {automation_profile}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}[INFO] 저장된 로그인 세션 사용 (로그인 안 되어 있으면 수동 로그인 필요){Style.RESET_ALL}\n")
 
+        # Chrome 프로필 잠금 파일 제거 (충돌 방지)
+        lock_files = [
+            os.path.join(automation_profile, 'SingletonLock'),
+            os.path.join(automation_profile, 'SingletonCookie'),
+            os.path.join(automation_profile, 'SingletonSocket'),
+            os.path.join(automation_profile, 'lockfile'),
+        ]
+        for lock_file in lock_files:
+            try:
+                if os.path.exists(lock_file):
+                    os.remove(lock_file)
+                    print(f"{Fore.GREEN}[INFO] 잠금 파일 제거: {os.path.basename(lock_file)}{Style.RESET_ALL}")
+            except Exception as e:
+                print(f"{Fore.YELLOW}[WARN] 잠금 파일 제거 실패: {lock_file} - {e}{Style.RESET_ALL}")
+
         try:
             context = await p.chromium.launch_persistent_context(
                 automation_profile,
@@ -134,6 +149,7 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
 
         # Phase 1: Open tabs sequentially and send questions
         print(f"{Fore.CYAN}[*] Opening tabs and sending questions sequentially...{Style.RESET_ALL}\n")
+        login_required = False
         for agent in agents:
             try:
                 print(f"{Fore.CYAN}[{agent.get_name()}] Opening tab...{Style.RESET_ALL}")
@@ -151,6 +167,27 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
             except Exception as e:
                 error_msg = f"Failed to send question: {str(e)}"
                 print(f"{Fore.RED}[{agent.get_name()}] {error_msg}{Style.RESET_ALL}\n")
+
+                # Check if login is required
+                if "login required" in error_msg.lower() or "login session expired" in error_msg.lower():
+                    login_required = True
+                    print(f"{Fore.YELLOW}[!] Login required detected!{Style.RESET_ALL}")
+                    if headless:
+                        print(f"{Fore.YELLOW}[!] Cannot login in headless mode. Please run with --headless flag disabled or login first.{Style.RESET_ALL}")
+                    else:
+                        print(f"{Fore.CYAN}[!] Browser is visible. Please login manually in the browser window.{Style.RESET_ALL}")
+                        print(f"{Fore.CYAN}[!] Waiting 60 seconds for manual login...{Style.RESET_ALL}")
+                        await asyncio.sleep(60)
+                        print(f"{Fore.CYAN}[!] Retrying after login wait...{Style.RESET_ALL}")
+                        # Retry login and send
+                        try:
+                            await agent.login()
+                            await agent.send_question_async(question)
+                            print(f"{Fore.GREEN}[{agent.get_name()}] [OK] Question sent after login!{Style.RESET_ALL}\n")
+                            continue
+                        except Exception as retry_e:
+                            print(f"{Fore.RED}[{agent.get_name()}] Retry failed: {str(retry_e)}{Style.RESET_ALL}\n")
+
                 aggregator.add_response(agent.get_name(), f"Error: {error_msg}")
 
         # Phase 2: Now wait for all responses in parallel
