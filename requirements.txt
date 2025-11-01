@@ -34,3 +34,6 @@ google-api-python-client>=2.0.0  # Google Custom Search API
 gradio>=4.0.0  # Web UI for file upload
 flask>=3.0.0
 flask-cors>=4.0.0
+
+# AI Aggregator (Multi-AI 질문 및 스크립트 생성)
+playwright>=1.48.0  # Browser automation for AI chat

@@ -21,6 +21,12 @@
 - SORA2 AI 시네마틱 영상 생성
 - JSON 프롬프트 기반 워크플로우
 
+### 4. AI 스크립트 생성기 (Multi-AI Aggregator)
+- **여러 AI에 동시 질문** (ChatGPT, Claude, Gemini, Grok)
+- **병렬 처리**로 빠른 응답 수집
+- **자동 답변 취합 및 요약**
+- 브라우저 자동화를 통한 실제 AI 챗봇 사용
+
 ## 📁 프로젝트 구조
 
 ```
@@ -30,10 +36,19 @@ trend-video-backend/
 │   │   ├── story_video_creator.py
 │   │   ├── narrator.py
 │   │   └── ...
-│   └── sora/               # SoraExtend 코드
-│       ├── api.py
-│       ├── main.py
-│       └── ...
+│   ├── sora/               # SoraExtend 코드
+│   │   ├── api.py
+│   │   ├── main.py
+│   │   └── ...
+│   └── ai_aggregator/      # Multi-AI Aggregator
+│       ├── main.py         # AI 질문 메인 스크립트
+│       ├── aggregator.py   # 답변 취합 및 요약
+│       ├── agents/         # AI 에이전트들
+│       │   ├── chatgpt_agent.py
+│       │   ├── claude_agent.py
+│       │   ├── gemini_agent.py
+│       │   └── grok_agent.py
+│       └── refine_and_send.py  # 대본 개선 및 전송
 ├── create_video_from_folder.py  # 메인 비디오 생성 스크립트
 ├── video_merge.py               # 비디오 병합 스크립트
 ├── config/                      # 설정 파일
@@ -121,6 +136,29 @@ python video_merge.py config.json
   "add_subtitles": true,
   "output_dir": "output/merged"
 }
+```
+
+### AI 스크립트 생성 (Multi-AI Aggregator)
+
+```bash
+cd src/ai_aggregator
+python main.py -q "중년층을 위한 감동적인 스토리 아이디어 3개 알려줘"
+```
+
+**인터랙티브 모드:**
+```bash
+cd src/ai_aggregator
+python main.py -i
+```
+
+**특정 AI만 사용:**
+```bash
+python main.py -q "질문" -a chatgpt,claude
+```
+
+**Playwright 브라우저 설치 (최초 1회):**
+```bash
+playwright install chromium
 ```
 
 ## 🎨 주요 옵션
