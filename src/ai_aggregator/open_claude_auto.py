@@ -11,8 +11,8 @@ from playwright.async_api import async_playwright
 
 async def open_claude_with_prompt(prompt_text: str):
     """Claude.ai를 열고 프롬프트를 자동으로 입력/전송"""
-    # automation profile 사용 (main.py와 동일)
-    automation_profile = os.path.join(os.getcwd(), '.chrome-automation-profile-claude')
+    # automation profile 사용 (refine_and_send.py와 동일하게 통일)
+    automation_profile = os.path.join(os.getcwd(), '.chrome-automation-profile')
     pathlib.Path(automation_profile).mkdir(exist_ok=True)
 
     print(f"[INFO] Chrome 프로필 사용: {automation_profile}")

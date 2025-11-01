@@ -54,26 +54,49 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
 
         print(f"{Fore.GREEN}[INFO] Launching browser...{Style.RESET_ALL}\n")
 
-        # Launch browser without persistent context to avoid profile lock issues
-        browser = await p.chromium.launch(
-            headless=headless,
-            args=[
-                '--disable-blink-features=AutomationControlled',
-                '--disable-dev-shm-usage',
-                '--no-first-run',
-                '--no-default-browser-check',
-                '--disable-features=IsolateOrigins,site-per-process',
-                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            ],
-            timeout=60000,
-        )
+        # Use persistent context to save login sessions (same profile as other scripts)
+        automation_profile = os.path.join(os.getcwd(), '.chrome-automation-profile')
+        pathlib.Path(automation_profile).mkdir(exist_ok=True)
 
-        # Create a new context
-        context = await browser.new_context(
-            viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            ignore_https_errors=True,
-        )
+        print(f"{Fore.CYAN}[INFO] Chrome 프로필 사용: {automation_profile}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}[INFO] 저장된 로그인 세션 사용 (로그인 안 되어 있으면 수동 로그인 필요){Style.RESET_ALL}\n")
+
+        try:
+            context = await p.chromium.launch_persistent_context(
+                automation_profile,
+                headless=headless,
+                channel='chrome',
+                args=[
+                    '--start-maximized',
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage',
+                    '--no-first-run',
+                    '--no-default-browser-check',
+                    '--disable-features=IsolateOrigins,site-per-process',
+                    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                ],
+                accept_downloads=True,
+                ignore_https_errors=True,
+                timeout=60000,
+                viewport=None  # 최대화
+            )
+        except Exception as e:
+            print(f"{Fore.YELLOW}[WARN] Could not launch Chrome, using Chromium: {e}{Style.RESET_ALL}")
+            context = await p.chromium.launch_persistent_context(
+                automation_profile,
+                headless=headless,
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage',
+                    '--no-first-run',
+                    '--no-default-browser-check',
+                    '--disable-features=IsolateOrigins,site-per-process',
+                    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                ],
+                accept_downloads=True,
+                ignore_https_errors=True,
+                timeout=60000,
+            )
 
         # Remove navigator.webdriver flag
         await context.add_init_script("""
@@ -105,7 +128,6 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
         if not agents:
             print(f"{Fore.RED}No valid agents selected!{Style.RESET_ALL}")
             await context.close()
-            await browser.close()
             return
 
         print(f"{Fore.YELLOW}Selected agents:{Style.RESET_ALL} {', '.join([a.get_name() for a in agents])}\n")
