@@ -36,7 +36,7 @@ async def wait_for_response(agent, aggregator: ResponseAggregator):
         aggregator.add_response(agent.get_name(), f"Error: {error_msg}")
 
 
-async def main(question: str, headless: bool = False, agents_to_use: list = None, use_real_chrome: bool = True):
+async def main(question: str, headless: bool = False, agents_to_use: list = None, use_real_chrome: bool = True, auto_close: bool = False):
     """Main function to run all agents"""
 
     print(f"\n{Fore.YELLOW}{Style.BRIGHT}{'='*80}{Style.RESET_ALL}")
@@ -181,11 +181,17 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
         aggregator.save_to_file(filename)
 
         print(f"\n{Fore.GREEN}{Style.BRIGHT}Done!{Style.RESET_ALL}")
-        print(f"\n{Fore.YELLOW}Browser will remain open. Close manually or press Ctrl+C to exit.{Style.RESET_ALL}")
 
-        # Keep the script running (browser stays open)
-        # User can close browser manually or terminate script
-        await asyncio.sleep(999999)  # Sleep indefinitely
+        if auto_close:
+            print(f"\n{Fore.YELLOW}Auto-close enabled. Browser will close in 3 seconds...{Style.RESET_ALL}")
+            await asyncio.sleep(3)
+            await context.close()
+            print(f"{Fore.GREEN}Browser closed.{Style.RESET_ALL}")
+        else:
+            print(f"\n{Fore.YELLOW}Browser will remain open. Close manually or press Ctrl+C to exit.{Style.RESET_ALL}")
+            # Keep the script running (browser stays open)
+            # User can close browser manually or terminate script
+            await asyncio.sleep(999999)  # Sleep indefinitely
 
 
 def interactive_mode():
@@ -247,6 +253,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--interactive', action='store_true', help='Run in interactive mode')
     parser.add_argument('--use-chrome-profile', action='store_true', default=True, help='Use your real Chrome profile (default: True)')
     parser.add_argument('--no-chrome-profile', dest='use_chrome_profile', action='store_false', help='Do not use real Chrome profile')
+    parser.add_argument('--auto-close', action='store_true', help='Automatically close browser after completion (for API usage)')
 
     args = parser.parse_args()
 
@@ -270,14 +277,14 @@ if __name__ == "__main__":
             agents = None
             if args.agents:
                 agents = [a.strip().lower() for a in args.agents.split(',')]
-            asyncio.run(main(question, args.headless, agents, args.use_chrome_profile))
+            asyncio.run(main(question, args.headless, agents, args.use_chrome_profile, args.auto_close))
         except Exception as e:
             print(f"{Fore.RED}Error reading file: {e}{Style.RESET_ALL}")
     elif args.question:
         agents = None
         if args.agents:
             agents = [a.strip().lower() for a in args.agents.split(',')]
-        asyncio.run(main(args.question, args.headless, agents, args.use_chrome_profile))
+        asyncio.run(main(args.question, args.headless, agents, args.use_chrome_profile, args.auto_close))
     else:
         # If no arguments, start interactive mode
         interactive_mode()
