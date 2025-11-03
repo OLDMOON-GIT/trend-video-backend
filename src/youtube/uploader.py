@@ -64,7 +64,7 @@ class YouTubeUploader:
                     flow = InstalledAppFlow.from_client_secrets_file(
                         str(self.credentials_path), SCOPES
                     )
-                    # OAuth 완료 후 프론트엔드로 리디렉션하는 커스텀 HTML
+                    # OAuth 완료 후 창을 닫고 opener 새로고침
                     success_html = '''
                     <!DOCTYPE html>
                     <html>
@@ -84,12 +84,21 @@ class YouTubeUploader:
                             <h1>✅ YouTube 채널 연결 성공!</h1>
                             <p>인증이 완료되었습니다.</p>
                             <div class="spinner"></div>
-                            <p>잠시 후 자동으로 페이지가 이동됩니다...</p>
+                            <p>이 창은 자동으로 닫힙니다...</p>
                         </div>
                         <script>
-                            setTimeout(function() {
-                                window.location.href = 'http://localhost:3000/settings/youtube';
-                            }, 2000);
+                            // opener가 있으면 (새 창으로 열린 경우) opener 새로고침 후 창 닫기
+                            if (window.opener) {
+                                window.opener.location.reload();
+                                setTimeout(function() {
+                                    window.close();
+                                }, 1000);
+                            } else {
+                                // opener가 없으면 (직접 접근한 경우) 리디렉션
+                                setTimeout(function() {
+                                    window.location.href = 'http://localhost:3000/settings/youtube?success=true';
+                                }, 2000);
+                            }
                         </script>
                     </body>
                     </html>
