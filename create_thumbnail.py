@@ -160,8 +160,8 @@ def create_hooking_text(story_data: dict) -> dict:
         # 각 줄마다 다른 글자 수: 1줄(5-6자), 2줄(5-6자), 3줄(8자), 4줄(12자...)
         # 단어 단위로 자연스럽게 끊되, 최소 글자 수 보장
         words = title.split()
-        line_limits = [4, 6, 8, 12]  # 각 줄의 최대 글자 수 (첫줄 짧게)
-        line_minimums = [0, 5, 7, 0]  # 각 줄의 최소 글자 수 (첫줄 최소 제한 없음)
+        line_limits = [8, 8, 10, 12]  # 각 줄의 최대 글자 수 (첫줄 7~8자 이하)
+        line_minimums = [0, 0, 0, 0]  # 각 줄의 최소 글자 수 (자연스럽게 분배)
 
         current_line = ""
         line_index = 0
