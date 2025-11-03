@@ -43,6 +43,12 @@ import multiprocessing
 import tempfile
 
 # 로깅 설정 (먼저 설정)
+# Windows에서 UTF-8 출력을 위해 stdout을 UTF-8로 재설정
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -59,7 +65,7 @@ try:
     GOOGLE_SEARCH_AVAILABLE = True
 except ImportError:
     GOOGLE_SEARCH_AVAILABLE = False
-    logger.warning("⚠️ google_image_search 모듈을 찾을 수 없습니다. 자동 이미지 검색 기능이 비활성화됩니다.")
+    logger.warning("[WARNING] google_image_search module not found. Auto image search disabled.")
 
 # DALL-E (옵션)
 try:
@@ -67,7 +73,7 @@ try:
     DALLE_AVAILABLE = True
 except ImportError:
     DALLE_AVAILABLE = False
-    logger.warning("⚠️ openai 모듈을 찾을 수 없습니다. DALL-E 이미지 생성 기능이 비활성화됩니다.")
+    logger.warning("[WARNING] openai module not found. DALL-E image generation disabled.")
 
 
 class VideoFromFolderCreator:
@@ -302,9 +308,9 @@ class VideoFromFolderCreator:
                     if scene_num not in images:
                         images[scene_num] = file
 
-        # 2. scene 패턴이 없으면 모든 이미지 파일 찾아서 시간순 정렬
+        # 2. scene 패턴이 없으면 모든 이미지 파일 찾기
         if not images:
-            logger.info("scene_XX 패턴 없음. 모든 이미지를 시간순으로 정렬합니다.")
+            logger.info("scene_XX 패턴 없음. 모든 이미지를 찾습니다.")
 
             # 모든 이미지 파일 찾기 (generated_videos 폴더 및 썸네일 제외, 중복 제거)
             all_images_set = set()
@@ -321,13 +327,21 @@ class VideoFromFolderCreator:
                         if 'thumbnail' not in img_file.name.lower():
                             all_images_set.add(img_file)
 
-            # Set을 리스트로 변환하고 생성 시간순으로 정렬 (오래된 것부터)
-            all_images = sorted(list(all_images_set), key=lambda f: f.stat().st_mtime)
+            # Set을 리스트로 변환하고 파일명 숫자 기준 정렬
+            # ⚠️ 중요: Frontend에서 image_01.jpg, image_02.jpg 형식으로 저장하므로
+            # 파일명의 숫자를 추출하여 정렬해야 함!
+            def extract_number(filepath):
+                """파일명에서 숫자 추출 (image_01.jpg → 1)"""
+                import re
+                match = re.search(r'_?(\d+)', filepath.stem)  # stem = 확장자 제외한 파일명
+                return int(match.group(1)) if match else 999999
+
+            all_images = sorted(list(all_images_set), key=extract_number)
 
             # 씬 번호 자동 할당
             for idx, img_path in enumerate(all_images, start=1):
                 images[idx] = img_path
-                logger.info(f"  씬 {idx}: {img_path.name} (생성시간: {img_path.stat().st_mtime})")
+                logger.info(f"  씬 {idx}: {img_path.name} (파일명 숫자: {extract_number(img_path)})")
 
         logger.info(f"이미지 {len(images)}개 발견")
 
@@ -970,8 +984,8 @@ class VideoFromFolderCreator:
             logger.info(f"DEBUG 씬 {scene_num}: audio_path = {audio_path}")
             logger.info(f"DEBUG 씬 {scene_num}: output_path = {output_path}")
 
-            # 상대 경로 그대로 사용 (콜론이 없으므로 이스케이프 불필요)
-            ass_path_str = str(ass_path).replace('\\', '/')
+            # Windows 경로를 FFmpeg 호환 경로로 변환 및 콜론 이스케이프
+            ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
             logger.info(f"DEBUG 씬 {scene_num}: ass_path_str (변환 후) = {ass_path_str}")
 
             # FFmpeg 명령어: 이미지 + 오디오 + 자막을 한번에 처리 (ass 필터 사용)
@@ -1005,8 +1019,8 @@ class VideoFromFolderCreator:
                 # ASS 자막 파일 경로 (이미 생성됨)
                 srt_path = audio_path.with_suffix('.srt')
                 ass_path = srt_path.with_suffix('.ass')
-                # Windows 경로를 FFmpeg 호환 경로로 변환 (상대 경로)
-                ass_path_str = str(ass_path).replace('\\', '/')
+                # Windows 경로를 FFmpeg 호환 경로로 변환 및 콜론 이스케이프
+                ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
 
                 cmd_cpu = [
                     'ffmpeg',
@@ -1978,37 +1992,12 @@ def main():
             generated_videos_folder = Path(args.folder) / "generated_videos"
 
             if generated_videos_folder.exists():
-                # simple_concat 실행
-                from simple_concat import concat_videos
-
-                # story.json에서 제목 가져오기
-                title = creator.story_data.get("title")
-                if not title and "metadata" in creator.story_data:
-                    title = creator.story_data["metadata"].get("title")
-                if not title:
-                    title = "video"
-
-                # 파일명으로 사용 가능하도록 특수문자 제거
-                safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-', '.')).strip()
-                safe_title = safe_title.replace(' ', '_')
-                merged_output_name = f"{safe_title}.mp4"
-
-                print(f"📝 영상 제목: {title}")
-                print(f"📝 파일명: {merged_output_name}")
-
-                success = concat_videos(str(generated_videos_folder), merged_output_name)
-
-                if success:
-                    merged_path = generated_videos_folder / merged_output_name
-                    print("\n" + "=" * 70)
-                    print("✅ 병합 완료!")
-                    print("=" * 70)
-                    print(f"병합된 영상: {merged_path}")
-                    print("=" * 70)
-                else:
-                    print("\n" + "=" * 70)
-                    print("⚠️ 병합 실패 (개별 씬 파일은 생성되었습니다)")
-                    print("=" * 70)
+                # 비디오 병합 기능 (simple_concat 모듈 없음 - 건너뜀)
+                print("\n" + "=" * 70)
+                print("ℹ️ 개별 씬 파일 생성 완료")
+                print("=" * 70)
+                print(f"📁 폴더: {generated_videos_folder}")
+                print("=" * 70)
             else:
                 logger.warning(f"generated_videos 폴더를 찾을 수 없습니다: {generated_videos_folder}")
     else:
