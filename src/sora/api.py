@@ -329,6 +329,67 @@ def instantiate_template(template_name):
 
 
 # ============================================================================
+# Video Merging Endpoints
+# ============================================================================
+
+@app.route("/api/merge/scenes", methods=["POST"])
+def merge_scenes_api():
+    """Merge scene videos from a folder (scene_1.mp4 to scene_N.mp4)."""
+    try:
+        data = request.get_json()
+
+        # Get folder path
+        if "folder" not in data:
+            return jsonify({
+                "success": False,
+                "error": "Missing required field: folder"
+            }), 400
+
+        folder_path = Path(data["folder"])
+
+        if not folder_path.exists():
+            return jsonify({
+                "success": False,
+                "error": f"Folder not found: {folder_path}"
+            }), 404
+
+        # Get optional parameters
+        output_name = data.get("output_name")
+
+        # Import quick_merge from project root
+        project_root = Path(__file__).resolve().parent.parent.parent
+        sys.path.insert(0, str(project_root))
+        from quick_merge import quick_merge
+
+        # Merge videos using existing logic
+        logger.info(f"Merging scenes from folder: {folder_path}")
+        output_path = quick_merge(folder_path, output_name)
+
+        return jsonify({
+            "success": True,
+            "message": "Videos merged successfully",
+            "output_path": str(output_path),
+            "folder": str(folder_path)
+        })
+
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 404
+
+    except Exception as e:
+        logger.error(f"Error merging videos: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+# ============================================================================
 # Video Generation Endpoints
 # ============================================================================
 

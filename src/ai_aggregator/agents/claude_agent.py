@@ -179,7 +179,7 @@ class ClaudeAgent(BaseAgent):
 
             # Wait for response to complete by checking for stop button disappearing
             print(f"[{self.get_name()}] Waiting for Claude to finish typing...")
-            max_wait = 600  # Maximum 10 minutes (no timeout essentially)
+            max_wait = 3600  # Maximum 60 minutes (1 hour) for very long responses
             waited = 0
             last_length = 0
             stable_count = 0

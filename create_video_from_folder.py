@@ -42,6 +42,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import multiprocessing
 import tempfile
 
+# 로깅 설정 (먼저 설정)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/video_from_folder.log', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
 # Google Image Search (옵션)
 try:
     from google_image_search import GoogleImageSearcher, DailyLimitExceededError, GoogleImageSearchError
@@ -57,17 +68,6 @@ try:
 except ImportError:
     DALLE_AVAILABLE = False
     logger.warning("⚠️ openai 모듈을 찾을 수 없습니다. DALL-E 이미지 생성 기능이 비활성화됩니다.")
-
-# 로깅 설정
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('logs/video_from_folder.log', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
 
 
 class VideoFromFolderCreator:
@@ -965,10 +965,16 @@ class VideoFromFolderCreator:
             srt_path = audio_path.with_suffix('.srt')
             ass_path = self._create_srt_with_timings(word_timings or [], srt_path, narration, audio_duration, max_chars_per_line=22)
 
-            # Windows 경로를 FFmpeg 호환 경로로 변환
-            ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
+            # Windows 경로를 FFmpeg 호환 경로로 변환 (백업 방식 - 상대 경로)
+            logger.info(f"DEBUG 씬 {scene_num}: ass_path (원본) = {ass_path}")
+            logger.info(f"DEBUG 씬 {scene_num}: audio_path = {audio_path}")
+            logger.info(f"DEBUG 씬 {scene_num}: output_path = {output_path}")
 
-            # FFmpeg 명령어: 이미지 + 오디오 + 자막을 한번에 처리
+            # 상대 경로 그대로 사용 (콜론이 없으므로 이스케이프 불필요)
+            ass_path_str = str(ass_path).replace('\\', '/')
+            logger.info(f"DEBUG 씬 {scene_num}: ass_path_str (변환 후) = {ass_path_str}")
+
+            # FFmpeg 명령어: 이미지 + 오디오 + 자막을 한번에 처리 (ass 필터 사용)
             cmd = [
                 'ffmpeg',
                 '-loop', '1',
@@ -984,7 +990,10 @@ class VideoFromFolderCreator:
                 str(output_path)
             ]
 
-            result = subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            logger.info(f"DEBUG 씬 {scene_num}: FFmpeg 명령어 = {' '.join(cmd)}")
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            if result.stderr and 'error' in result.stderr.lower():
+                logger.warning(f"FFmpeg 경고 (씬 {scene_num}): {result.stderr[:500]}")
             logger.info(f"씬 {scene_num} 비디오 + 자막 생성 완료: {output_path}")
             return output_path
 
@@ -996,7 +1005,8 @@ class VideoFromFolderCreator:
                 # ASS 자막 파일 경로 (이미 생성됨)
                 srt_path = audio_path.with_suffix('.srt')
                 ass_path = srt_path.with_suffix('.ass')
-                ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
+                # Windows 경로를 FFmpeg 호환 경로로 변환 (상대 경로)
+                ass_path_str = str(ass_path).replace('\\', '/')
 
                 cmd_cpu = [
                     'ffmpeg',
@@ -1014,11 +1024,13 @@ class VideoFromFolderCreator:
                 ]
 
                 try:
-                    subprocess.run(cmd_cpu, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    result_cpu = subprocess.run(cmd_cpu, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+                    if result_cpu.stderr and 'error' in result_cpu.stderr.lower():
+                        logger.warning(f"FFmpeg CPU 경고 (씬 {scene_num}): {result_cpu.stderr[:500]}")
                     logger.info(f"씬 {scene_num} CPU 인코더로 성공")
                     return output_path
                 except subprocess.CalledProcessError as e2:
-                    logger.error(f"씬 {scene_num} CPU 인코더도 실패")
+                    logger.error(f"씬 {scene_num} CPU 인코더도 실패: {e2.stderr if hasattr(e2, 'stderr') else str(e2)}")
                     return None
             else:
                 logger.error(f"씬 {scene_num} FFmpeg 실행 실패")
@@ -1087,91 +1099,45 @@ class VideoFromFolderCreator:
             return None
 
     def _combine_videos(self, video_paths: List[Path], output_path: Path, start_time: float) -> Optional[Path]:
-        """여러 씬 비디오를 하나로 결합 (FFmpeg concat demuxer 사용 - 초고속)"""
-        try:
-            logger.info(f"🎬 {len(video_paths)}개 씬 결합 중... (GPU 가속)")
+        """여러 씬 비디오를 하나로 결합 - simple_concat.py 호출"""
+        import sys
 
-            # FFmpeg concat demuxer용 파일 리스트 생성
-            video_folder = output_path.parent
-            concat_file = video_folder / "concat_list.txt"
-            with open(concat_file, 'w', encoding='utf-8') as f:
-                for video_path in video_paths:
-                    # 파일명만 사용 (같은 폴더에 있으므로)
-                    f.write(f"file '{video_path.name}'\n")
+        video_folder = output_path.parent
 
-            # FFmpeg concat 명령어 (재인코딩 없이 초고속 결합)
-            cmd = [
-                'ffmpeg',
-                '-f', 'concat',
-                '-safe', '0',
-                '-i', concat_file.name,  # 파일명만
-                '-c', 'copy',  # 재인코딩 없이 복사만 (초고속)
-                '-y',
-                output_path.name  # 파일명만
-            ]
+        logger.info(f"비디오 결합 시작: {len(video_paths)}개 씬")
 
-            # FFmpeg 실행 (작업 디렉토리를 video_folder로 설정)
-            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=str(video_folder))
+        # simple_concat.py를 새로운 Python 프로세스로 실행
+        script_path = Path(__file__).parent / "simple_concat.py"
+        cmd = [
+            sys.executable,  # 현재 Python 실행 파일
+            str(script_path),
+            str(video_folder),
+            output_path.name
+        ]
 
-            # 임시 파일 삭제
-            if concat_file.exists():
-                concat_file.unlink()
+        logger.info(f"simple_concat.py 실행: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
 
-            logger.info(f"✅ 비디오 결합 완료: {output_path}")
+        if result.stdout:
+            logger.info(f"simple_concat.py 출력:\n{result.stdout}")
 
-            # 총 수행 시간 출력
-            elapsed_time = time() - start_time
-            minutes = int(elapsed_time // 60)
-            seconds = int(elapsed_time % 60)
-            logger.info(f"⏱️  총 수행 시간: {minutes}분 {seconds}초")
+        if result.stderr:
+            logger.warning(f"simple_concat.py 에러:\n{result.stderr}")
 
-            return output_path
-
-        except subprocess.CalledProcessError as e:
-            logger.error(f"FFmpeg 결합 실패, 재인코딩 방식으로 재시도...")
-
-            # 재인코딩 방식으로 재시도 (코덱이 다를 경우)
-            try:
-                video_folder = output_path.parent
-                concat_file = video_folder / "concat_list.txt"
-
-                cmd_reencode = [
-                    'ffmpeg',
-                    '-f', 'concat',
-                    '-safe', '0',
-                    '-i', concat_file.name,  # 파일명만
-                    '-c:v', self.video_codec,  # GPU 인코더
-                    '-preset', self.codec_preset,
-                    '-c:a', 'aac',
-                    '-y',
-                    output_path.name  # 파일명만
-                ]
-
-                result = subprocess.run(cmd_reencode, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore', cwd=str(video_folder))
-                logger.info(f"GPU 재인코딩 성공")
-
-                if concat_file.exists():
-                    concat_file.unlink()
-
-                logger.info(f"✅ 비디오 결합 완료 (재인코딩): {output_path}")
-
-                # 총 수행 시간 출력
-                elapsed_time = time() - start_time
-                minutes = int(elapsed_time // 60)
-                seconds = int(elapsed_time % 60)
-                logger.info(f"⏱️  총 수행 시간: {minutes}분 {seconds}초")
-
-                return output_path
-
-            except subprocess.CalledProcessError as e2:
-                logger.error(f"GPU 재인코딩 실패!")
-                logger.error(f"stderr: {e2.stderr}")
-                logger.error(f"stdout: {e2.stdout}")
-                raise RuntimeError(f"GPU 인코딩 실패: {e2.stderr}")
-
-        except Exception as e:
-            logger.error(f"비디오 결합 실패: {e}")
+        if result.returncode != 0:
+            logger.error(f"simple_concat.py 실패 (종료 코드: {result.returncode})")
+            if result.stderr:
+                logger.error(f"에러 메시지:\n{result.stderr}")
             return None
+
+        # 총 수행 시간
+        elapsed_time = time() - start_time
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+        logger.info(f"비디오 결합 완료: {output_path}")
+        logger.info(f"총 수행 시간: {minutes}분 {seconds}초")
+
+        return output_path
 
     def _backup_previous_videos(self):
         """기존 generated_videos 폴더를 backup으로 이동 (파일 사용 중이면 건너뛰기)"""
@@ -1292,11 +1258,11 @@ class VideoFromFolderCreator:
                 'clean_narration': clean_narration
             })
 
-        # TTS 병렬 생성 (4개씩 제한) - 타임스탬프도 함께 받음!
-        logger.info(f"⚡ TTS 병렬 생성: 최대 4개씩 동시 처리 (타임스탬프 포함)")
+        # TTS 병렬 생성 (8개씩 제한) - 타임스탬프도 함께 받음!
+        logger.info(f"⚡ TTS 병렬 생성: 최대 8개씩 동시 처리 (타임스탬프 포함)")
 
         tts_results = []
-        batch_size = 4
+        batch_size = 8
         for i in range(0, len(tts_tasks), batch_size):
             batch = tts_tasks[i:i+batch_size]
             batch_results = await asyncio.gather(*batch)
@@ -1324,9 +1290,9 @@ class VideoFromFolderCreator:
         logger.info(f"🎬 비디오 인코더: {self.video_codec} ({encoder_type})")
         logger.info(f"📊 총 {len(scene_data_list)}개 씬 처리 예정")
 
-        # 시스템에 무리 안 가도록 워커 수 제한 (CPU 코어의 50%, 최소 1, 최대 4)
+        # 시스템에 무리 안 가도록 워커 수 제한 (CPU 코어의 75%, 최소 2, 최대 4)
         cpu_count = multiprocessing.cpu_count()
-        max_workers = max(1, min(4, cpu_count // 2))
+        max_workers = max(2, min(4, (cpu_count * 3) // 4))
         logger.info(f"⚡ 병렬 처리: {max_workers}개 워커 (CPU 코어: {cpu_count}개)")
         logger.info("=" * 70)
 
@@ -1636,17 +1602,29 @@ class VideoFromFolderCreator:
                 f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
                 f.write("Style: Default,NanumGothic,96,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,2,2,10,10,20,1\n\n")
 
-                # 이벤트 (자막)
+                # 이벤트 (자막) - audio_duration을 초과하는 자막 필터링
                 f.write("[Events]\n")
                 f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
 
+                filtered_subtitles = []
                 for sub in subtitles:
+                    # audio_duration을 초과하는 자막은 제외
+                    if sub["start"] < audio_duration:
+                        # 끝 시간이 duration을 초과하면 duration으로 잘라냄
+                        end_time_adjusted = min(sub["end"], audio_duration)
+                        filtered_subtitles.append({
+                            "start": sub["start"],
+                            "end": end_time_adjusted,
+                            "text": sub["text"]
+                        })
+
+                for sub in filtered_subtitles:
                     start_time = self._format_ass_timestamp(sub["start"])
                     end_time = self._format_ass_timestamp(sub["end"])
                     text = sub["text"].replace('\n', '\\N')
                     f.write(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text}\n")
 
-            logger.info(f"Edge TTS 타임스탬프 기반 ASS 자막 완료: {len(subtitles)}개 라인")
+            logger.info(f"Edge TTS 타임스탬프 기반 ASS 자막 완료: {len(filtered_subtitles)}개 라인 (duration: {audio_duration:.2f}초)")
             return ass_path
 
         except Exception as e:
@@ -1944,10 +1922,12 @@ def main():
                        help="TTS 음성 (기본: ko-KR-SoonBokNeural)")
     parser.add_argument("--aspect-ratio", "-a", default="9:16", choices=["9:16", "16:9"],
                        help="비디오 비율 (기본: 9:16)")
-    parser.add_argument("--no-combine", action="store_true",
-                       help="씬별 비디오만 생성 (결합 안 함)")
-    parser.add_argument("--add-subtitles", "-s", action="store_true",
-                       help="자막 추가 (기본: 추가 안 함)")
+    parser.add_argument("--combine", action="store_true",
+                       help="씬별 비디오를 하나로 결합 (기본: 결합 안 함)")
+    parser.add_argument("--add-subtitles", "-s", action="store_true", default=True,
+                       help="자막 추가 (기본: 추가함, --no-subtitles로 끄기)")
+    parser.add_argument("--no-subtitles", action="store_false", dest="add_subtitles",
+                       help="자막 추가 안 함")
     parser.add_argument("--image-source", "-i", default="none", choices=["none", "google", "dalle"],
                        help="이미지 소스 (기본: none - 수동 업로드, google - Google Image Search, dalle - DALL-E 3)")
     parser.add_argument("--is-admin", action="store_true",
@@ -1979,7 +1959,7 @@ def main():
     )
 
     # 비디오 생성
-    result = asyncio.run(creator.create_all_videos(combine=not args.no_combine))
+    result = asyncio.run(creator.create_all_videos(combine=args.combine))
 
     if result:
         print("=" * 70)
@@ -1987,6 +1967,50 @@ def main():
         print("=" * 70)
         print(f"출력: {result}")
         print("=" * 70)
+
+        # simple_concat 병합 로직 추가
+        if not args.combine:
+            print("\n" + "=" * 70)
+            print("🔗 씬 병합 시작 (simple_concat)")
+            print("=" * 70)
+
+            # generated_videos 폴더 경로
+            generated_videos_folder = Path(args.folder) / "generated_videos"
+
+            if generated_videos_folder.exists():
+                # simple_concat 실행
+                from simple_concat import concat_videos
+
+                # story.json에서 제목 가져오기
+                title = creator.story_data.get("title")
+                if not title and "metadata" in creator.story_data:
+                    title = creator.story_data["metadata"].get("title")
+                if not title:
+                    title = "video"
+
+                # 파일명으로 사용 가능하도록 특수문자 제거
+                safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-', '.')).strip()
+                safe_title = safe_title.replace(' ', '_')
+                merged_output_name = f"{safe_title}.mp4"
+
+                print(f"📝 영상 제목: {title}")
+                print(f"📝 파일명: {merged_output_name}")
+
+                success = concat_videos(str(generated_videos_folder), merged_output_name)
+
+                if success:
+                    merged_path = generated_videos_folder / merged_output_name
+                    print("\n" + "=" * 70)
+                    print("✅ 병합 완료!")
+                    print("=" * 70)
+                    print(f"병합된 영상: {merged_path}")
+                    print("=" * 70)
+                else:
+                    print("\n" + "=" * 70)
+                    print("⚠️ 병합 실패 (개별 씬 파일은 생성되었습니다)")
+                    print("=" * 70)
+            else:
+                logger.warning(f"generated_videos 폴더를 찾을 수 없습니다: {generated_videos_folder}")
     else:
         print("✗ 실패!")
         sys.exit(1)

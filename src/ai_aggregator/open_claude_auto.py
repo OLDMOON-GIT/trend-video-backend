@@ -18,6 +18,21 @@ async def open_claude_with_prompt(prompt_text: str):
     print(f"[INFO] Chrome 프로필 사용: {automation_profile}")
     print(f"[INFO] 저장된 로그인 세션 사용 (로그인 안 되어 있으면 수동 로그인 필요)")
 
+    # Chrome 프로필 잠금 파일 제거 (충돌 방지)
+    lock_files = [
+        os.path.join(automation_profile, 'SingletonLock'),
+        os.path.join(automation_profile, 'SingletonCookie'),
+        os.path.join(automation_profile, 'SingletonSocket'),
+        os.path.join(automation_profile, 'lockfile'),
+    ]
+    for lock_file in lock_files:
+        try:
+            if os.path.exists(lock_file):
+                os.remove(lock_file)
+                print(f"[INFO] 잠금 파일 제거: {os.path.basename(lock_file)}")
+        except Exception as e:
+            print(f"[WARN] 잠금 파일 제거 실패: {lock_file} - {e}")
+
     p = await async_playwright().start()
     try:
         # Chrome 실행 (main.py와 동일한 설정)

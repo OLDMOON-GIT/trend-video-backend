@@ -3059,6 +3059,11 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
         if font is None:
             font = ImageFont.load_default()
 
+        # Remove quotes from title
+        quote_chars = ['"', "'", '"', '"', ''', ''']
+        for quote in quote_chars:
+            title = title.replace(quote, '')
+
         # Wrap title text
         max_width = img.width - 100
         words = title.split()

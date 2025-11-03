@@ -11,9 +11,80 @@ import subprocess
 import logging
 import re
 
-# 로깅 설정
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+# 워터마크 제거 기능
+try:
+    import cv2
+    import numpy as np
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+    logging.warning("⚠️ OpenCV가 설치되지 않아 워터마크 제거 기능을 사용할 수 없습니다.")
+
+# 로깅 설정 (stderr 에러 방지)
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(message)s',
+    stream=sys.stdout,  # stderr 대신 stdout 사용
+    force=True
+)
 logger = logging.getLogger(__name__)
+
+
+def detect_watermark_region(frame, threshold=200):
+    """프레임에서 워터마크 영역 감지"""
+    if not OPENCV_AVAILABLE:
+        return []
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+
+    kernel = np.ones((5, 5), np.uint8)
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    watermark_regions = []
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        area = w * h
+        frame_area = frame.shape[0] * frame.shape[1]
+        if 0.005 * frame_area < area < 0.1 * frame_area:
+            watermark_regions.append((x, y, w, h))
+
+    return watermark_regions
+
+
+def inpaint_region(frame, x, y, w, h):
+    """특정 영역을 주변 픽셀로 채우기 (inpainting)"""
+    if not OPENCV_AVAILABLE:
+        return frame
+
+    mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+    padding = 5
+    x1 = max(0, x - padding)
+    y1 = max(0, y - padding)
+    x2 = min(frame.shape[1], x + w + padding)
+    y2 = min(frame.shape[0], y + h + padding)
+
+    mask[y1:y2, x1:x2] = 255
+    result = cv2.inpaint(frame, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+    return result
+
+
+def remove_watermark_from_video(input_path: Path, output_path: Path, threshold: int = 150) -> Path:
+    """
+    비디오에서 워터마크 제거 - 워터마크 제거는 건너뛰고 원본 복사
+    (현재는 워터마크 제거 기능 비활성화)
+    """
+    logger.info(f"⏭️ 워터마크 제거 건너뛰기: {input_path.name}")
+    logger.info(f"   (워터마크 제거 기능은 현재 비활성화되어 있습니다)")
+
+    # 원본을 그대로 복사
+    import shutil
+    shutil.copy(input_path, output_path)
+    return output_path
 
 
 def get_ffmpeg_path():
@@ -37,31 +108,47 @@ def get_ffmpeg_path():
 
 def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
     """
-    FFmpeg를 사용하여 비디오 병합 (lossless)
+    FFmpeg를 사용하여 비디오 병합 (재인코딩)
     """
     ffmpeg = get_ffmpeg_path()
     if not ffmpeg:
         raise RuntimeError("FFmpeg not found. Install FFmpeg or imageio-ffmpeg.")
 
     logger.info(f"📹 {len(video_paths)}개 비디오 병합 중...")
+    logger.info(f"   비디오 목록:")
+    for i, path in enumerate(video_paths, 1):
+        logger.info(f"   {i}. {path.name}")
 
     # Concat 파일 생성
     concat_file = output_path.with_suffix('.txt')
     with open(concat_file, 'w', encoding='utf-8') as f:
         for path in video_paths:
+            # Windows 경로를 Unix 스타일로 변환
             path_str = str(path.resolve()).replace('\\', '/')
             f.write(f"file '{path_str}'\n")
 
+    # concat 파일 내용 확인
+    logger.info(f"📝 Concat 파일 내용:")
+    with open(concat_file, 'r', encoding='utf-8') as f:
+        logger.info(f.read())
+
     try:
+        # -c copy 대신 재인코딩 (호환성 문제 방지)
         cmd = [
             ffmpeg,
             '-y',  # 덮어쓰기
             '-f', 'concat',
             '-safe', '0',
             '-i', str(concat_file),
-            '-c', 'copy',  # Lossless copy
+            '-c:v', 'libx264',  # 비디오 재인코딩
+            '-preset', 'medium',
+            '-crf', '18',  # 고품질
+            '-c:a', 'aac',  # 오디오 재인코딩
+            '-b:a', '192k',
             str(output_path)
         ]
+
+        logger.info(f"🎬 FFmpeg 명령 실행 중...")
 
         result = subprocess.run(
             cmd,
@@ -71,6 +158,7 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
         )
 
         if result.returncode != 0:
+            logger.error(f"❌ FFmpeg stderr: {result.stderr}")
             raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
 
         logger.info(f"✅ 비디오 병합 완료: {output_path.name}")
@@ -406,8 +494,13 @@ async def main():
             config = json.load(f)
 
         video_files = [Path(p) for p in config['video_files']]
+
+        # 파일명으로 명시적 정렬 (순서 보장)
+        video_files.sort(key=lambda p: p.name)
+
         narration_text = config.get('narration_text', '')
         add_subtitles = config.get('add_subtitles', False)
+        remove_watermark = config.get('remove_watermark', False)
         output_dir = Path(config['output_dir'])
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -419,13 +512,16 @@ async def main():
         logger.info(f"\n{'='*60}")
         logger.info(f"🎞️ 비디오 병합 시작")
         logger.info(f"{'='*60}")
-        logger.info(f"입력 비디오: {len(video_files)}개")
+        logger.info(f"입력 비디오: {len(video_files)}개 (정렬됨)")
         for i, vf in enumerate(video_files, 1):
             logger.info(f"  {i}. {vf.name}")
 
+        # 워터마크 제거 기능 비활성화 (작동하지 않음)
+        processed_video_files = video_files
+
         # 1단계: 비디오 병합
         merged_video = output_dir / 'merged_video.mp4'
-        concatenate_videos(video_files, merged_video)
+        concatenate_videos(processed_video_files, merged_video)
 
         final_output = merged_video
 
@@ -451,23 +547,27 @@ async def main():
         logger.info(f"📁 출력 파일: {final_output}")
         logger.info(f"{'='*60}\n")
 
-        # 성공 응답
-        print(json.dumps({
+        # 성공 응답 (stdout으로 명시적 출력)
+        result_json = json.dumps({
             "success": True,
             "output_video": str(final_output),
             "output_dir": str(output_dir)
-        }))
+        })
+        sys.stdout.write(result_json + '\n')
+        sys.stdout.flush()
         sys.exit(0)
 
     except Exception as e:
         logger.error(f"\n❌ 오류 발생: {e}")
         import traceback
-        traceback.print_exc()
+        traceback.print_exc(file=sys.stdout)  # stderr 대신 stdout 사용
 
-        print(json.dumps({
+        error_json = json.dumps({
             "success": False,
             "error": str(e)
-        }))
+        })
+        sys.stdout.write(error_json + '\n')
+        sys.stdout.flush()
         sys.exit(1)
 
 

@@ -183,6 +183,21 @@ async def main(headless: bool = False, use_queue: bool = True):
             print(f"{Fore.YELLOW}[INFO] Mode: {'Headless' if headless else 'Visible'}{Style.RESET_ALL}")
             print(f"{Fore.CYAN}[INFO] Queue system ensures only one execution at a time{Style.RESET_ALL}\n")
 
+            # Chrome 프로필 잠금 파일 제거 (충돌 방지)
+            lock_files = [
+                os.path.join(automation_profile, 'SingletonLock'),
+                os.path.join(automation_profile, 'SingletonCookie'),
+                os.path.join(automation_profile, 'SingletonSocket'),
+                os.path.join(automation_profile, 'lockfile'),
+            ]
+            for lock_file in lock_files:
+                try:
+                    if os.path.exists(lock_file):
+                        os.remove(lock_file)
+                        print(f"{Fore.GREEN}[INFO] 잠금 파일 제거: {os.path.basename(lock_file)}{Style.RESET_ALL}")
+                except Exception as e:
+                    print(f"{Fore.YELLOW}[WARN] 잠금 파일 제거 실패: {lock_file} - {e}{Style.RESET_ALL}")
+
             try:
                 context = await p.chromium.launch_persistent_context(
                     automation_profile,
