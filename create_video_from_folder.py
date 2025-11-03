@@ -1179,45 +1179,75 @@ class VideoFromFolderCreator:
             return None
 
     def _combine_videos(self, video_paths: List[Path], output_path: Path, start_time: float) -> Optional[Path]:
-        """여러 씬 비디오를 하나로 결합 - simple_concat.py 호출"""
-        import sys
+        """여러 씬 비디오를 하나로 결합 - FFmpeg concat demuxer 사용"""
+        import tempfile
 
         video_folder = output_path.parent
-
         logger.info(f"비디오 결합 시작: {len(video_paths)}개 씬")
 
-        # simple_concat.py를 새로운 Python 프로세스로 실행
-        script_path = Path(__file__).parent / "simple_concat.py"
-        cmd = [
-            sys.executable,  # 현재 Python 실행 파일
-            str(script_path),
-            str(video_folder),
-            output_path.name
-        ]
-
-        logger.info(f"simple_concat.py 실행: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
-
-        if result.stdout:
-            logger.info(f"simple_concat.py 출력:\n{result.stdout}")
-
-        if result.stderr:
-            logger.warning(f"simple_concat.py 에러:\n{result.stderr}")
-
-        if result.returncode != 0:
-            logger.error(f"simple_concat.py 실패 (종료 코드: {result.returncode})")
-            if result.stderr:
-                logger.error(f"에러 메시지:\n{result.stderr}")
+        # scene_XX.mp4 파일 찾기
+        scene_videos = sorted(video_folder.glob("scene_*.mp4"))
+        if not scene_videos:
+            logger.error("씬 비디오 파일을 찾을 수 없습니다")
             return None
 
-        # 총 수행 시간
-        elapsed_time = time() - start_time
-        minutes = int(elapsed_time // 60)
-        seconds = int(elapsed_time % 60)
-        logger.info(f"비디오 결합 완료: {output_path}")
-        logger.info(f"총 수행 시간: {minutes}분 {seconds}초")
+        logger.info(f"발견된 씬 비디오: {len(scene_videos)}개")
 
-        return output_path
+        # concat list 파일 생성 (임시 파일)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+            concat_file = f.name
+            for video in scene_videos:
+                # FFmpeg concat demuxer 형식: file 'path'
+                # Windows 경로를 위해 forward slash로 변환하고 이스케이프
+                video_path_str = str(video.absolute()).replace('\\', '/')
+                f.write(f"file '{video_path_str}'\n")
+
+        try:
+            # FFmpeg concat demuxer로 병합
+            cmd = [
+                'ffmpeg',
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', concat_file,
+                '-c', 'copy',  # 재인코딩 없이 복사
+                '-y',  # 덮어쓰기
+                str(output_path)
+            ]
+
+            logger.info(f"FFmpeg 실행: {' '.join(cmd)}")
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore'
+            )
+
+            if result.returncode != 0:
+                logger.error(f"FFmpeg 실패 (종료 코드: {result.returncode})")
+                if result.stderr:
+                    logger.error(f"에러 메시지:\n{result.stderr}")
+                return None
+
+            if not output_path.exists():
+                logger.error(f"병합된 비디오 파일이 생성되지 않았습니다: {output_path}")
+                return None
+
+            # 총 수행 시간
+            elapsed_time = time() - start_time
+            minutes = int(elapsed_time // 60)
+            seconds = int(elapsed_time % 60)
+            logger.info(f"비디오 결합 완료: {output_path}")
+            logger.info(f"총 수행 시간: {minutes}분 {seconds}초")
+
+            return output_path
+
+        finally:
+            # 임시 concat 파일 삭제
+            try:
+                Path(concat_file).unlink()
+            except Exception as e:
+                logger.warning(f"임시 파일 삭제 실패: {e}")
 
     def _backup_previous_videos(self):
         """기존 generated_videos 폴더를 backup으로 이동 (파일 사용 중이면 건너뛰기)"""
