@@ -64,7 +64,41 @@ class YouTubeUploader:
                     flow = InstalledAppFlow.from_client_secrets_file(
                         str(self.credentials_path), SCOPES
                     )
-                    creds = flow.run_local_server(port=0)
+                    # OAuth 완료 후 프론트엔드로 리디렉션하는 커스텀 HTML
+                    success_html = '''
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>YouTube 연결 완료</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #1e293b; color: white; }
+                            .container { max-width: 500px; margin: 0 auto; }
+                            h1 { color: #10b981; margin-bottom: 20px; }
+                            p { font-size: 18px; margin: 20px 0; }
+                            .spinner { border: 4px solid #374151; border-top: 4px solid #8b5cf6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+                            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <h1>✅ YouTube 채널 연결 성공!</h1>
+                            <p>인증이 완료되었습니다.</p>
+                            <div class="spinner"></div>
+                            <p>잠시 후 자동으로 페이지가 이동됩니다...</p>
+                        </div>
+                        <script>
+                            setTimeout(function() {
+                                window.location.href = 'http://localhost:3000/settings/youtube';
+                            }, 2000);
+                        </script>
+                    </body>
+                    </html>
+                    '''
+                    creds = flow.run_local_server(
+                        port=0,
+                        success_message=success_html,
+                        open_browser=True
+                    )
 
                 self.token_path.parent.mkdir(parents=True, exist_ok=True)
                 self.token_path.write_text(creds.to_json(), encoding="utf-8")
