@@ -20,6 +20,7 @@ import logging
 from pathlib import Path
 import warnings
 from time import time
+import signal
 
 # 버전 호환성 경고 메시지 숨기기
 warnings.filterwarnings("ignore", message="Model was trained with")
@@ -58,6 +59,16 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Global cancellation flag
+cancellation_requested = False
+
+def signal_handler(signum, frame):
+    """Handle SIGTERM/SIGINT for graceful shutdown"""
+    global cancellation_requested
+    logger.info("🛑 취소 시그널 수신, 작업을 중단합니다...")
+    cancellation_requested = True
+    sys.exit(0)
 
 # Google Image Search (옵션)
 try:
@@ -327,21 +338,69 @@ class VideoFromFolderCreator:
                         if 'thumbnail' not in img_file.name.lower():
                             all_images_set.add(img_file)
 
-            # Set을 리스트로 변환하고 파일명 숫자 기준 정렬
-            # ⚠️ 중요: Frontend에서 image_01.jpg, image_02.jpg 형식으로 저장하므로
-            # 파일명의 숫자를 추출하여 정렬해야 함!
-            def extract_number(filepath):
-                """파일명에서 숫자 추출 (image_01.jpg → 1)"""
+            # Set을 리스트로 변환하고 정렬
+            # ⚠️ 중요: Frontend와 동일한 로직 사용!
+            # 1. 명확한 시퀀스 패턴이 있으면 시퀀스로 정렬
+            # 2. 없으면 파일 수정 시간으로 정렬 (오래된 것부터)
+            def extract_sequence(filepath):
+                """
+                명확한 시퀀스 번호만 추출:
+                - image_01, scene_1, img_5 등
+                - image(1), scene(2) 등
+                - (1), (2) 등
+                - 파일명 전체가 숫자 (1.jpg, 2.png)
+
+                Returns: (sequence_number or None, mtime)
+                """
                 import re
-                match = re.search(r'_?(\d+)', filepath.stem)  # stem = 확장자 제외한 파일명
-                return int(match.group(1)) if match else 999999
+                name = filepath.stem  # 확장자 제외한 파일명
 
-            all_images = sorted(list(all_images_set), key=extract_number)
+                # image_01, scene_1, img_5 패턴
+                match = re.match(r'^(image|scene|img)[-_](\d+)$', name, re.IGNORECASE)
+                if match:
+                    return (int(match.group(2)), 0)
 
-            # 씬 번호 자동 할당
+                # image(1), scene(2) 패턴
+                match = re.match(r'^(image|scene|img)\((\d+)\)$', name, re.IGNORECASE)
+                if match:
+                    return (int(match.group(2)), 0)
+
+                # (1), (2) 패턴
+                match = re.match(r'^\((\d+)\)$', name)
+                if match:
+                    return (int(match.group(1)), 0)
+
+                # 파일명 전체가 숫자 (1, 2, 3)
+                match = re.match(r'^(\d+)$', name)
+                if match:
+                    return (int(match.group(1)), 0)
+
+                # 시퀀스 번호 없음 - 파일 수정 시간 사용
+                try:
+                    mtime = filepath.stat().st_mtime
+                except:
+                    mtime = 0
+                return (None, mtime)
+
+            # 정렬: 시퀀스 번호가 있으면 우선, 없으면 시간 순서
+            all_images_list = list(all_images_set)
+            all_images = sorted(all_images_list, key=lambda f: (
+                extract_sequence(f)[0] is None,  # 시퀀스 없는 것을 뒤로
+                extract_sequence(f)[0] if extract_sequence(f)[0] is not None else 0,  # 시퀀스 정렬
+                extract_sequence(f)[1]  # 시간 정렬
+            ))
+
+            # 씬 번호 자동 할당 및 로그 출력
+            logger.info(f"\n📷 이미지 정렬 완료 (총 {len(all_images)}개):")
             for idx, img_path in enumerate(all_images, start=1):
                 images[idx] = img_path
-                logger.info(f"  씬 {idx}: {img_path.name} (파일명 숫자: {extract_number(img_path)})")
+                seq_info = extract_sequence(img_path)
+                if seq_info[0] is not None:
+                    logger.info(f"  씬 {idx}: {img_path.name} (시퀀스: {seq_info[0]})")
+                else:
+                    import datetime
+                    mtime_str = datetime.datetime.fromtimestamp(seq_info[1]).strftime('%Y-%m-%d %H:%M:%S')
+                    logger.info(f"  씬 {idx}: {img_path.name} (시간: {mtime_str})")
 
         logger.info(f"이미지 {len(images)}개 발견")
 
@@ -914,8 +973,8 @@ class VideoFromFolderCreator:
             cmd = [
                 'ffmpeg',
                 '-loop', '1',  # 이미지 반복
-                '-i', str(image_path),  # 입력 이미지
-                '-i', str(audio_path),  # 입력 오디오
+                '-i', str(image_path.resolve()),  # 입력 이미지 (절대 경로)
+                '-i', str(audio_path.resolve()),  # 입력 오디오 (절대 경로)
                 '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black",  # 리스케일 + 레터박스
                 '-c:v', self.video_codec,  # GPU 가속 코덱
                 '-preset', self.codec_preset,  # 프리셋
@@ -923,7 +982,7 @@ class VideoFromFolderCreator:
                 '-shortest',  # 오디오 길이만큼
                 '-pix_fmt', 'yuv420p',  # 호환성
                 '-y',  # 덮어쓰기
-                str(output_path)
+                str(output_path.resolve())  # 출력 경로 (절대 경로)
             ]
 
             # FFmpeg 실행 (UTF-8 인코딩)
@@ -941,8 +1000,8 @@ class VideoFromFolderCreator:
                 cmd_cpu = [
                     'ffmpeg',
                     '-loop', '1',
-                    '-i', str(image_path),
-                    '-i', str(audio_path),
+                    '-i', str(image_path.resolve()),
+                    '-i', str(audio_path.resolve()),
                     '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black",
                     '-c:v', 'libx264',  # CPU 인코더
                     '-preset', 'ultrafast',
@@ -950,7 +1009,7 @@ class VideoFromFolderCreator:
                     '-shortest',
                     '-pix_fmt', 'yuv420p',
                     '-y',
-                    str(output_path)
+                    str(output_path.resolve())
                 ]
 
                 try:
@@ -979,33 +1038,28 @@ class VideoFromFolderCreator:
             srt_path = audio_path.with_suffix('.srt')
             ass_path = self._create_srt_with_timings(word_timings or [], srt_path, narration, audio_duration, max_chars_per_line=22)
 
-            # Windows 경로를 FFmpeg 호환 경로로 변환 (백업 방식 - 상대 경로)
-            logger.info(f"DEBUG 씬 {scene_num}: ass_path (원본) = {ass_path}")
-            logger.info(f"DEBUG 씬 {scene_num}: audio_path = {audio_path}")
-            logger.info(f"DEBUG 씬 {scene_num}: output_path = {output_path}")
-
-            # Windows 경로를 FFmpeg 호환 경로로 변환 및 콜론 이스케이프
-            ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
-            logger.info(f"DEBUG 씬 {scene_num}: ass_path_str (변환 후) = {ass_path_str}")
+            # FFmpeg ass 필터에는 파일명만 전달 (같은 디렉토리에 있음)
+            ass_filename = ass_path.name
+            logger.info(f"DEBUG 씬 {scene_num}: ass_filename = {ass_filename}")
 
             # FFmpeg 명령어: 이미지 + 오디오 + 자막을 한번에 처리 (ass 필터 사용)
             cmd = [
                 'ffmpeg',
                 '-loop', '1',
-                '-i', str(image_path),
-                '-i', str(audio_path),
-                '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black,ass={ass_path_str}",
+                '-i', str(image_path.resolve()),
+                '-i', str(audio_path.resolve()),
+                '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black,ass={ass_filename}",
                 '-c:v', self.video_codec,
                 '-preset', self.codec_preset,
                 '-c:a', 'aac',
                 '-shortest',
                 '-pix_fmt', 'yuv420p',
                 '-y',
-                str(output_path)
+                str(output_path.resolve())
             ]
 
             logger.info(f"DEBUG 씬 {scene_num}: FFmpeg 명령어 = {' '.join(cmd)}")
-            result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore', cwd=str(output_path.parent))
             if result.stderr and 'error' in result.stderr.lower():
                 logger.warning(f"FFmpeg 경고 (씬 {scene_num}): {result.stderr[:500]}")
             logger.info(f"씬 {scene_num} 비디오 + 자막 생성 완료: {output_path}")
@@ -1019,26 +1073,26 @@ class VideoFromFolderCreator:
                 # ASS 자막 파일 경로 (이미 생성됨)
                 srt_path = audio_path.with_suffix('.srt')
                 ass_path = srt_path.with_suffix('.ass')
-                # Windows 경로를 FFmpeg 호환 경로로 변환 및 콜론 이스케이프
-                ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
+                # FFmpeg ass 필터에는 파일명만 전달
+                ass_filename = ass_path.name
 
                 cmd_cpu = [
                     'ffmpeg',
                     '-loop', '1',
-                    '-i', str(image_path),
-                    '-i', str(audio_path),
-                    '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black,ass={ass_path_str}",
+                    '-i', str(image_path.resolve()),
+                    '-i', str(audio_path.resolve()),
+                    '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black,ass={ass_filename}",
                     '-c:v', 'libx264',
                     '-preset', 'ultrafast',
                     '-c:a', 'aac',
                     '-shortest',
                     '-pix_fmt', 'yuv420p',
                     '-y',
-                    str(output_path)
+                    str(output_path.resolve())
                 ]
 
                 try:
-                    result_cpu = subprocess.run(cmd_cpu, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+                    result_cpu = subprocess.run(cmd_cpu, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore', cwd=str(output_path.parent))
                     if result_cpu.stderr and 'error' in result_cpu.stderr.lower():
                         logger.warning(f"FFmpeg CPU 경고 (씬 {scene_num}): {result_cpu.stderr[:500]}")
                     logger.info(f"씬 {scene_num} CPU 인코더로 성공")
@@ -1903,20 +1957,20 @@ class VideoFromFolderCreator:
         # 대본 기반 ASS 자막 생성 (스타일 포함)
         ass_path = self._create_srt_from_script(narration, audio_duration, srt_path, max_chars_per_line=22)
 
-        # Windows 경로를 FFmpeg 호환 경로로 변환 (백슬래시 → 슬래시, 이스케이프)
-        ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
+        # FFmpeg ass 필터에는 파일명만 전달
+        ass_filename = ass_path.name
 
         # FFmpeg 명령어 (ASS 파일은 이미 스타일이 포함되어 있으므로 force_style 불필요)
         cmd = [
             'ffmpeg', '-i', str(video_path),
-            '-vf', f"ass={ass_path_str}",
+            '-vf', f"ass={ass_filename}",
             '-c:a', 'copy',
             '-y',
             str(output_path)
         ]
 
         try:
-            result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore', cwd=str(audio_path.parent))
         except subprocess.CalledProcessError as e:
             logger.error(f"FFmpeg 자막 추가 실패: {e.stderr}")
             raise
@@ -1930,6 +1984,10 @@ class VideoFromFolderCreator:
 
 
 def main():
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = argparse.ArgumentParser(description="story.json과 이미지로 영상 생성")
     parser.add_argument("--folder", "-f", required=True, help="story.json과 이미지가 있는 폴더 경로")
     parser.add_argument("--voice", "-v", default="ko-KR-SoonBokNeural",
