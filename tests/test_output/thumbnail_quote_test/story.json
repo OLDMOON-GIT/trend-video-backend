@@ -1,0 +1,10 @@
+{
+  "title": "\"테스트 제목\" 큰따옴표 제거",
+  "scenes": [
+    {
+      "scene_number": 1,
+      "title": "Scene 1",
+      "content": "Test content"
+    }
+  ]
+}

@@ -46,8 +46,8 @@ def get_story_data(folder: Path) -> dict:
     if not title:
         title = "No title"
 
-    # 제목에서 모든 종류의 따옴표 제거
-    quote_chars = ['"', "'", '"', '"', ''', ''']
+    # 제목에서 큰따옴표만 제거 (쉼표는 유지)
+    quote_chars = ['"', '"', '"']  # 큰따옴표만
     for quote in quote_chars:
         title = title.replace(quote, '')
 

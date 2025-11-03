@@ -60,15 +60,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global cancellation flag
+# Global cancellation flag and child processes tracking
 cancellation_requested = False
+child_processes = []
 
 def signal_handler(signum, frame):
     """Handle SIGTERM/SIGINT for graceful shutdown"""
-    global cancellation_requested
+    global cancellation_requested, child_processes
     logger.info("🛑 취소 시그널 수신, 작업을 중단합니다...")
     cancellation_requested = True
-    sys.exit(0)
+
+    # 모든 자식 프로세스 강제 종료
+    for proc in child_processes:
+        try:
+            if proc.poll() is None:  # 아직 실행 중
+                logger.info(f"🛑 자식 프로세스 종료 중: PID {proc.pid}")
+                proc.kill()  # SIGKILL
+                proc.wait(timeout=2)
+        except Exception as e:
+            logger.error(f"❌ 프로세스 종료 실패: {e}")
+
+    sys.exit(1)
 
 # Google Image Search (옵션)
 try:
@@ -2050,12 +2062,75 @@ def main():
             generated_videos_folder = Path(args.folder) / "generated_videos"
 
             if generated_videos_folder.exists():
-                # 비디오 병합 기능 (simple_concat 모듈 없음 - 건너뜀)
+                # story.json에서 제목 추출
+                story_path = Path(args.folder) / "story.json"
+                story_metadata_path = Path(args.folder) / "story_metadata.json"
+
+                title = "output_video"
+                if story_metadata_path.exists():
+                    try:
+                        with open(story_metadata_path, 'r', encoding='utf-8') as f:
+                            metadata = json.load(f)
+                            title = metadata.get('title', 'output_video')
+                    except Exception as e:
+                        logger.warning(f"story_metadata.json 읽기 실패: {e}")
+                elif story_path.exists():
+                    try:
+                        with open(story_path, 'r', encoding='utf-8') as f:
+                            story = json.load(f)
+                            title = story.get('title', 'output_video')
+                    except Exception as e:
+                        logger.warning(f"story.json 읽기 실패: {e}")
+
+                # 안전한 파일명으로 변환
+                safe_title = re.sub(r'[\\/:*?"<>|]', '_', title)
+                output_filename = f"{safe_title}.mp4"
+
                 print("\n" + "=" * 70)
                 print("ℹ️ 개별 씬 파일 생성 완료")
                 print("=" * 70)
                 print(f"📁 폴더: {generated_videos_folder}")
                 print("=" * 70)
+                print(f"📝 예상 파일명: {output_filename}")
+
+                # simple_concat.py 호출
+                try:
+                    script_path = Path(__file__).parent / "simple_concat.py"
+                    cmd = [
+                        sys.executable,
+                        str(script_path),
+                        str(generated_videos_folder),
+                        output_filename
+                    ]
+
+                    concat_result = subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        encoding='utf-8',
+                        errors='ignore',
+                        timeout=600
+                    )
+
+                    if concat_result.stdout:
+                        print(concat_result.stdout)
+
+                    if concat_result.returncode == 0:
+                        final_video_path = generated_videos_folder / output_filename
+                        if final_video_path.exists():
+                            print("\n" + "=" * 70)
+                            print("✓ 최종 영상 생성 완료!")
+                            print("=" * 70)
+                            print(f"📹 파일: {final_video_path}")
+                            print("=" * 70)
+                        else:
+                            raise FileNotFoundError(f"생성된 영상 파일을 찾을 수 없습니다.")
+                    else:
+                        raise RuntimeError(f"simple_concat.py 실패: {concat_result.stderr}")
+
+                except Exception as e:
+                    logger.error(f"❌ 영상 파일 확인 실패: {e}")
+                    sys.exit(1)
             else:
                 logger.warning(f"generated_videos 폴더를 찾을 수 없습니다: {generated_videos_folder}")
     else:
