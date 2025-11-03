@@ -2006,8 +2006,6 @@ def main():
                        help="TTS 음성 (기본: ko-KR-SoonBokNeural)")
     parser.add_argument("--aspect-ratio", "-a", default="9:16", choices=["9:16", "16:9"],
                        help="비디오 비율 (기본: 9:16)")
-    parser.add_argument("--combine", action="store_true",
-                       help="씬별 비디오를 하나로 결합 (기본: 결합 안 함)")
     parser.add_argument("--add-subtitles", "-s", action="store_true", default=True,
                        help="자막 추가 (기본: 추가함, --no-subtitles로 끄기)")
     parser.add_argument("--no-subtitles", action="store_false", dest="add_subtitles",
@@ -2042,8 +2040,8 @@ def main():
         is_admin=args.is_admin
     )
 
-    # 비디오 생성
-    result = asyncio.run(creator.create_all_videos(combine=args.combine))
+    # 비디오 생성 (항상 병합)
+    result = asyncio.run(creator.create_all_videos(combine=True))
 
     if result:
         print("=" * 70)
@@ -2051,88 +2049,6 @@ def main():
         print("=" * 70)
         print(f"출력: {result}")
         print("=" * 70)
-
-        # simple_concat 병합 로직 추가
-        if not args.combine:
-            print("\n" + "=" * 70)
-            print("🔗 씬 병합 시작 (simple_concat)")
-            print("=" * 70)
-
-            # generated_videos 폴더 경로
-            generated_videos_folder = Path(args.folder) / "generated_videos"
-
-            if generated_videos_folder.exists():
-                # story.json에서 제목 추출
-                story_path = Path(args.folder) / "story.json"
-                story_metadata_path = Path(args.folder) / "story_metadata.json"
-
-                title = "output_video"
-                if story_metadata_path.exists():
-                    try:
-                        with open(story_metadata_path, 'r', encoding='utf-8') as f:
-                            metadata = json.load(f)
-                            title = metadata.get('title', 'output_video')
-                    except Exception as e:
-                        logger.warning(f"story_metadata.json 읽기 실패: {e}")
-                elif story_path.exists():
-                    try:
-                        with open(story_path, 'r', encoding='utf-8') as f:
-                            story = json.load(f)
-                            title = story.get('title', 'output_video')
-                    except Exception as e:
-                        logger.warning(f"story.json 읽기 실패: {e}")
-
-                # 안전한 파일명으로 변환
-                safe_title = re.sub(r'[\\/:*?"<>|]', '_', title)
-                output_filename = f"{safe_title}.mp4"
-
-                print("\n" + "=" * 70)
-                print("ℹ️ 개별 씬 파일 생성 완료")
-                print("=" * 70)
-                print(f"📁 폴더: {generated_videos_folder}")
-                print("=" * 70)
-                print(f"📝 예상 파일명: {output_filename}")
-
-                # simple_concat.py 호출
-                try:
-                    script_path = Path(__file__).parent / "simple_concat.py"
-                    cmd = [
-                        sys.executable,
-                        str(script_path),
-                        str(generated_videos_folder),
-                        output_filename
-                    ]
-
-                    concat_result = subprocess.run(
-                        cmd,
-                        capture_output=True,
-                        text=True,
-                        encoding='utf-8',
-                        errors='ignore',
-                        timeout=600
-                    )
-
-                    if concat_result.stdout:
-                        print(concat_result.stdout)
-
-                    if concat_result.returncode == 0:
-                        final_video_path = generated_videos_folder / output_filename
-                        if final_video_path.exists():
-                            print("\n" + "=" * 70)
-                            print("✓ 최종 영상 생성 완료!")
-                            print("=" * 70)
-                            print(f"📹 파일: {final_video_path}")
-                            print("=" * 70)
-                        else:
-                            raise FileNotFoundError(f"생성된 영상 파일을 찾을 수 없습니다.")
-                    else:
-                        raise RuntimeError(f"simple_concat.py 실패: {concat_result.stderr}")
-
-                except Exception as e:
-                    logger.error(f"❌ 영상 파일 확인 실패: {e}")
-                    sys.exit(1)
-            else:
-                logger.warning(f"generated_videos 폴더를 찾을 수 없습니다: {generated_videos_folder}")
     else:
         print("✗ 실패!")
         sys.exit(1)
