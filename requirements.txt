@@ -27,8 +27,11 @@ colorama>=0.4.6
 # Configuration
 pyyaml>=6.0.1
 
-# Google Custom Search (Optional - 하루 100회 무료)
-google-api-python-client>=2.0.0  # Google Custom Search API
+# Google APIs
+google-api-python-client>=2.0.0  # Google Custom Search API & YouTube Data API
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+google-auth>=2.27.0
 
 # Web Interface
 gradio>=4.0.0  # Web UI for file upload

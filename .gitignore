@@ -113,6 +113,10 @@ backup/
 config/secrets.json
 config/api_keys.json
 
+# YouTube API credentials and tokens
+config/youtube_client_secret.json
+config/youtube_token*.json
+
 # Large files
 *.zip
 *.tar.gz
