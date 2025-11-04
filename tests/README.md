@@ -3,10 +3,16 @@
 ## Overview
 
 These regression tests verify core functionality using small test data:
-- **Longform video generation** (2 scenes)
+- **Longform video generation** (2 scenes + concatenation)
+- **Thumbnail generation** (comma preservation, quote removal)
 - **Shortform video generation** (2 scenes)
-- **SORA2 video generation** (1 simple prompt)
-- **Video merge with TTS and subtitles**
+- **SORA2 video generation** (1 simple prompt) - *currently skipped*
+- **Video merge with TTS and subtitles** - *currently skipped*
+- **Process control** (STOP signal detection)
+- **TTS functions** (timestamp formatting, subtitle generation)
+- **File safety** (filename sanitization, Unicode preservation)
+- **Edge cases** (empty text, long text, special characters)
+- **Video quality** (resolution, audio stream detection)
 
 ## Test Data
 
@@ -49,17 +55,35 @@ python -m pytest tests/test_regression.py -v
 
 ### Run specific test class
 ```bash
-# Longform only
+# Longform generation
 python -m pytest tests/test_regression.py::TestLongformGeneration -v
 
-# Shortform only
+# Thumbnail generation
+python -m pytest tests/test_regression.py::TestThumbnailGeneration -v
+
+# Shortform generation
 python -m pytest tests/test_regression.py::TestShortformGeneration -v
 
-# SORA2 only
+# SORA2 (currently skipped)
 python -m pytest tests/test_regression.py::TestSora2Generation -v
 
-# Video merge only
+# Video merge (currently skipped)
 python -m pytest tests/test_regression.py::TestVideoMerge -v
+
+# Process control
+python -m pytest tests/test_regression.py::TestProcessControl -v
+
+# TTS functions
+python -m pytest tests/test_regression.py::TestTTSFunctions -v
+
+# File safety
+python -m pytest tests/test_regression.py::TestFileSafety -v
+
+# Edge cases
+python -m pytest tests/test_regression.py::TestEdgeCases -v
+
+# Video quality
+python -m pytest tests/test_regression.py::TestVideoQuality -v
 ```
 
 ### Run with output displayed
@@ -76,19 +100,39 @@ python tests/test_regression.py
 
 Test outputs are saved to `tests/test_output/`:
 - `longform_test/` - Longform generation outputs
+- `longform_concat_test/` - Longform concatenation test outputs
+- `thumbnail_test/` - Thumbnail generation test outputs
+- `thumbnail_quote_test/` - Quote removal test outputs
 - `shortform_test/` - Shortform generation outputs
-- `sora2_test/` - SORA2 generation outputs
-- `merge_test/` - Video merge outputs
+- `sora2_test/` - SORA2 generation outputs (skipped)
+- `merge_test/` - Video merge outputs (skipped)
+- `process_control_test/` - Process control test outputs
+- `process_controller_init/` - Process controller initialization
+- `subtitle_test/` - Subtitle generation test outputs
+- `edge_case_test/` - Edge case test outputs
 
 **Note**: These folders are kept after test runs for inspection. Delete manually if needed.
 
 ## Success Criteria
 
+### Video Generation Tests
 Each test passes if:
 1. ✅ Script exits with code 0
 2. ✅ Output video file is created
 3. ✅ Video file is valid (can be opened by ffprobe)
 4. ✅ Video has non-zero duration
+
+### Unit Tests
+Each test passes if:
+1. ✅ Function returns expected output
+2. ✅ Edge cases are handled correctly
+3. ✅ Files are created with proper structure
+4. ✅ Unicode and special characters are preserved/sanitized correctly
+
+### Current Test Count
+- **18 tests passing**
+- **2 tests skipped** (SORA2, VideoMerge - require API updates)
+- **0 tests failing**
 
 ## When to Update Tests
 

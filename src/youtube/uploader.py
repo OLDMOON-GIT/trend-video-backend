@@ -202,17 +202,37 @@ class YouTubeUploader:
             video_url = f"https://youtu.be/{video_id}"
             print(f"[INFO] 업로드 완료: {video_url}")
 
-            # 썸네일 업로드
+            # 썸네일 업로드 (재시도 로직 포함)
             if thumbnail_path and thumbnail_path.exists():
-                try:
-                    media = MediaFileUpload(str(thumbnail_path))
-                    self.youtube.thumbnails().set(
-                        videoId=video_id,
-                        media_body=media
-                    ).execute()
-                    print("[INFO] 썸네일 업로드 완료")
-                except Exception as e:
-                    print(f"[WARN] 썸네일 업로드 실패: {e}")
+                import time
+                max_retries = 5
+                retry_delay = 3  # 3초 대기
+
+                # YouTube가 비디오를 인식하도록 초기 대기
+                print("[INFO] 썸네일 업로드 준비 중 (5초 대기)...")
+                time.sleep(5)
+
+                for attempt in range(max_retries):
+                    try:
+                        if attempt > 0:
+                            print(f"[INFO] 썸네일 업로드 재시도 {attempt + 1}/{max_retries} (2초 후)...")
+                            time.sleep(retry_delay)
+
+                        media = MediaFileUpload(str(thumbnail_path))
+                        self.youtube.thumbnails().set(
+                            videoId=video_id,
+                            media_body=media
+                        ).execute()
+                        print("[INFO] 썸네일 업로드 완료")
+                        break
+                    except Exception as e:
+                        error_msg = str(e)
+                        if "videoNotFound" in error_msg and attempt < max_retries - 1:
+                            print(f"[WARN] 비디오 처리 중... 재시도 대기")
+                        elif attempt < max_retries - 1:
+                            print(f"[WARN] 썸네일 업로드 실패 (재시도 예정): {e}")
+                        else:
+                            print(f"[WARN] 썸네일 업로드 최종 실패: {e}")
 
             # 자막 업로드
             if captions_path and captions_path.exists():
