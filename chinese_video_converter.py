@@ -671,7 +671,7 @@ def _remove_watermark_propainter(input_video: Path, output_video: Path, x: int, 
         return False
 
 
-def remove_watermark_ai(input_video: Path, output_video: Path, watermark_region: tuple = None, quality_mode: str = 'lama-vsr', output_dir: Path = None) -> bool:
+def remove_watermark_ai(input_video: Path, output_video: Path, watermark_region: tuple = None, quality_mode: str = 'fast', output_dir: Path = None) -> bool:
     """
     AI 기반 워터마크 제거
 
@@ -680,10 +680,13 @@ def remove_watermark_ai(input_video: Path, output_video: Path, watermark_region:
         output_video: 출력 비디오 경로
         watermark_region: (x, y, w, h) 워터마크 영역, None이면 자동 감지 (하단 중국어 자막)
         quality_mode:
-            - 'sttn' (기본값, 속도와 품질 균형, 빠름)
+            - 'fast' (기본값, OpenCV Telea - 빠르고 안정적)
+            - 'lama-vsr' (LAMA-VSR - 최고 품질, 느림)
+            - 'black' (검은색 박스 - 초고속)
+            - 'lama' (LAMA 인페인팅 - 고품질, 느림)
+            - 'sttn' (STTN - 고품질, 느림)
             - 'e2fgvi' (E2FGVI, 모델 필요)
-            - 'fast' (OpenCV Telea, 가장 빠름)
-            - 'high' (ProPainter, 가장 느림)
+            - 'high' (ProPainter, 최고 품질, 매우 느림)
         output_dir: 작업 디렉토리 (STOP 파일 체크용)
 
     Returns:
@@ -715,9 +718,15 @@ def remove_watermark_ai(input_video: Path, output_video: Path, watermark_region:
             logger.info(f"🤖 워터마크 제거 중 (지정 영역: x={x}, y={y}, w={w}, h={h})")
 
         # 품질 모드에 따른 처리 방법 결정
-        if quality_mode == 'lama-vsr':
+        if quality_mode == 'fast':
+            # OpenCV Telea 인페인팅 (기본값 - 빠르고 안정적)
+            logger.info(f"   방법: OpenCV Inpainting (Telea 알고리즘) - 기본값")
+            # fast 모드는 아래에서 처리됨
+            pass
+
+        elif quality_mode == 'lama-vsr':
             # video-subtitle-remover의 LAMA 사용 (가장 효과적인 자막 제거)
-            logger.info(f"   방법: LAMA-VSR (AI 자막 제거 전용)")
+            logger.info(f"   방법: LAMA-VSR (AI 자막 제거 전용, 고품질)")
             return _remove_subtitle_vsr(input_video, output_video, x, y, w, h, output_dir)
 
         elif quality_mode == 'lama':
@@ -754,8 +763,12 @@ def remove_watermark_ai(input_video: Path, output_video: Path, watermark_region:
         elif quality_mode == 'high':
             logger.info(f"   방법: ProPainter (고품질 AI 인페인팅)")
             return _remove_watermark_propainter(input_video, output_video, x, y, w, h, output_dir)
-        else:  # fast
-            logger.info(f"   방법: OpenCV Inpainting (Telea 알고리즘)")
+
+        # fast 모드 처리 (기본값)
+        if quality_mode == 'fast' or quality_mode not in ['lama-vsr', 'lama', 'black', 'sttn', 'e2fgvi', 'high']:
+            if quality_mode != 'fast':
+                logger.warning(f"⚠️ 알 수 없는 quality_mode: {quality_mode}, 기본값(fast) 사용")
+                logger.info(f"   방법: OpenCV Inpainting (Telea 알고리즘) - 폴백")
 
         # 임시 디렉토리 생성
         temp_dir = Path(tempfile.mkdtemp())
