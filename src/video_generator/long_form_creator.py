@@ -2225,9 +2225,9 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
         from concurrent.futures import ThreadPoolExecutor, as_completed
         import time
 
-        # Determine optimal number of workers (CPU cores - 1, max 4)
+        # Determine optimal number of workers (CPU cores - 1, max 3)
         import os
-        max_workers = min(4, max(1, os.cpu_count() - 1))
+        max_workers = min(3, max(1, os.cpu_count() - 1))
         print(f"   병렬 작업 수: {max_workers} (CPU cores: {os.cpu_count()})")
 
         scene_videos = [None] * len(scene_images)  # Pre-allocate list

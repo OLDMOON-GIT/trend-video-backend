@@ -1400,9 +1400,9 @@ class VideoFromFolderCreator:
         logger.info(f"🎬 비디오 인코더: {self.video_codec} ({encoder_type})")
         logger.info(f"📊 총 {len(scene_data_list)}개 씬 처리 예정")
 
-        # 시스템에 무리 안 가도록 워커 수 제한 (CPU 코어의 75%, 최소 2, 최대 4)
+        # 시스템에 무리 안 가도록 워커 수 제한 (CPU 코어의 75%, 최소 2, 최대 3)
         cpu_count = multiprocessing.cpu_count()
-        max_workers = max(2, min(4, (cpu_count * 3) // 4))
+        max_workers = max(2, min(3, (cpu_count * 3) // 4))
         logger.info(f"⚡ 병렬 처리: {max_workers}개 워커 (CPU 코어: {cpu_count}개)")
         logger.info("=" * 70)
 
@@ -1544,7 +1544,7 @@ class VideoFromFolderCreator:
 
         # ThreadPoolExecutor로 병렬 실행
         loop = asyncio.get_event_loop()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             return await loop.run_in_executor(executor, _run_whisper, str(audio_path))
 
     def _generate_word_timestamps(self, audio_path: Path) -> list:
