@@ -211,6 +211,12 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
     logger.info(f"✅ TTS 생성 완료: {output_path.name}")
     logger.info(f"📝 타임스탬프 수집 완료: {len(subtitle_data)}개 단어")
 
+    # 타임스탬프 샘플 출력 (디버깅)
+    if subtitle_data:
+        logger.info(f"📊 타임스탬프 샘플 (처음 5개):")
+        for i, word in enumerate(subtitle_data[:5]):
+            logger.info(f"   {i+1}. {word['start']:.3f}s ~ {word['end']:.3f}s: '{word['text']}'")
+
     return output_path, subtitle_data
 
 
@@ -232,8 +238,16 @@ def format_ass_timestamp(seconds: float) -> str:
     return f"{hours}:{minutes:02d}:{secs:02d}.{centisecs:02d}"
 
 
-def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars_per_line: int = 22) -> Path:
-    """타임스탬프 데이터에서 ASS 자막 파일 생성 (TTS와 완벽 동기화)"""
+def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars_per_line: int = 22, delay: float = 0.15, min_duration: float = 1.2) -> Path:
+    """타임스탬프 데이터에서 ASS 자막 파일 생성 (TTS와 동기화)
+
+    Args:
+        subtitle_data: TTS 타임스탬프 데이터
+        output_path: 출력 파일 경로
+        max_chars_per_line: 한 줄 최대 글자 수
+        delay: 자막 시작 딜레이 (초) - 음성보다 약간 늦게 표시
+        min_duration: 최소 표시 시간 (초) - 읽기 충분한 시간 보장
+    """
     if not subtitle_data:
         logger.error("❌ 자막 생성 실패: 타임스탬프 데이터가 비어있습니다.")
         return None
@@ -257,9 +271,18 @@ def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars
         # 줄 길이 초과 또는 마지막 단어인 경우
         is_last_word = (i == len(subtitle_data) - 1)
         if len(current_text) >= max_chars_per_line or is_last_word:
+            # 자막 시작/종료 시간 조정
+            start_time = current_start + delay
+            end_time = word_data["end"] + delay
+
+            # 최소 표시 시간 보장
+            duration = end_time - start_time
+            if duration < min_duration:
+                end_time = start_time + min_duration
+
             subtitles.append({
-                "start": current_start,
-                "end": word_data["end"],
+                "start": start_time,
+                "end": end_time,
                 "text": current_text
             })
             current_line = []
