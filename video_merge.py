@@ -108,7 +108,7 @@ def get_ffmpeg_path():
 
 def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
     """
-    FFmpeg를 사용하여 비디오 병합 (재인코딩)
+    FFmpeg를 사용하여 비디오 병합 (filter_complex 방식)
     """
     ffmpeg = get_ffmpeg_path()
     if not ffmpeg:
@@ -119,53 +119,48 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
     for i, path in enumerate(video_paths, 1):
         logger.info(f"   {i}. {path.name}")
 
-    # Concat 파일 생성
-    concat_file = output_path.with_suffix('.txt')
-    with open(concat_file, 'w', encoding='utf-8') as f:
-        for path in video_paths:
-            # Windows 경로를 Unix 스타일로 변환
-            path_str = str(path.resolve()).replace('\\', '/')
-            f.write(f"file '{path_str}'\n")
+    # filter_complex 방식으로 병합 (타임스탬프 문제 해결)
+    # 입력 파일들
+    input_args = []
+    for path in video_paths:
+        input_args.extend(['-i', str(path)])
 
-    # concat 파일 내용 확인
-    logger.info(f"📝 Concat 파일 내용:")
-    with open(concat_file, 'r', encoding='utf-8') as f:
-        logger.info(f.read())
+    # filter_complex 문자열 생성
+    # [0:v][0:a][1:v][1:a]...[n:v][n:a]concat=n=N:v=1:a=1[outv][outa]
+    filter_parts = []
+    for i in range(len(video_paths)):
+        filter_parts.append(f"[{i}:v][{i}:a]")
+    filter_str = "".join(filter_parts) + f"concat=n={len(video_paths)}:v=1:a=1[outv][outa]"
 
-    try:
-        # -c copy 대신 재인코딩 (호환성 문제 방지)
-        cmd = [
-            ffmpeg,
-            '-y',  # 덮어쓰기
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', str(concat_file),
-            '-c:v', 'libx264',  # 비디오 재인코딩
-            '-preset', 'medium',
-            '-crf', '18',  # 고품질
-            '-c:a', 'aac',  # 오디오 재인코딩
-            '-b:a', '192k',
-            str(output_path)
-        ]
+    logger.info(f"🎬 FFmpeg filter_complex 명령 실행 중...")
 
-        logger.info(f"🎬 FFmpeg 명령 실행 중...")
+    cmd = [
+        ffmpeg,
+        '-y',  # 덮어쓰기
+        *input_args,  # 입력 파일들
+        '-filter_complex', filter_str,
+        '-map', '[outv]',
+        '-map', '[outa]',
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-crf', '18',  # 고품질
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        str(output_path)
+    ]
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=600
-        )
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=600
+    )
 
-        if result.returncode != 0:
-            logger.error(f"❌ FFmpeg stderr: {result.stderr}")
-            raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
+    if result.returncode != 0:
+        logger.error(f"❌ FFmpeg stderr: {result.stderr}")
+        raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
 
-        logger.info(f"✅ 비디오 병합 완료: {output_path.name}")
-
-    finally:
-        if concat_file.exists():
-            concat_file.unlink()
+    logger.info(f"✅ 비디오 병합 완료: {output_path.name}")
 
     if not output_path.exists():
         raise RuntimeError(f"출력 비디오가 생성되지 않았습니다: {output_path}")
@@ -350,15 +345,56 @@ def get_video_duration(video_path: Path) -> float:
         return 0.0
 
 
+def get_audio_duration(audio_path: Path) -> float:
+    """FFprobe로 오디오 길이 확인"""
+    ffmpeg = get_ffmpeg_path()
+    if not ffmpeg:
+        raise RuntimeError("FFmpeg not found.")
+
+    ffprobe_path = ffmpeg.replace('ffmpeg', 'ffprobe')
+
+    try:
+        cmd = [
+            ffprobe_path,
+            '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            str(audio_path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        return float(result.stdout.strip())
+    except Exception as e:
+        logger.warning(f"⚠️ 오디오 길이 확인 실패: {e}")
+        return 0.0
+
+
 def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, subtitle_text: str = None, add_subtitles: bool = False) -> Path:
     """
     FFmpeg로 비디오에 오디오 (및 선택적으로 자막) 추가
+    TTS가 짧아도 비디오 전체 길이에 맞춰 무음 추가
     """
     ffmpeg = get_ffmpeg_path()
     if not ffmpeg:
         raise RuntimeError("FFmpeg not found.")
 
     logger.info(f"🔊 비디오에 오디오 추가 중...")
+
+    # 비디오와 오디오 길이 확인
+    video_duration = get_video_duration(video_path)
+    audio_duration = get_audio_duration(audio_path)
+
+    logger.info(f"⏱️ 비디오 길이: {video_duration:.2f}초")
+    logger.info(f"⏱️ 오디오 길이: {audio_duration:.2f}초")
+
+    if audio_duration < video_duration:
+        logger.info(f"⚠️ TTS가 비디오보다 짧습니다. 무음을 추가하여 비디오 길이에 맞춥니다.")
+
+    # 오디오 필터 준비 (오디오가 짧으면 패딩)
+    audio_filter = None
+    if audio_duration < video_duration and audio_duration > 0 and video_duration > 0:
+        # apad 필터로 비디오 길이에 맞춰 무음 추가
+        audio_filter = f"apad=whole_dur={video_duration:.3f}"
+        logger.info(f"🔇 오디오 패딩 필터 적용: {audio_filter}")
 
     # 자막이 있는 경우
     if subtitle_text and add_subtitles:
@@ -411,8 +447,13 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
                     '-c:a', 'aac',
                     '-map', '0:v:0',
                     '-map', '1:a:0',
-                    str(output_path)
                 ]
+
+                # 오디오 필터 추가 (패딩이 필요한 경우)
+                if audio_filter:
+                    cmd.extend(['-af', audio_filter])
+
+                cmd.append(str(output_path))
 
                 logger.info(f"🎬 FFmpeg 명령어 실행 중...")
                 logger.info(f"   자막 필터: ass={ass_path_str}")
@@ -454,8 +495,13 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
             '-c:a', 'aac',   # 오디오는 aac로 인코딩
             '-map', '0:v:0',  # 첫 번째 입력의 비디오
             '-map', '1:a:0',  # 두 번째 입력의 오디오
-            str(output_path)
         ]
+
+        # 오디오 필터 추가 (패딩이 필요한 경우)
+        if audio_filter:
+            cmd.extend(['-af', audio_filter])
+
+        cmd.append(str(output_path))
 
         result = subprocess.run(
             cmd,
@@ -495,8 +541,25 @@ async def main():
 
         video_files = [Path(p) for p in config['video_files']]
 
-        # 파일명으로 명시적 정렬 (순서 보장)
-        video_files.sort(key=lambda p: p.name)
+        # 파일명에 시퀀스 번호가 있는지 확인
+        def extract_sequence(filename: str):
+            """파일명에서 시퀀스 번호 추출 (예: video_001.mp4 -> 1, clip_03.mp4 -> 3)"""
+            match = re.search(r'_(\d+)\.(mp4|mov|avi|mkv)$', filename, re.IGNORECASE)
+            if match:
+                return int(match.group(1))
+            return None
+
+        # 시퀀스 번호가 있는 파일이 하나라도 있는지 확인
+        has_sequence = any(extract_sequence(p.name) is not None for p in video_files)
+
+        if has_sequence:
+            # 시퀀스가 있으면: 시퀀스 번호로 정렬
+            logger.info(f"📋 시퀀스 번호로 정렬")
+            video_files.sort(key=lambda p: (extract_sequence(p.name) or 0, p.name))
+        else:
+            # 시퀀스가 없으면: 파일 생성 시간으로 정렬 (오래된 파일 먼저)
+            logger.info(f"📋 파일 생성 시간으로 정렬 (오래된 파일 먼저)")
+            video_files.sort(key=lambda p: p.stat().st_ctime)
 
         narration_text = config.get('narration_text', '')
         add_subtitles = config.get('add_subtitles', False)
