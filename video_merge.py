@@ -168,6 +168,121 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
     return output_path
 
 
+def align_videos_to_scenes(video_paths: list, scenes: list, whisper_segments: list, output_path: Path) -> Path:
+    """
+    scenes 배열에 맞춰 비디오를 배치 (원본 대본 구조 사용)
+
+    Args:
+        video_paths: 입력 비디오 파일 경로 리스트
+        scenes: scenes 배열 (각 scene은 narration, duration 포함)
+        whisper_segments: Whisper 세그먼트 (전체 타임스탬프)
+        output_path: 출력 비디오 경로
+    """
+    ffmpeg = get_ffmpeg_path()
+    if not ffmpeg:
+        raise RuntimeError("FFmpeg not found. Install FFmpeg or imageio-ffmpeg.")
+
+    logger.info(f"\n🎬 scenes 배열에 맞춰 비디오 배치 중...")
+    logger.info(f"   scenes: {len(scenes)}개")
+    logger.info(f"   비디오: {len(video_paths)}개")
+
+    # scenes와 비디오 매칭
+    video_segments = []
+    current_time = 0.0
+
+    for i, scene in enumerate(scenes):
+        # 비디오 선택 (순차적으로, 마지막 비디오 반복)
+        video_idx = min(i, len(video_paths) - 1)
+        video_path = video_paths[video_idx]
+
+        # scene의 duration 사용 (Whisper 세그먼트에서 실제 길이 계산)
+        scene_narration = scene.get('narration', '')
+        scene_duration = scene.get('duration', 0)
+
+        # Whisper 세그먼트에서 이 scene에 해당하는 구간 찾기
+        scene_start = current_time
+        scene_end = scene_start
+
+        # scene의 narration과 매칭되는 Whisper 세그먼트 찾기
+        for seg in whisper_segments:
+            if seg['start'] >= current_time:
+                if scene_end == scene_start:
+                    scene_end = seg['end']
+                else:
+                    scene_end = seg['end']
+
+                # scene_narration이 seg['text']에 포함되거나 유사하면 계속
+                # 간단하게 시간 기준으로 판단
+                if scene_duration > 0 and (scene_end - scene_start) >= scene_duration * 0.9:
+                    break
+
+        # scene_end가 업데이트되지 않았으면 duration 사용
+        if scene_end == scene_start and scene_duration > 0:
+            scene_end = scene_start + scene_duration
+
+        duration = scene_end - scene_start
+        current_time = scene_end
+
+        video_segments.append({
+            'video_path': video_path,
+            'duration': duration,
+            'scene_text': scene_narration[:30]
+        })
+
+        logger.info(f"   씬 {i+1}: {duration:.2f}초 → {video_path.name}")
+
+    # FFmpeg filter_complex로 각 비디오를 trim하고 concat
+    input_args = []
+    trim_filters = []
+    concat_inputs = []
+
+    for i, vs in enumerate(video_segments):
+        input_args.extend(['-i', str(vs['video_path'])])
+        trim_filters.append(f"[{i}:v]trim=duration={vs['duration']},setpts=PTS-STARTPTS[v{i}]")
+        trim_filters.append(f"[{i}:a]atrim=duration={vs['duration']},asetpts=PTS-STARTPTS[a{i}]")
+        concat_inputs.append(f"[v{i}][a{i}]")
+
+    trim_filter_str = ";".join(trim_filters)
+    concat_input_str = "".join(concat_inputs)
+    concat_filter = f"{concat_input_str}concat=n={len(video_segments)}:v=1:a=1[outv][outa]"
+    filter_complex = f"{trim_filter_str};{concat_filter}"
+
+    logger.info(f"🎬 FFmpeg filter_complex 실행 중...")
+
+    cmd = [
+        ffmpeg,
+        '-y',
+        *input_args,
+        '-filter_complex', filter_complex,
+        '-map', '[outv]',
+        '-map', '[outa]',
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-crf', '23',
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        str(output_path)
+    ]
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=600
+    )
+
+    if result.returncode != 0:
+        logger.error(f"❌ FFmpeg stderr: {result.stderr}")
+        raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
+
+    logger.info(f"✅ scenes 기반 비디오 병합 완료: {output_path.name}")
+
+    if not output_path.exists():
+        raise RuntimeError(f"출력 비디오가 생성되지 않았습니다: {output_path}")
+
+    return output_path
+
+
 def align_videos_to_segments(video_paths: list, segments: list, output_path: Path) -> Path:
     """
     나레이션 세그먼트에 맞춰 비디오를 배치
@@ -843,6 +958,7 @@ async def main():
         add_subtitles = config.get('add_subtitles', False)
         remove_watermark = config.get('remove_watermark', False)
         title = config.get('title', '')  # 대본의 title
+        scenes = config.get('scenes', None)  # scenes 배열 (비디오 배치용)
         output_dir = Path(config['output_dir'])
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -875,9 +991,14 @@ async def main():
                 logger.info(f"   세그먼트 개수: {len(subtitle_data)}개")
                 logger.info(f"   비디오 개수: {len(processed_video_files)}개")
 
-                # 세그먼트에 맞춰 비디오 배치
+                # scenes 배열이 있으면 scenes 기준으로 비디오 배치
                 merged_video = output_dir / 'merged_video.mp4'
-                align_videos_to_segments(processed_video_files, subtitle_data, merged_video)
+                if scenes:
+                    logger.info(f"   📋 scenes 배열 사용: {len(scenes)}개 씬")
+                    align_videos_to_scenes(processed_video_files, scenes, subtitle_data, merged_video)
+                else:
+                    logger.info(f"   📋 Whisper 세그먼트 사용")
+                    align_videos_to_segments(processed_video_files, subtitle_data, merged_video)
 
                 # 비디오에 오디오 + 자막 추가
                 final_with_audio = output_dir / 'final_with_narration.mp4'
