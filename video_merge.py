@@ -402,15 +402,15 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
         logger.info(f"📝 자막 텍스트 길이: {len(subtitle_text)}자")
         logger.info(f"📝 자막 텍스트 미리보기: {subtitle_text[:100]}...")
 
-        # 비디오 길이 확인
-        duration = get_video_duration(video_path)
-        logger.info(f"⏱️ 비디오 길이: {duration}초")
+        # TTS 오디오 길이 기준으로 자막 생성 (TTS와 동기화)
+        duration = audio_duration if audio_duration > 0 else get_video_duration(video_path)
+        logger.info(f"⏱️ 자막 기준 길이: {duration}초 (TTS 오디오 기준)")
 
         if duration == 0:
-            logger.warning("⚠️ 비디오 길이를 확인할 수 없어 자막을 건너뜁니다.")
+            logger.warning("⚠️ 오디오/비디오 길이를 확인할 수 없어 자막을 건너뜁니다.")
             subtitle_text = None
         else:
-            # ASS 자막 파일 생성 (롱폼 방식)
+            # ASS 자막 파일 생성 (롱폼 방식 - TTS와 동기화)
             temp_path = video_path.parent / f"{video_path.stem}_temp.srt"
             ass_path = create_ass_from_text(subtitle_text, duration, temp_path)
 
