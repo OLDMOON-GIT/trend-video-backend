@@ -386,14 +386,20 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
     logger.info(f"⏱️ 비디오 길이: {video_duration:.2f}초")
     logger.info(f"⏱️ 오디오 길이: {audio_duration:.2f}초")
 
-    if audio_duration < video_duration:
-        logger.info(f"⚠️ TTS가 비디오보다 짧습니다. 무음을 추가하여 비디오 길이에 맞춥니다.")
-
-    # 오디오 필터 준비 (오디오가 짧으면 패딩)
+    # 비디오와 오디오 길이 비교하여 필터 준비
+    video_filter = None
     audio_filter = None
-    if audio_duration < video_duration and audio_duration > 0 and video_duration > 0:
-        # apad 필터로 비디오 길이에 맞춰 무음 추가
+
+    if video_duration < audio_duration:
+        # 비디오가 짧으면: 마지막 프레임을 freeze하여 오디오 길이에 맞춤
+        freeze_duration = audio_duration - video_duration
+        video_filter = f"tpad=stop_mode=clone:stop_duration={freeze_duration:.3f}"
+        logger.info(f"⚠️ 비디오가 TTS보다 짧습니다. 마지막 프레임을 {freeze_duration:.2f}초 freeze합니다.")
+        logger.info(f"🎬 비디오 패딩 필터 적용: {video_filter}")
+    elif audio_duration < video_duration:
+        # 오디오가 짧으면: 무음 추가하여 비디오 길이에 맞춤
         audio_filter = f"apad=whole_dur={video_duration:.3f}"
+        logger.info(f"⚠️ TTS가 비디오보다 짧습니다. 무음을 추가하여 비디오 길이에 맞춥니다.")
         logger.info(f"🔇 오디오 패딩 필터 적용: {audio_filter}")
 
     # 자막이 있는 경우
@@ -432,15 +438,22 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
                 # Windows 경로를 FFmpeg 호환 경로로 변환 (롱폼 방식)
                 ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
 
+                # 비디오 필터 생성 (tpad + ass 결합)
+                vf_parts = []
+                if video_filter:
+                    vf_parts.append(video_filter)
+                vf_parts.append(f"ass={ass_path_str}")
+                vf_combined = ",".join(vf_parts)
+
                 # FFmpeg 명령어 (ASS 자막 포함)
-                # 비디오 길이에 맞추고, 오디오가 짧으면 나머지는 무음
+                # 비디오 길이를 TTS에 맞추고, 오디오가 짧으면 나머지는 무음
                 # 주의: -vf 사용 시 비디오 재인코딩 필요 (자막을 비디오에 오버레이)
                 cmd = [
                     ffmpeg,
                     '-y',
                     '-i', str(video_path),
                     '-i', str(audio_path),
-                    '-vf', f"ass={ass_path_str}",
+                    '-vf', vf_combined,
                     '-c:v', 'libx264',  # 자막 오버레이를 위해 재인코딩 필요
                     '-preset', 'medium',
                     '-crf', '23',
@@ -491,11 +504,24 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
             '-y',
             '-i', str(video_path),
             '-i', str(audio_path),
-            '-c:v', 'copy',  # 비디오는 복사
+        ]
+
+        # 비디오 필터가 있으면 재인코딩 필요
+        if video_filter:
+            cmd.extend([
+                '-vf', video_filter,
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', '23',
+            ])
+        else:
+            cmd.extend(['-c:v', 'copy'])  # 비디오는 복사
+
+        cmd.extend([
             '-c:a', 'aac',   # 오디오는 aac로 인코딩
             '-map', '0:v:0',  # 첫 번째 입력의 비디오
             '-map', '1:a:0',  # 두 번째 입력의 오디오
-        ]
+        ])
 
         # 오디오 필터 추가 (패딩이 필요한 경우)
         if audio_filter:
