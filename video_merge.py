@@ -238,55 +238,85 @@ def format_ass_timestamp(seconds: float) -> str:
     return f"{hours}:{minutes:02d}:{secs:02d}.{centisecs:02d}"
 
 
-def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars_per_line: int = 22, delay: float = 0.15, min_duration: float = 1.2) -> Path:
-    """타임스탬프 데이터에서 ASS 자막 파일 생성 (TTS와 동기화)
+def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars_per_line: int = 30) -> Path:
+    """타임스탬프 데이터에서 ASS 자막 파일 생성 (롱폼 스타일 - 문장 단위)
 
     Args:
         subtitle_data: TTS 타임스탬프 데이터
         output_path: 출력 파일 경로
         max_chars_per_line: 한 줄 최대 글자 수
-        delay: 자막 시작 딜레이 (초) - 음성보다 약간 늦게 표시
-        min_duration: 최소 표시 시간 (초) - 읽기 충분한 시간 보장
     """
     if not subtitle_data:
         logger.error("❌ 자막 생성 실패: 타임스탬프 데이터가 비어있습니다.")
         return None
 
-    # 단어들을 한 줄씩 그룹화 (max_chars_per_line 기준)
-    subtitles = []
-    current_line = []
-    current_start = None
+    # 전체 텍스트 조합
+    full_text = " ".join([w["text"] for w in subtitle_data])
 
-    for i, word_data in enumerate(subtitle_data):
-        word_text = word_data["text"].strip()
-        if not word_text:
+    # 문장 단위로 분리 (롱폼 방식)
+    import re
+    sentences = re.split(r'([.!?。！？])\s*', full_text)
+
+    # 분리된 구두점을 앞 문장에 붙이기
+    combined_sentences = []
+    for i in range(0, len(sentences)-1, 2):
+        if i+1 < len(sentences):
+            combined_sentences.append((sentences[i] + sentences[i+1]).strip())
+
+    # 마지막 문장 처리
+    if len(sentences) % 2 == 1 and sentences[-1].strip():
+        combined_sentences.append(sentences[-1].strip())
+
+    if not combined_sentences:
+        combined_sentences = [full_text.strip()]
+
+    # 각 문장에 해당하는 타임스탬프 범위 찾기
+    subtitles = []
+    word_index = 0
+
+    for sentence in combined_sentences:
+        if not sentence:
             continue
 
-        if current_start is None:
-            current_start = word_data["start"]
+        # 문장에 포함된 단어 개수 계산
+        sentence_words = sentence.split()
+        if not sentence_words:
+            continue
 
-        current_line.append(word_text)
-        current_text = " ".join(current_line)
+        # 이 문장의 첫 단어와 마지막 단어의 타임스탬프 찾기
+        start_time = None
+        end_time = None
 
-        # 줄 길이 초과 또는 마지막 단어인 경우
-        is_last_word = (i == len(subtitle_data) - 1)
-        if len(current_text) >= max_chars_per_line or is_last_word:
-            # 자막 시작/종료 시간 조정
-            start_time = current_start + delay
-            end_time = word_data["end"] + delay
+        matched_words = 0
+        temp_word_index = word_index
 
-            # 최소 표시 시간 보장
-            duration = end_time - start_time
-            if duration < min_duration:
-                end_time = start_time + min_duration
+        while matched_words < len(sentence_words) and temp_word_index < len(subtitle_data):
+            word_data = subtitle_data[temp_word_index]
 
+            if start_time is None:
+                start_time = word_data["start"]
+
+            end_time = word_data["end"]
+            temp_word_index += 1
+            matched_words += 1
+
+        word_index = temp_word_index
+
+        if start_time is not None and end_time is not None:
             subtitles.append({
                 "start": start_time,
                 "end": end_time,
-                "text": current_text
+                "text": sentence
             })
-            current_line = []
-            current_start = None
+
+    logger.info(f"📝 문장 단위 자막 생성: {len(subtitles)}개 문장")
+
+    # 자막 샘플 로그 (디버깅)
+    if subtitles:
+        logger.info(f"📊 자막 샘플 (처음 3개 문장):")
+        for i, sub in enumerate(subtitles[:3]):
+            duration = sub['end'] - sub['start']
+            logger.info(f"   {i+1}. {sub['start']:.3f}s ~ {sub['end']:.3f}s ({duration:.3f}초): '{sub['text'][:50]}...'")
 
     # ASS 파일 작성
     ass_path = output_path.with_suffix('.ass')
