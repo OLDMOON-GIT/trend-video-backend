@@ -54,11 +54,16 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
 
         print(f"{Fore.GREEN}[INFO] Launching browser...{Style.RESET_ALL}\n")
 
-        # Use persistent context to save login sessions (same profile as other scripts)
-        automation_profile = os.path.join(os.getcwd(), '.chrome-automation-profile')
+        # Use persistent context to save login sessions (same profile as setup_login.py)
+        # 스크립트 위치 기준으로 프로젝트 루트 찾기 (trend-video-backend)
+        script_dir = os.path.dirname(os.path.abspath(__file__))  # src/ai_aggregator
+        project_root = os.path.dirname(os.path.dirname(script_dir))  # trend-video-backend
+        automation_profile = os.path.join(project_root, '.chrome-automation-profile')
         pathlib.Path(automation_profile).mkdir(exist_ok=True)
 
-        print(f"{Fore.CYAN}[INFO] Chrome 프로필 사용: {automation_profile}{Style.RESET_ALL}")
+        # 절대 경로 출력
+        print(f"{Fore.CYAN}[INFO] 프로젝트 루트: {project_root}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}[INFO] Chrome 프로필 경로: {automation_profile}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}[INFO] 저장된 로그인 세션 사용 (로그인 안 되어 있으면 수동 로그인 필요){Style.RESET_ALL}\n")
 
         # Chrome 프로필 잠금 파일 제거 (충돌 방지)
@@ -77,6 +82,7 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
                 print(f"{Fore.YELLOW}[WARN] 잠금 파일 제거 실패: {lock_file} - {e}{Style.RESET_ALL}")
 
         try:
+            print(f"{Fore.CYAN}[INFO] Chrome 브라우저 실행 시도 (channel='chrome')...{Style.RESET_ALL}")
             context = await p.chromium.launch_persistent_context(
                 automation_profile,
                 headless=headless,
@@ -95,8 +101,11 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
                 timeout=60000,
                 viewport=None  # 최대화
             )
+            print(f"{Fore.GREEN}[INFO] ✅ Chrome 브라우저 실행 성공!{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}[INFO] 브라우저 타입: Chrome (실제 Chrome 사용){Style.RESET_ALL}\n")
         except Exception as e:
-            print(f"{Fore.YELLOW}[WARN] Could not launch Chrome, using Chromium: {e}{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}[WARN] Chrome 실행 실패, Chromium으로 대체: {e}{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}[INFO] Chromium 브라우저 실행 시도...{Style.RESET_ALL}")
             context = await p.chromium.launch_persistent_context(
                 automation_profile,
                 headless=headless,
@@ -112,6 +121,8 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
                 ignore_https_errors=True,
                 timeout=60000,
             )
+            print(f"{Fore.GREEN}[INFO] ✅ Chromium 브라우저 실행 성공!{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}[INFO] 브라우저 타입: Chromium (Playwright 내장){Style.RESET_ALL}\n")
 
         # Remove navigator.webdriver flag
         await context.add_init_script("""
@@ -136,8 +147,10 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
         # No skip login - always check login status
         skip_login = False
 
+        print(f"{Fore.CYAN}[INFO] Agent 생성 중...{Style.RESET_ALL}")
         for agent_name in agents_to_use:
             if agent_name.lower() in agent_map:
+                print(f"{Fore.CYAN}[INFO] - {agent_name} Agent 생성 (동일한 Chrome context 사용){Style.RESET_ALL}")
                 agents.append(agent_map[agent_name.lower()](context, headless, skip_login))
 
         if not agents:
@@ -145,7 +158,9 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
             await context.close()
             return
 
-        print(f"{Fore.YELLOW}Selected agents:{Style.RESET_ALL} {', '.join([a.get_name() for a in agents])}\n")
+        print(f"{Fore.GREEN}[INFO] ✅ Agent 생성 완료!{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Selected agents:{Style.RESET_ALL} {', '.join([a.get_name() for a in agents])}")
+        print(f"{Fore.YELLOW}모든 Agent는 동일한 Chrome 프로필을 공유합니다: {abs_profile_path}{Style.RESET_ALL}\n")
 
         # Phase 1: Open tabs sequentially and send questions
         print(f"{Fore.CYAN}[*] Opening tabs and sending questions sequentially...{Style.RESET_ALL}\n")
