@@ -177,6 +177,10 @@ def align_videos_to_segments(video_paths: list, segments: list, output_path: Pat
         segments: Whisper 세그먼트 리스트 (각 세그먼트는 start, end, text 포함)
         output_path: 출력 비디오 경로
     """
+    ffmpeg = get_ffmpeg_path()
+    if not ffmpeg:
+        raise RuntimeError("FFmpeg not found. Install FFmpeg or imageio-ffmpeg.")
+
     logger.info(f"\n🎬 세그먼트에 맞춰 비디오 배치 중...")
     logger.info(f"   세그먼트: {len(segments)}개")
     logger.info(f"   비디오: {len(video_paths)}개")
