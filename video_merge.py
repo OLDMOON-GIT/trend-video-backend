@@ -168,9 +168,55 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
     return output_path
 
 
+def transcribe_audio_with_whisper(audio_path: Path, original_text: str) -> list:
+    """
+    Whisper로 오디오를 인식해서 정확한 타임스탬프 얻기 (롱폼 방식)
+    """
+    try:
+        import whisper
+        import numpy as np
+
+        logger.info(f"🎧 Whisper로 오디오 인식 중...")
+
+        # Whisper 모델 로드 (base 모델 사용)
+        model = whisper.load_model("base")
+
+        # 오디오 인식
+        result = model.transcribe(
+            str(audio_path),
+            language="ko",
+            verbose=False
+        )
+
+        # 세그먼트를 subtitle_data 형식으로 변환
+        subtitle_data = []
+        for segment in result["segments"]:
+            subtitle_data.append({
+                "start": segment["start"],
+                "end": segment["end"],
+                "text": segment["text"].strip()
+            })
+
+        logger.info(f"✅ Whisper 인식 완료: {len(subtitle_data)}개 세그먼트")
+
+        # 타임스탬프 샘플 출력
+        if subtitle_data:
+            logger.info(f"📊 타임스탬프 샘플 (처음 3개):")
+            for i, seg in enumerate(subtitle_data[:3]):
+                duration = seg['end'] - seg['start']
+                logger.info(f"   {i+1}. {seg['start']:.3f}s ~ {seg['end']:.3f}s ({duration:.3f}초): '{seg['text']}'")
+
+        return subtitle_data
+
+    except Exception as e:
+        logger.warning(f"⚠️ Whisper 인식 실패: {e}")
+        logger.warning(f"   WordBoundary 타임스탬프로 대체합니다.")
+        return None
+
+
 async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNeural"):
     """
-    Edge TTS로 음성 생성 (타임스탬프 포함)
+    Edge TTS로 음성 생성 후 Whisper로 정확한 타임스탬프 얻기
     Returns: (audio_path, subtitle_data)
     """
     try:
@@ -185,37 +231,22 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
     if not clean_text:
         raise ValueError("나레이션 텍스트가 비어있습니다.")
 
-    # Edge TTS로 음성 생성 + 타임스탬프 수집
+    # Edge TTS로 음성만 생성 (타임스탬프는 Whisper에서 얻음)
     communicate = edge_tts.Communicate(clean_text, voice)
-    subtitle_data = []
 
     with open(output_path, "wb") as audio_file:
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 audio_file.write(chunk["data"])
-            elif chunk["type"] == "WordBoundary":
-                # WordBoundary에서 직접 타임스탬프 수집
-                offset = chunk["offset"]  # 100ns 단위
-                duration = chunk["duration"]  # 100ns 단위
-                word_text = chunk["text"]
-
-                start_sec = offset / 10_000_000  # 100ns -> seconds
-                end_sec = (offset + duration) / 10_000_000
-
-                subtitle_data.append({
-                    "start": start_sec,
-                    "end": end_sec,
-                    "text": word_text
-                })
 
     logger.info(f"✅ TTS 생성 완료: {output_path.name}")
-    logger.info(f"📝 타임스탬프 수집 완료: {len(subtitle_data)}개 단어")
 
-    # 타임스탬프 샘플 출력 (디버깅)
-    if subtitle_data:
-        logger.info(f"📊 타임스탬프 샘플 (처음 5개):")
-        for i, word in enumerate(subtitle_data[:5]):
-            logger.info(f"   {i+1}. {word['start']:.3f}s ~ {word['end']:.3f}s: '{word['text']}'")
+    # Whisper로 오디오 인식해서 정확한 타임스탬프 얻기
+    subtitle_data = transcribe_audio_with_whisper(output_path, clean_text)
+
+    # Whisper 실패 시 빈 리스트 반환 (자막 없이 진행)
+    if subtitle_data is None:
+        subtitle_data = []
 
     return output_path, subtitle_data
 
@@ -239,84 +270,26 @@ def format_ass_timestamp(seconds: float) -> str:
 
 
 def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars_per_line: int = 30) -> Path:
-    """타임스탬프 데이터에서 ASS 자막 파일 생성 (롱폼 스타일 - 문장 단위)
+    """Whisper 세그먼트 데이터에서 ASS 자막 파일 생성
 
     Args:
-        subtitle_data: TTS 타임스탬프 데이터
+        subtitle_data: Whisper 세그먼트 데이터 (이미 문장 단위로 분리됨)
         output_path: 출력 파일 경로
-        max_chars_per_line: 한 줄 최대 글자 수
+        max_chars_per_line: 한 줄 최대 글자 수 (현재 미사용)
     """
     if not subtitle_data:
         logger.error("❌ 자막 생성 실패: 타임스탬프 데이터가 비어있습니다.")
         return None
 
-    # 전체 텍스트 조합
-    full_text = " ".join([w["text"] for w in subtitle_data])
-
-    # 문장 단위로 분리 (롱폼 방식)
-    import re
-    sentences = re.split(r'([.!?。！？])\s*', full_text)
-
-    # 분리된 구두점을 앞 문장에 붙이기
-    combined_sentences = []
-    for i in range(0, len(sentences)-1, 2):
-        if i+1 < len(sentences):
-            combined_sentences.append((sentences[i] + sentences[i+1]).strip())
-
-    # 마지막 문장 처리
-    if len(sentences) % 2 == 1 and sentences[-1].strip():
-        combined_sentences.append(sentences[-1].strip())
-
-    if not combined_sentences:
-        combined_sentences = [full_text.strip()]
-
-    # 각 문장에 해당하는 타임스탬프 범위 찾기
-    subtitles = []
-    word_index = 0
-
-    for sentence in combined_sentences:
-        if not sentence:
-            continue
-
-        # 문장에 포함된 단어 개수 계산
-        sentence_words = sentence.split()
-        if not sentence_words:
-            continue
-
-        # 이 문장의 첫 단어와 마지막 단어의 타임스탬프 찾기
-        start_time = None
-        end_time = None
-
-        matched_words = 0
-        temp_word_index = word_index
-
-        while matched_words < len(sentence_words) and temp_word_index < len(subtitle_data):
-            word_data = subtitle_data[temp_word_index]
-
-            if start_time is None:
-                start_time = word_data["start"]
-
-            end_time = word_data["end"]
-            temp_word_index += 1
-            matched_words += 1
-
-        word_index = temp_word_index
-
-        if start_time is not None and end_time is not None:
-            subtitles.append({
-                "start": start_time,
-                "end": end_time,
-                "text": sentence
-            })
-
-    logger.info(f"📝 문장 단위 자막 생성: {len(subtitles)}개 문장")
+    # Whisper 세그먼트를 그대로 사용 (이미 문장 단위로 분리됨)
+    logger.info(f"📝 Whisper 세그먼트 기반 자막 생성: {len(subtitle_data)}개 세그먼트")
 
     # 자막 샘플 로그 (디버깅)
-    if subtitles:
-        logger.info(f"📊 자막 샘플 (처음 3개 문장):")
-        for i, sub in enumerate(subtitles[:3]):
+    if subtitle_data:
+        logger.info(f"📊 자막 샘플 (처음 3개):")
+        for i, sub in enumerate(subtitle_data[:3]):
             duration = sub['end'] - sub['start']
-            logger.info(f"   {i+1}. {sub['start']:.3f}s ~ {sub['end']:.3f}s ({duration:.3f}초): '{sub['text'][:50]}...'")
+            logger.info(f"   {i+1}. {sub['start']:.3f}s ~ {sub['end']:.3f}s ({duration:.3f}초): '{sub['text'][:50]}'")
 
     # ASS 파일 작성
     ass_path = output_path.with_suffix('.ass')
@@ -339,13 +312,13 @@ def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars
         f.write("[Events]\n")
         f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
 
-        for sub in subtitles:
+        for sub in subtitle_data:
             start_time = format_ass_timestamp(sub["start"])
             end_time = format_ass_timestamp(sub["end"])
             text = sub["text"]
             f.write(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text}\n")
 
-    logger.info(f"✅ ASS 자막 파일 생성 완료: {ass_path} ({len(subtitles)}개 라인)")
+    logger.info(f"✅ ASS 자막 파일 생성 완료: {ass_path} ({len(subtitle_data)}개 라인)")
     return ass_path
 
 
