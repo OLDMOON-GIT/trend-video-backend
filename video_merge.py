@@ -175,7 +175,6 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
     """
     try:
         import edge_tts
-        from edge_tts import SubMaker
     except ImportError:
         raise ImportError("edge-tts가 설치되지 않았습니다. pip install edge-tts 를 실행하세요.")
 
@@ -188,34 +187,28 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
 
     # Edge TTS로 음성 생성 + 타임스탬프 수집
     communicate = edge_tts.Communicate(clean_text, voice)
-    submaker = SubMaker()
+    subtitle_data = []
 
     with open(output_path, "wb") as audio_file:
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 audio_file.write(chunk["data"])
             elif chunk["type"] == "WordBoundary":
-                submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
+                # WordBoundary에서 직접 타임스탬프 수집
+                offset = chunk["offset"]  # 100ns 단위
+                duration = chunk["duration"]  # 100ns 단위
+                word_text = chunk["text"]
+
+                start_sec = offset / 10_000_000  # 100ns -> seconds
+                end_sec = (offset + duration) / 10_000_000
+
+                subtitle_data.append({
+                    "start": start_sec,
+                    "end": end_sec,
+                    "text": word_text
+                })
 
     logger.info(f"✅ TTS 생성 완료: {output_path.name}")
-
-    # 자막 데이터 반환 (offset은 100ns 단위이므로 초로 변환)
-    subtitle_data = []
-
-    # SubMaker에서 자막 생성
-    subs = submaker.generate_subs()
-
-    for sub in subs:
-        # sub 형식: (offset, duration, text) 튜플
-        start_sec = sub[0] / 10_000_000  # 100ns -> seconds
-        end_sec = (sub[0] + sub[1]) / 10_000_000
-        text = sub[2]
-        subtitle_data.append({
-            "start": start_sec,
-            "end": end_sec,
-            "text": text
-        })
-
     logger.info(f"📝 타임스탬프 수집 완료: {len(subtitle_data)}개 단어")
 
     return output_path, subtitle_data
