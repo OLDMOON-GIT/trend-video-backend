@@ -172,10 +172,13 @@ def align_videos_to_scenes(video_paths: list, scenes: list, whisper_segments: li
     """
     scenes 배열에 맞춰 비디오를 배치 (원본 대본 구조 사용)
 
+    간단하게: scene 1 → video 1, scene 2 → video 2 ...
+    각 scene의 narration 시간만큼 해당 비디오 사용
+
     Args:
         video_paths: 입력 비디오 파일 경로 리스트
         scenes: scenes 배열 (각 scene은 narration, duration 포함)
-        whisper_segments: Whisper 세그먼트 (전체 타임스탬프)
+        whisper_segments: Whisper 세그먼트 (자막용, 비디오 배치에는 사용 안 함)
         output_path: 출력 비디오 경로
     """
     ffmpeg = get_ffmpeg_path()
@@ -186,12 +189,12 @@ def align_videos_to_scenes(video_paths: list, scenes: list, whisper_segments: li
     logger.info(f"   scenes: {len(scenes)}개")
     logger.info(f"   비디오: {len(video_paths)}개")
 
-    # scenes와 비디오 매칭
+    # scenes와 비디오 매칭 - 간단하게!
     video_segments = []
-    segment_idx = 0  # Whisper segments 인덱스
+    cumulative_time = 0.0
 
     for i, scene in enumerate(scenes):
-        # 비디오 선택 (순차적으로, 마지막 비디오 반복)
+        # scene 1 → video 1, scene 2 → video 2, ...
         video_idx = min(i, len(video_paths) - 1)
         video_path = video_paths[video_idx]
 
@@ -202,49 +205,33 @@ def align_videos_to_scenes(video_paths: list, scenes: list, whisper_segments: li
             logger.warning(f"   씬 {i+1}: 나레이션이 비어있음, 건너뜀")
             continue
 
-        # 이 scene의 narration에 해당하는 Whisper segments 찾기
-        matched_segments = []
-        scene_narration_words = scene_narration.split()
-        accumulated_text = ""
+        # scene의 narration에 해당하는 Whisper segments의 실제 시간 찾기
+        # Whisper segments에서 현재 cumulative_time부터 시작하는 segments를 찾아서
+        # 이 scene의 narration이 끝날 때까지의 실제 시간 계산
+        scene_start_time = cumulative_time
+        scene_end_time = scene_start_time
 
-        # 현재 segment_idx부터 시작하여 scene_narration과 매칭되는 segments 찾기
-        temp_idx = segment_idx
-        while temp_idx < len(whisper_segments):
-            seg = whisper_segments[temp_idx]
-            accumulated_text += " " + seg['text'].strip()
-            matched_segments.append(seg)
+        for seg in whisper_segments:
+            if seg['start'] >= cumulative_time:
+                if scene_end_time == scene_start_time:
+                    scene_start_time = seg['start']
+                scene_end_time = seg['end']
 
-            # scene_narration의 충분한 부분이 매칭되었는지 확인
-            # (단어 수 기준으로 80% 이상 또는 시간 기준으로 scene_duration에 근접)
-            if len(matched_segments) > 0:
-                matched_duration = matched_segments[-1]['end'] - matched_segments[0]['start']
-                # scene_duration이 있으면 그것과 비교, 없으면 텍스트 길이로 판단
-                if scene_duration > 0:
-                    if matched_duration >= scene_duration * 0.8:
-                        break
-                else:
-                    # 텍스트 길이로 판단 (scene narration의 50% 이상 포함되면)
-                    if len(accumulated_text.split()) >= len(scene_narration_words) * 0.5:
-                        break
+                # 이 scene의 예상 duration에 도달하면 중단
+                if (scene_end_time - scene_start_time) >= scene_duration * 0.9:
+                    break
 
-            temp_idx += 1
-
-        # 매칭된 segments가 없으면 scene_duration 사용
-        if matched_segments:
-            scene_start = matched_segments[0]['start']
-            scene_end = matched_segments[-1]['end']
-            duration = scene_end - scene_start
-            segment_idx = temp_idx + 1  # 다음 scene은 다음 segment부터 시작
+        # 실제 사용할 duration
+        if scene_end_time > scene_start_time:
+            duration = scene_end_time - scene_start_time
+            cumulative_time = scene_end_time
         elif scene_duration > 0:
-            # 매칭 실패, duration만 사용
-            if video_segments:
-                scene_start = video_segments[-1]['duration']
-            else:
-                scene_start = 0
             duration = scene_duration
+            cumulative_time += scene_duration
         else:
-            logger.warning(f"   씬 {i+1}: 매칭 실패, 기본 3초 사용")
+            logger.warning(f"   씬 {i+1}: duration을 찾을 수 없음, 3초 사용")
             duration = 3.0
+            cumulative_time += 3.0
 
         video_segments.append({
             'video_path': video_path,
@@ -252,7 +239,7 @@ def align_videos_to_scenes(video_paths: list, scenes: list, whisper_segments: li
             'scene_text': scene_narration[:30]
         })
 
-        logger.info(f"   씬 {i+1}: {duration:.2f}초 → {video_path.name} (나레이션: {scene_narration[:40]}...)")
+        logger.info(f"   씬 {i+1}: {duration:.2f}초 → {video_path.name}")
 
     # FFmpeg filter_complex로 각 비디오를 trim하고 concat
     input_args = []
