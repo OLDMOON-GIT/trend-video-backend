@@ -201,7 +201,12 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
 
     # 자막 데이터 반환 (offset은 100ns 단위이므로 초로 변환)
     subtitle_data = []
-    for sub in submaker.subs:
+
+    # SubMaker에서 자막 생성
+    subs = submaker.generate_subs()
+
+    for sub in subs:
+        # sub 형식: (offset, duration, text) 튜플
         start_sec = sub[0] / 10_000_000  # 100ns -> seconds
         end_sec = (sub[0] + sub[1]) / 10_000_000
         text = sub[2]
