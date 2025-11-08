@@ -160,7 +160,7 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
 
         print(f"{Fore.GREEN}[INFO] ✅ Agent 생성 완료!{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}Selected agents:{Style.RESET_ALL} {', '.join([a.get_name() for a in agents])}")
-        print(f"{Fore.YELLOW}모든 Agent는 동일한 Chrome 프로필을 공유합니다: {abs_profile_path}{Style.RESET_ALL}\n")
+        print(f"{Fore.YELLOW}모든 Agent는 동일한 Chrome 프로필을 공유합니다: {automation_profile}{Style.RESET_ALL}\n")
 
         # Phase 1: Open tabs sequentially and send questions
         print(f"{Fore.CYAN}[*] Opening tabs and sending questions sequentially...{Style.RESET_ALL}\n")
