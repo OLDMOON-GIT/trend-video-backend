@@ -168,12 +168,14 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
     return output_path
 
 
-async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNeural") -> Path:
+async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNeural"):
     """
-    Edge TTS로 음성 생성
+    Edge TTS로 음성 생성 (타임스탬프 포함)
+    Returns: (audio_path, subtitle_data)
     """
     try:
         import edge_tts
+        from edge_tts import SubMaker
     except ImportError:
         raise ImportError("edge-tts가 설치되지 않았습니다. pip install edge-tts 를 실행하세요.")
 
@@ -184,12 +186,34 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
     if not clean_text:
         raise ValueError("나레이션 텍스트가 비어있습니다.")
 
-    # Edge TTS로 음성 생성
+    # Edge TTS로 음성 생성 + 타임스탬프 수집
     communicate = edge_tts.Communicate(clean_text, voice)
-    await communicate.save(str(output_path))
+    submaker = SubMaker()
+
+    with open(output_path, "wb") as audio_file:
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_file.write(chunk["data"])
+            elif chunk["type"] == "WordBoundary":
+                submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
 
     logger.info(f"✅ TTS 생성 완료: {output_path.name}")
-    return output_path
+
+    # 자막 데이터 반환 (offset은 100ns 단위이므로 초로 변환)
+    subtitle_data = []
+    for sub in submaker.subs:
+        start_sec = sub[0] / 10_000_000  # 100ns -> seconds
+        end_sec = (sub[0] + sub[1]) / 10_000_000
+        text = sub[2]
+        subtitle_data.append({
+            "start": start_sec,
+            "end": end_sec,
+            "text": text
+        })
+
+    logger.info(f"📝 타임스탬프 수집 완료: {len(subtitle_data)}개 단어")
+
+    return output_path, subtitle_data
 
 
 def format_srt_time(seconds: float) -> str:
@@ -208,6 +232,70 @@ def format_ass_timestamp(seconds: float) -> str:
     secs = int(seconds % 60)
     centisecs = int((seconds % 1) * 100)
     return f"{hours}:{minutes:02d}:{secs:02d}.{centisecs:02d}"
+
+
+def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars_per_line: int = 22) -> Path:
+    """타임스탬프 데이터에서 ASS 자막 파일 생성 (TTS와 완벽 동기화)"""
+    if not subtitle_data:
+        logger.error("❌ 자막 생성 실패: 타임스탬프 데이터가 비어있습니다.")
+        return None
+
+    # 단어들을 한 줄씩 그룹화 (max_chars_per_line 기준)
+    subtitles = []
+    current_line = []
+    current_start = None
+
+    for i, word_data in enumerate(subtitle_data):
+        word_text = word_data["text"].strip()
+        if not word_text:
+            continue
+
+        if current_start is None:
+            current_start = word_data["start"]
+
+        current_line.append(word_text)
+        current_text = " ".join(current_line)
+
+        # 줄 길이 초과 또는 마지막 단어인 경우
+        is_last_word = (i == len(subtitle_data) - 1)
+        if len(current_text) >= max_chars_per_line or is_last_word:
+            subtitles.append({
+                "start": current_start,
+                "end": word_data["end"],
+                "text": current_text
+            })
+            current_line = []
+            current_start = None
+
+    # ASS 파일 작성
+    ass_path = output_path.with_suffix('.ass')
+
+    with open(ass_path, 'w', encoding='utf-8') as f:
+        # ASS 헤더
+        f.write("[Script Info]\n")
+        f.write("ScriptType: v4.00+\n")
+        f.write("PlayResX: 1920\n")
+        f.write("PlayResY: 1080\n")
+        f.write("\n")
+
+        # 스타일 정의
+        f.write("[V4+ Styles]\n")
+        f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
+        f.write("Style: Default,Pretendard Variable,48,&H00FFFFFF,&H000088EF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,30,30,40,1\n")
+        f.write("\n")
+
+        # 이벤트 (자막)
+        f.write("[Events]\n")
+        f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
+
+        for sub in subtitles:
+            start_time = format_ass_timestamp(sub["start"])
+            end_time = format_ass_timestamp(sub["end"])
+            text = sub["text"]
+            f.write(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text}\n")
+
+    logger.info(f"✅ ASS 자막 파일 생성 완료: {ass_path} ({len(subtitles)}개 라인)")
+    return ass_path
 
 
 def create_ass_from_text(text: str, duration: float, output_path: Path, max_chars_per_line: int = 22) -> Path:
@@ -368,10 +456,11 @@ def get_audio_duration(audio_path: Path) -> float:
         return 0.0
 
 
-def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, subtitle_text: str = None, add_subtitles: bool = False) -> Path:
+def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, subtitle_text: str = None, add_subtitles: bool = False, subtitle_data: list = None) -> Path:
     """
     FFmpeg로 비디오에 오디오 (및 선택적으로 자막) 추가
     TTS가 짧아도 비디오 전체 길이에 맞춰 무음 추가
+    subtitle_data: TTS 타임스탬프 데이터 (있으면 정확한 동기화)
     """
     ffmpeg = get_ffmpeg_path()
     if not ffmpeg:
@@ -408,17 +497,27 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
         logger.info(f"📝 자막 텍스트 길이: {len(subtitle_text)}자")
         logger.info(f"📝 자막 텍스트 미리보기: {subtitle_text[:100]}...")
 
-        # TTS 오디오 길이 기준으로 자막 생성 (TTS와 동기화)
-        duration = audio_duration if audio_duration > 0 else get_video_duration(video_path)
-        logger.info(f"⏱️ 자막 기준 길이: {duration}초 (TTS 오디오 기준)")
+        # ASS 자막 파일 생성
+        temp_path = video_path.parent / f"{video_path.stem}_temp.srt"
 
-        if duration == 0:
-            logger.warning("⚠️ 오디오/비디오 길이를 확인할 수 없어 자막을 건너뜁니다.")
-            subtitle_text = None
+        # 타임스탬프 데이터가 있으면 정확한 동기화 사용
+        if subtitle_data:
+            logger.info(f"⏱️ TTS 타임스탬프 기반 자막 생성 (완벽 동기화)")
+            ass_path = create_ass_from_timestamps(subtitle_data, temp_path)
         else:
-            # ASS 자막 파일 생성 (롱폼 방식 - TTS와 동기화)
-            temp_path = video_path.parent / f"{video_path.stem}_temp.srt"
-            ass_path = create_ass_from_text(subtitle_text, duration, temp_path)
+            # 타임스탬프가 없으면 텍스트 기반 추정
+            logger.info(f"⏱️ 텍스트 기반 자막 생성 (TTS 오디오 길이 기준)")
+            duration = audio_duration if audio_duration > 0 else get_video_duration(video_path)
+            logger.info(f"⏱️ 자막 기준 길이: {duration}초")
+
+            if duration == 0:
+                logger.warning("⚠️ 오디오/비디오 길이를 확인할 수 없어 자막을 건너뜁니다.")
+                subtitle_text = None
+                ass_path = None
+            else:
+                ass_path = create_ass_from_text(subtitle_text, duration, temp_path)
+
+        if subtitle_text:
 
             if not ass_path or not ass_path.exists():
                 logger.error(f"❌ ASS 자막 파일 생성 실패!")
@@ -620,14 +719,15 @@ async def main():
             logger.info(f"\n🎙️ TTS 나레이션 추가")
             logger.info(f"텍스트: {narration_text[:100]}...")
             if add_subtitles:
-                logger.info(f"📝 자막: 추가됨")
+                logger.info(f"📝 자막: 추가됨 (TTS 타임스탬프 기반)")
 
             tts_audio = output_dir / 'narration.mp3'
-            await generate_tts(narration_text, tts_audio)
+            # TTS 생성 및 타임스탬프 수집
+            tts_path, subtitle_data = await generate_tts(narration_text, tts_audio)
 
             final_with_audio = output_dir / 'final_with_narration.mp4'
-            # 자막 추가 여부에 따라 처리
-            add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles)
+            # 자막 추가 여부에 따라 처리 (타임스탬프 전달)
+            add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles, subtitle_data)
             final_output = final_with_audio
         else:
             logger.info(f"\nℹ️ 나레이션 없이 병합만 수행")
