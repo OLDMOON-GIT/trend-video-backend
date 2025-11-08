@@ -564,6 +564,7 @@ async def main():
         narration_text = config.get('narration_text', '')
         add_subtitles = config.get('add_subtitles', False)
         remove_watermark = config.get('remove_watermark', False)
+        title = config.get('title', '')  # 대본의 title
         output_dir = Path(config['output_dir'])
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -604,6 +605,18 @@ async def main():
             final_output = final_with_audio
         else:
             logger.info(f"\nℹ️ 나레이션 없이 병합만 수행")
+
+        # title이 있으면 최종 파일명을 title.mp4로 변경
+        if title:
+            # 파일명으로 사용할 수 없는 문자 제거
+            safe_title = re.sub(r'[<>:"/\\|?*]', '', title)
+            final_output_with_title = output_dir / f"{safe_title}.mp4"
+
+            # 파일 이동 (리네임)
+            import shutil
+            shutil.move(str(final_output), str(final_output_with_title))
+            final_output = final_output_with_title
+            logger.info(f"📝 파일명을 대본 제목으로 변경: {safe_title}.mp4")
 
         logger.info(f"\n{'='*60}")
         logger.info(f"✅ 비디오 병합 완료!")
