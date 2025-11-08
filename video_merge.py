@@ -185,10 +185,11 @@ def align_videos_to_segments(video_paths: list, segments: list, output_path: Pat
     logger.info(f"   세그먼트: {len(segments)}개")
     logger.info(f"   비디오: {len(video_paths)}개")
 
-    # 세그먼트와 비디오 매칭 (순환)
+    # 세그먼트와 비디오 매칭 (순환 없음, 마지막 비디오 유지)
     video_segments = []
     for i, seg in enumerate(segments):
-        video_idx = i % len(video_paths)  # 순환
+        # 비디오 개수를 넘어가면 마지막 비디오 계속 사용
+        video_idx = min(i, len(video_paths) - 1)
         video_path = video_paths[video_idx]
         duration = seg['end'] - seg['start']
 
