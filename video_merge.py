@@ -261,47 +261,84 @@ def align_videos_to_segments(video_paths: list, segments: list, output_path: Pat
 
 def transcribe_audio_with_whisper(audio_path: Path, original_text: str) -> list:
     """
-    Whisper로 오디오를 인식해서 정확한 타임스탬프 얻기 (롱폼 방식)
+    Whisper로 타임스탬프만 얻고, 텍스트는 원본 나레이션 사용
     """
     try:
         import whisper
-        import numpy as np
+        import re
 
-        logger.info(f"🎧 Whisper로 오디오 인식 중...")
+        logger.info(f"🎧 Whisper로 타이밍 분석 중...")
 
         # Whisper 모델 로드 (base 모델 사용)
         model = whisper.load_model("base")
 
-        # 오디오 인식
+        # 오디오 인식 (타임스탬프만 필요)
         result = model.transcribe(
             str(audio_path),
             language="ko",
             verbose=False
         )
 
-        # 세그먼트를 subtitle_data 형식으로 변환
+        # Whisper 세그먼트 타임스탬프 추출
+        whisper_segments = result["segments"]
+        logger.info(f"✅ Whisper 타이밍 분석 완료: {len(whisper_segments)}개 세그먼트")
+
+        # 원본 텍스트를 문장 단위로 분리
+        sentences = re.split(r'([.!?。！？]+)', original_text)
+
+        # 분리된 구두점을 앞 문장에 붙이기
+        original_sentences = []
+        for i in range(0, len(sentences)-1, 2):
+            if i+1 < len(sentences):
+                sentence = (sentences[i] + sentences[i+1]).strip()
+                if sentence:
+                    original_sentences.append(sentence)
+
+        # 마지막 문장 처리
+        if len(sentences) % 2 == 1 and sentences[-1].strip():
+            original_sentences.append(sentences[-1].strip())
+
+        if not original_sentences:
+            original_sentences = [original_text.strip()]
+
+        logger.info(f"📝 원본 텍스트: {len(original_sentences)}개 문장")
+
+        # Whisper 타임스탬프 + 원본 텍스트 결합
         subtitle_data = []
-        for segment in result["segments"]:
+
+        # 세그먼트 개수와 문장 개수가 다를 경우 조정
+        num_segments = min(len(whisper_segments), len(original_sentences))
+
+        if len(whisper_segments) != len(original_sentences):
+            logger.warning(f"⚠️ 세그먼트 개수 불일치: Whisper {len(whisper_segments)}개, 원본 {len(original_sentences)}개")
+            logger.warning(f"   → {num_segments}개만 사용")
+
+        for i in range(num_segments):
             subtitle_data.append({
-                "start": segment["start"],
-                "end": segment["end"],
-                "text": segment["text"].strip()
+                "start": whisper_segments[i]["start"],
+                "end": whisper_segments[i]["end"],
+                "text": original_sentences[i]  # 원본 텍스트 사용!
             })
 
-        logger.info(f"✅ Whisper 인식 완료: {len(subtitle_data)}개 세그먼트")
+        # 남은 원본 문장이 있으면 마지막 세그먼트에 이어붙이기
+        if len(original_sentences) > num_segments:
+            remaining = " ".join(original_sentences[num_segments:])
+            if subtitle_data:
+                subtitle_data[-1]["text"] += " " + remaining
+                logger.info(f"📝 남은 문장을 마지막 세그먼트에 추가")
 
         # 타임스탬프 샘플 출력
         if subtitle_data:
-            logger.info(f"📊 타임스탬프 샘플 (처음 3개):")
+            logger.info(f"📊 타임스탬프 + 원본 텍스트 (처음 3개):")
             for i, seg in enumerate(subtitle_data[:3]):
                 duration = seg['end'] - seg['start']
-                logger.info(f"   {i+1}. {seg['start']:.3f}s ~ {seg['end']:.3f}s ({duration:.3f}초): '{seg['text']}'")
+                logger.info(f"   {i+1}. {seg['start']:.3f}s ~ {seg['end']:.3f}s ({duration:.3f}초): '{seg['text'][:50]}'")
 
         return subtitle_data
 
     except Exception as e:
-        logger.warning(f"⚠️ Whisper 인식 실패: {e}")
-        logger.warning(f"   WordBoundary 타임스탬프로 대체합니다.")
+        logger.warning(f"⚠️ Whisper 분석 실패: {e}")
+        logger.warning(f"   타임스탬프 없이 진행합니다.")
         return None
 
 
