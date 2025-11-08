@@ -987,36 +987,78 @@ async def main():
         # 워터마크 제거 기능 비활성화 (작동하지 않음)
         processed_video_files = video_files
 
-        # 나레이션이 있으면 TTS를 먼저 생성하고 세그먼트에 맞춰 비디오 배치
+        # 나레이션이 있으면 TTS 생성
         if narration_text:
-            logger.info(f"\n🎙️ TTS 나레이션 생성 (비디오 배치 기준)")
-            logger.info(f"텍스트: {narration_text[:100]}...")
-
-            tts_audio = output_dir / 'narration.mp3'
-            # TTS 생성 및 Whisper 세그먼트 수집
-            tts_path, subtitle_data = await generate_tts(narration_text, tts_audio)
-
-            if subtitle_data:
-                logger.info(f"\n🎬 나레이션 세그먼트에 맞춰 비디오 배치")
-                logger.info(f"   세그먼트 개수: {len(subtitle_data)}개")
+            # scenes 배열이 있으면 롱폼 방식으로: 씬별로 TTS + 비디오 생성 → 병합
+            if scenes:
+                logger.info(f"\n🎬 씬별로 비디오 생성 (롱폼 방식)")
+                logger.info(f"   씬 개수: {len(scenes)}개")
                 logger.info(f"   비디오 개수: {len(processed_video_files)}개")
 
-                # scenes 배열이 있으면 scenes 기준으로 비디오 배치
-                merged_video = output_dir / 'merged_video.mp4'
-                if scenes:
-                    logger.info(f"   📋 scenes 배열 사용: {len(scenes)}개 씬")
-                    align_videos_to_scenes(processed_video_files, scenes, subtitle_data, merged_video)
-                else:
+                scene_videos = []
+                scenes_dir = output_dir / 'scenes'
+                scenes_dir.mkdir(exist_ok=True)
+
+                for i, scene in enumerate(scenes):
+                    scene_narration = scene.get('narration', '').strip()
+                    if not scene_narration:
+                        logger.warning(f"   씬 {i+1}: 나레이션 없음, 건너뜀")
+                        continue
+
+                    # 비디오 선택 (scene 1 → video 1, scene 2 → video 2, ...)
+                    video_idx = min(i, len(processed_video_files) - 1)
+                    video_path = processed_video_files[video_idx]
+
+                    logger.info(f"\n   씬 {i+1}/{len(scenes)}: {scene_narration[:40]}...")
+
+                    # 1. 씬별 TTS 생성
+                    scene_audio = scenes_dir / f'scene_{i+1}_audio.mp3'
+                    scene_tts_path, scene_subtitle_data = await generate_tts(scene_narration, scene_audio)
+
+                    # 2. 비디오 + 오디오 결합 (롱폼의 이미지처럼, 비디오를 오디오 길이만큼 사용)
+                    scene_video = scenes_dir / f'scene_{i+1}.mp4'
+                    add_audio_to_video(
+                        video_path,
+                        scene_tts_path,
+                        scene_video,
+                        scene_narration,
+                        add_subtitles,
+                        scene_subtitle_data
+                    )
+
+                    scene_videos.append(scene_video)
+                    logger.info(f"   ✅ 씬 {i+1} 완료: {scene_video.name}")
+
+                # 3. 모든 씬 비디오 병합
+                logger.info(f"\n📦 전체 씬 병합 중...")
+                final_output = output_dir / 'final_output.mp4'
+                concatenate_videos(scene_videos, final_output)
+
+            else:
+                # scenes 배열이 없으면 기존 방식 (전체 나레이션 → Whisper 세그먼트)
+                logger.info(f"\n🎙️ TTS 나레이션 생성 (비디오 배치 기준)")
+                logger.info(f"텍스트: {narration_text[:100]}...")
+
+                tts_audio = output_dir / 'narration.mp3'
+                # TTS 생성 및 Whisper 세그먼트 수집
+                tts_path, subtitle_data = await generate_tts(narration_text, tts_audio)
+
+                if subtitle_data:
+                    logger.info(f"\n🎬 나레이션 세그먼트에 맞춰 비디오 배치")
+                    logger.info(f"   세그먼트 개수: {len(subtitle_data)}개")
+                    logger.info(f"   비디오 개수: {len(processed_video_files)}개")
+
+                    merged_video = output_dir / 'merged_video.mp4'
                     logger.info(f"   📋 Whisper 세그먼트 사용")
                     align_videos_to_segments(processed_video_files, subtitle_data, merged_video)
 
-                # 비디오에 오디오 + 자막 추가
-                final_with_audio = output_dir / 'final_with_narration.mp4'
-                add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles, subtitle_data)
-                final_output = final_with_audio
-            else:
-                # Whisper 실패 시 기존 방식 (순차 병합)
-                logger.warning(f"⚠️ 세그먼트 정보 없음, 기존 방식으로 병합")
+                    # 비디오에 오디오 + 자막 추가
+                    final_with_audio = output_dir / 'final_with_narration.mp4'
+                    add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles, subtitle_data)
+                    final_output = final_with_audio
+                else:
+                    # Whisper 실패 시 기존 방식 (순차 병합)
+                    logger.warning(f"⚠️ 세그먼트 정보 없음, 기존 방식으로 병합")
                 merged_video = output_dir / 'merged_video.mp4'
                 concatenate_videos(processed_video_files, merged_video)
 
