@@ -9,7 +9,7 @@ from datetime import datetime
 from openai import OpenAI
 from moviepy.editor import VideoFileClip, concatenate_videoclips, AudioFileClip, ImageClip
 import requests
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 from tqdm import tqdm
 
@@ -1958,7 +1958,10 @@ JSON 형식으로 평가 결과를 출력하시오:
                 response.raise_for_status()
 
                 # Return PIL Image
-                return Image.open(io.BytesIO(response.content))
+                img = Image.open(io.BytesIO(response.content))
+                # Apply EXIF orientation to fix rotated images
+                img = ImageOps.exif_transpose(img)
+                return img
 
             except requests.exceptions.RequestException as e:
                 if attempt == max_retries - 1:
@@ -2003,7 +2006,10 @@ JSON 형식으로 평가 결과를 출력하시오:
             response.raise_for_status()
 
             # Return PIL Image
-            return Image.open(io.BytesIO(response.content))
+            img = Image.open(io.BytesIO(response.content))
+            # Apply EXIF orientation to fix rotated images
+            img = ImageOps.exif_transpose(img)
+            return img
 
         except Exception as e:
             raise Exception(f"Failed to generate image with Replicate: {e}")

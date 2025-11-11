@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 import json
 import re
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance, ImageOps
 import textwrap
 
 logging.basicConfig(
@@ -354,6 +354,8 @@ def create_thumbnail(image_path: Path, text_lines: list, output_path: Path):
 
     # Load image and keep original aspect ratio
     img = Image.open(image_path)
+    # Apply EXIF orientation to fix rotated images
+    img = ImageOps.exif_transpose(img)
     original_size = (img.width, img.height)
     logger.info(f"Original image size: {original_size[0]}x{original_size[1]}")
 
