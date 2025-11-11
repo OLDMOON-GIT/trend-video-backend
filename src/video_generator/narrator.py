@@ -1197,8 +1197,13 @@ NOW CREATE: {target_chars} chars Korean narration ONLY:"""
             # ko-KR-InJoonNeural (Male, natural)
             voice = os.getenv("TTS_VOICE", "ko-KR-SoonBokNeural")
 
+            # Voice speed/rate - configurable via environment variable
+            # Examples: "+10%" (10% faster), "-10%" (10% slower), "+0%" (default)
+            # For longform content, slightly faster speed helps maintain engagement
+            rate = os.getenv("TTS_RATE", "+10%")
+
             async def generate():
-                communicate = edge_tts.Communicate(script, voice)
+                communicate = edge_tts.Communicate(script, voice, rate=rate)
                 await communicate.save(str(audio_path))
 
             # Run async function
