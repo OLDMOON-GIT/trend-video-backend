@@ -161,7 +161,7 @@ class YouTubeUploader:
         """비디오 업로드"""
         # SIGTERM, SIGINT를 KeyboardInterrupt로 변환
         def signal_handler(signum, frame):
-            print(f"[WARN] 시그널 수신: {signum} (업로드 중지)")
+            print(f"[WARN] 시그널 수신: {signum} (업로드 중지)", flush=True)
             raise KeyboardInterrupt
 
         signal.signal(signal.SIGTERM, signal_handler)
@@ -285,19 +285,20 @@ class YouTubeUploader:
                 )
 
             except KeyboardInterrupt:
-                print("[WARN] 업로드 취소 요청 감지 (KeyboardInterrupt)")
+                print("[WARN] 업로드 취소 요청 감지 (KeyboardInterrupt)", flush=True)
                 was_cancelled = True
                 # finally에서 삭제 처리 후 반환
 
             finally:
                 # video_id가 있고 정상 완료가 아닌 경우 YouTube에서 삭제
+                print(f"[DEBUG] finally 블록 실행: video_id={video_id}, upload_success={upload_success}", flush=True)
                 if video_id and not upload_success:
                     try:
-                        print(f"[INFO] YouTube에서 비디오 삭제 중: {video_id}")
+                        print(f"[INFO] YouTube에서 비디오 삭제 중: {video_id}", flush=True)
                         self.youtube.videos().delete(id=video_id).execute()
-                        print(f"[INFO] YouTube 비디오 삭제 완료: {video_id}")
+                        print(f"[INFO] YouTube 비디오 삭제 완료: {video_id}", flush=True)
                     except Exception as delete_error:
-                        print(f"[ERROR] YouTube 비디오 삭제 실패: {delete_error}")
+                        print(f"[ERROR] YouTube 비디오 삭제 실패: {delete_error}", flush=True)
 
             # except 블록 후 실행: 취소된 경우 에러 반환
             if was_cancelled:
