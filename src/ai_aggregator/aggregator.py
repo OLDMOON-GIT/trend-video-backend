@@ -101,12 +101,25 @@ class ResponseAggregator:
 
     def save_to_file(self, filename: str = "ai_responses.txt"):
         """Save all responses to a file"""
-        with open(filename, 'w', encoding='utf-8') as f:
+        import os
+        from pathlib import Path
+
+        # Get the project root directory (where main.py is executed)
+        project_root = Path.cwd()
+
+        # Create src/scripts directory if it doesn't exist
+        scripts_dir = project_root / "src" / "scripts"
+        scripts_dir.mkdir(parents=True, exist_ok=True)
+
+        # Full path to save file
+        full_path = scripts_dir / filename
+
+        with open(full_path, 'w', encoding='utf-8') as f:
             # Just write the raw response, nothing else
             for agent_name, response in self.responses.items():
                 f.write(response)
 
-        print(f"\n{Fore.GREEN}[OK] Responses saved to {filename}{Style.RESET_ALL}")
+        print(f"\n{Fore.GREEN}[OK] Responses saved to {full_path}{Style.RESET_ALL}")
 
     def get_all_responses(self) -> Dict[str, str]:
         """Get all responses as a dictionary"""

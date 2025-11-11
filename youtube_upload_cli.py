@@ -76,6 +76,7 @@ def cmd_upload(args):
         metadata=metadata,
         thumbnail_path=Path(args.thumbnail) if args.thumbnail else None,
         captions_path=Path(args.captions) if args.captions else None,
+        cancel_flag_path=Path(args.cancel_flag) if hasattr(args, 'cancel_flag') and args.cancel_flag else None,
     )
 
     if result.success:
@@ -99,6 +100,7 @@ def main():
     parser.add_argument("--metadata", help="메타데이터 JSON 파일")
     parser.add_argument("--thumbnail", help="썸네일 이미지")
     parser.add_argument("--captions", help="자막 파일")
+    parser.add_argument("--cancel-flag", help="취소 플래그 파일 경로")
     args = parser.parse_args()
 
     if args.action == "auth":

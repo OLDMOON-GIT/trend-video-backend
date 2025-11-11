@@ -157,8 +157,15 @@ class YouTubeUploader:
         thumbnail_path: Optional[Path] = None,
         captions_path: Optional[Path] = None,
         progress_callback=None,
+        cancel_flag_path: Optional[Path] = None,
     ) -> UploadResult:
         """비디오 업로드"""
+        # 취소 플래그 체크 함수
+        def check_cancelled():
+            if cancel_flag_path and cancel_flag_path.exists():
+                print(f"[WARN] 취소 플래그 파일 감지: {cancel_flag_path}", flush=True)
+                raise KeyboardInterrupt
+
         # SIGTERM, SIGINT를 KeyboardInterrupt로 변환
         def signal_handler(signum, frame):
             print(f"[WARN] 시그널 수신: {signum} (업로드 중지)", flush=True)
@@ -206,12 +213,14 @@ class YouTubeUploader:
             try:
                 # 비디오 업로드
                 while response is None:
+                    check_cancelled()  # 취소 체크
                     status, response = request.next_chunk()
                     if status:
                         progress = int(status.progress() * 100)
                         print(f"[INFO] 업로드 진행률: {progress}%")
                         if progress_callback:
                             progress_callback(progress)
+                        check_cancelled()  # 진행률 업데이트 후에도 체크
 
                 # 업로드 완료 - video_id 즉시 저장
                 if response and "id" in response:
@@ -224,13 +233,16 @@ class YouTubeUploader:
 
                 # 썸네일 업로드 (재시도 로직 포함)
                 if thumbnail_path and thumbnail_path.exists():
+                    check_cancelled()  # 썸네일 업로드 전 취소 체크
                     import time
                     max_retries = 5
                     retry_delay = 3  # 3초 대기
 
                     # YouTube가 비디오를 인식하도록 초기 대기
                     print("[INFO] 썸네일 업로드 준비 중 (5초 대기)...")
-                    time.sleep(5)
+                    for _ in range(5):
+                        time.sleep(1)
+                        check_cancelled()  # 1초마다 취소 체크
 
                     for attempt in range(max_retries):
                         try:
@@ -299,6 +311,14 @@ class YouTubeUploader:
                         print(f"[INFO] YouTube 비디오 삭제 완료: {video_id}", flush=True)
                     except Exception as delete_error:
                         print(f"[ERROR] YouTube 비디오 삭제 실패: {delete_error}", flush=True)
+
+                # 취소 플래그 파일 삭제
+                if cancel_flag_path and cancel_flag_path.exists():
+                    try:
+                        cancel_flag_path.unlink()
+                        print(f"[INFO] 취소 플래그 파일 삭제: {cancel_flag_path}", flush=True)
+                    except Exception:
+                        pass
 
             # except 블록 후 실행: 취소된 경우 에러 반환
             if was_cancelled:
