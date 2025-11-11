@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import signal
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -158,6 +159,14 @@ class YouTubeUploader:
         progress_callback=None,
     ) -> UploadResult:
         """비디오 업로드"""
+        # SIGTERM, SIGINT를 KeyboardInterrupt로 변환
+        def signal_handler(signum, frame):
+            print(f"[WARN] 시그널 수신: {signum} (업로드 중지)")
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+
         try:
             if not self.youtube:
                 return UploadResult(success=False, error="인증이 필요합니다")
