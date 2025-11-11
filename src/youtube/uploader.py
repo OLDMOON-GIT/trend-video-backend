@@ -282,9 +282,21 @@ class YouTubeUploader:
                         print(f"[INFO] YouTube에서 비디오 삭제 중: {video_id}")
                         self.youtube.videos().delete(id=video_id).execute()
                         print(f"[INFO] YouTube 비디오 삭제 완료: {video_id}")
+                        return UploadResult(
+                            success=False,
+                            error="업로드가 취소되었고 YouTube에서 비디오가 삭제되었습니다"
+                        )
                     except Exception as delete_error:
                         print(f"[ERROR] YouTube 비디오 삭제 실패: {delete_error}")
-                raise  # KeyboardInterrupt 다시 발생시켜서 상위로 전파
+                        return UploadResult(
+                            success=False,
+                            error=f"업로드가 취소되었지만 YouTube 비디오 삭제 실패: {delete_error}"
+                        )
+                else:
+                    return UploadResult(
+                        success=False,
+                        error="업로드가 취소되었습니다 (아직 YouTube에 업로드되지 않음)"
+                    )
 
             return UploadResult(
                 success=True,
