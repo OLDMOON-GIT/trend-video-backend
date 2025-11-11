@@ -208,22 +208,41 @@ class LongFormStoryCreator:
                 print(f"\n[OK] 이미지가 이미 존재합니다.")
                 print(f"  사용자 확인부터 시작합니다...\n")
 
-            # Show images and ask for confirmation
-            scene_images = []
-            for i, scene in enumerate(story_data['scenes'], 1):
+            # [통합] 씬 정렬 후 이미지+비디오 모두 체크
+            sorted_scenes = self._sort_scenes(story_data['scenes'])
+
+            scene_media = []
+            for i, scene in enumerate(sorted_scenes, 1):
                 scene_dir = project_dir / f"scene_{i:02d}"
                 image_path = scene_dir / f"scene_{i:02d}_image.png"
-                if image_path.exists():
-                    scene_images.append({
+                video_path = scene_dir / f"scene_{i:02d}_video.mp4"
+
+                media_type = None
+                media_path = None
+
+                # 비디오 우선 (있으면 비디오 사용)
+                if video_path.exists():
+                    media_type = 'video'
+                    media_path = video_path
+                elif image_path.exists():
+                    media_type = 'image'
+                    media_path = image_path
+
+                if media_path:
+                    scene_media.append({
                         'scene': scene,
-                        'image_path': image_path,
+                        'media_type': media_type,
+                        'media_path': media_path,
+                        'image_path': image_path if media_type == 'image' else None,
+                        'video_path': video_path if media_type == 'video' else None,
                         'scene_dir': scene_dir,
                         'scene_num': i
                     })
 
-            print(f"생성된 이미지 목록:")
-            for img_data in scene_images:
-                print(f"  - Scene {img_data['scene_num']:02d}: {img_data['image_path'].name}")
+            print(f"생성된 미디어 목록:")
+            for media_data in scene_media:
+                media_icon = "🎬" if media_data['media_type'] == 'video' else "🖼️"
+                print(f"  - Scene {media_data['scene_num']:02d}: {media_icon} {media_data['media_path'].name}")
 
             print(f"\n프로젝트 폴더: {project_dir}")
 
@@ -242,20 +261,20 @@ class LongFormStoryCreator:
             if user_input not in ['y', 'yes']:
                 print(f"\n중단되었습니다.")
                 return {
-                    'status': 'images_only',
+                    'status': 'media_only',
                     'project_dir': str(project_dir),
-                    'num_scenes': len(scene_images),
+                    'num_scenes': len(scene_media),
                     'script_length': len(story_data.get('script', '')),
-                    'images': [str(img['image_path']) for img in scene_images]
+                    'media': [str(media['media_path']) for media in scene_media]
                 }
 
             # Continue from Step 2-B (narrations if needed)
             aspect_ratio = "16:9"  # Default
             target_minutes = 60
-            num_scenes = len(story_data['scenes'])
+            num_scenes = len(sorted_scenes)
 
             # Continue with the rest of the process (from Step 2-B)
-            return self._continue_from_images(project_dir, story_data, scene_images, aspect_ratio, target_minutes, is_test_mode=is_test_mode)
+            return self._continue_from_media(project_dir, story_data, scene_media, aspect_ratio, target_minutes, is_test_mode=is_test_mode)
 
         else:
             print(f"\n[OK] 시나리오는 있지만 이미지가 없습니다.")
@@ -265,8 +284,35 @@ class LongFormStoryCreator:
             # TODO: Implement image generation from existing scenario
             raise NotImplementedError("이미지 생성부터 재개하는 기능은 아직 구현되지 않았습니다.")
 
-    def _continue_from_images(self, project_dir: Path, story_data: Dict, scene_images: list, aspect_ratio: str, target_minutes: int, is_test_mode: bool = False) -> Dict[str, Any]:
-        """Continue video creation from approved images."""
+    def _sort_scenes(self, scenes: List[Dict]) -> List[Dict]:
+        """
+        씬을 정렬: seq가 있으면 seq 우선, 없으면 created_at 기준
+
+        Args:
+            scenes: 씬 리스트
+
+        Returns:
+            정렬된 씬 리스트
+        """
+        def get_sort_key(scene):
+            # seq가 있으면 (0, seq) - 가장 우선
+            if 'seq' in scene and scene['seq'] is not None:
+                return (0, scene['seq'])
+            # created_at이 있으면 (1, timestamp) - 그 다음
+            elif 'created_at' in scene and scene['created_at']:
+                try:
+                    timestamp = datetime.fromisoformat(scene['created_at'].replace('Z', '+00:00'))
+                    return (1, timestamp.timestamp())
+                except:
+                    return (2, 0)
+            # 둘 다 없으면 원래 순서 유지
+            else:
+                return (2, 0)
+
+        return sorted(scenes, key=get_sort_key)
+
+    def _continue_from_media(self, project_dir: Path, story_data: Dict, scene_media: list, aspect_ratio: str, target_minutes: int, is_test_mode: bool = False) -> Dict[str, Any]:
+        """Continue video creation from approved media (images and/or videos)."""
         from tqdm import tqdm
         import time
 
@@ -305,16 +351,16 @@ class LongFormStoryCreator:
             min_per_scene = int(target_per_scene * 0.8)
 
             with tqdm(total=num_scenes, desc="나레이션 생성 진행", position=0) as pbar_narration:
-                for img_data in scene_images:
-                    i = img_data['scene_num']
-                    scene = img_data['scene']
+                for media_data in scene_media:
+                    i = media_data['scene_num']
+                    scene = media_data['scene']
 
                     # Create scene directory for this scene's files
                     scene_dir = project_dir / f"scene_{i:02d}"
                     scene_dir.mkdir(parents=True, exist_ok=True)
 
-                    # Update scene_dir in img_data for later use
-                    img_data['scene_dir'] = scene_dir
+                    # Update scene_dir in media_data for later use
+                    media_data['scene_dir'] = scene_dir
 
                     print(f"\n[Scene {i}/{num_scenes}] {scene['title']} - 상세 나레이션 생성 중...")
 
@@ -339,15 +385,15 @@ class LongFormStoryCreator:
             self._save_story_metadata(story_data, project_dir, is_structure_only=False)
             print(f"\n 전체 스크립트 업데이트 완료: {len(total_script)} chars\n")
 
-        # Step 2-C: Create videos from approved images
+        # Step 2-C: Create videos from approved media (images and/or videos)
         print(f"\n{'='*70}")
         print(f"[Step 2-C] Creating Videos for {num_scenes} Scenes... (병렬 처리)")
         print(f"{'='*70}")
         step_start = time.time()
 
-        # Parallel video generation
+        # Parallel video generation (handles both images and videos)
         scene_videos = self._create_scene_videos_parallel(
-            scene_images,
+            scene_media,
             aspect_ratio,
             num_scenes
         )
@@ -1218,11 +1264,25 @@ class LongFormStoryCreator:
             next_step='사용자 이미지 확인 대기'
         )
 
+        # Convert scene_images to scene_media format (add media_type field)
+        scene_media = []
+        for img_data in scene_images:
+            media_data = {
+                'scene': img_data['scene'],
+                'media_type': 'image',
+                'media_path': img_data['image_path'],
+                'image_path': img_data['image_path'],
+                'video_path': None,
+                'scene_dir': img_data['scene_dir'],
+                'scene_num': img_data['scene_num']
+            }
+            scene_media.append(media_data)
+
         # Continue from Step 2 (same as normal flow)
-        return self._continue_from_images(
+        return self._continue_from_media(
             project_dir,
             story_data,
-            scene_images,
+            scene_media,
             aspect_ratio,
             target_minutes=60,
             is_test_mode=False
@@ -2217,11 +2277,11 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
 
     def _create_scene_videos_parallel(
         self,
-        scene_images: list,
+        scene_media: list,
         aspect_ratio: str,
         num_scenes: int
     ) -> list:
-        """Create scene videos in parallel for much faster processing."""
+        """Create scene videos in parallel for much faster processing (handles both images and videos)."""
         from concurrent.futures import ThreadPoolExecutor, as_completed
         import time
 
@@ -2230,25 +2290,25 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
         max_workers = min(3, max(1, os.cpu_count() - 1))
         print(f"   병렬 작업 수: {max_workers} (CPU cores: {os.cpu_count()})")
 
-        scene_videos = [None] * len(scene_images)  # Pre-allocate list
+        scene_videos = [None] * len(scene_media)  # Pre-allocate list
         completed = 0
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all tasks
             future_to_scene = {}
-            for img_data in scene_images:
+            for media_data in scene_media:
                 future = executor.submit(
                     self._create_single_scene_video,
-                    img_data,
+                    media_data,
                     aspect_ratio
                 )
-                future_to_scene[future] = img_data
+                future_to_scene[future] = media_data
 
             # Process completed tasks
             with tqdm(total=num_scenes, desc="비디오 제작 진행", position=0) as pbar:
                 for future in as_completed(future_to_scene):
-                    img_data = future_to_scene[future]
-                    i = img_data['scene_num']
+                    media_data = future_to_scene[future]
+                    i = media_data['scene_num']
 
                     try:
                         scene_video, elapsed = future.result()
@@ -2268,34 +2328,53 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
 
     def _create_single_scene_video(
         self,
-        img_data: dict,
+        media_data: dict,
         aspect_ratio: str
     ) -> tuple:
-        """Create a single scene video (audio + video + subtitles). Used for parallel processing."""
+        """Create a single scene video (audio + video + subtitles). Used for parallel processing.
+
+        Handles both images and videos:
+        - For images: converts to video with audio and subtitles
+        - For videos: adds audio and subtitles to existing video
+        """
         import time
 
         start_time = time.time()
 
-        i = img_data['scene_num']
-        scene = img_data['scene']
-        scene_dir = img_data['scene_dir']
-        image_path = img_data['image_path']
+        i = media_data['scene_num']
+        scene = media_data['scene']
+        scene_dir = media_data['scene_dir']
+        media_type = media_data['media_type']
+        media_path = media_data['media_path']
 
-        # Generate audio from narration
+        # Generate audio from narration (always needed)
         audio_path = self._generate_scene_narration(
             scene,
             scene_dir,
             i
         )
 
-        # Create scene video (with subtitles)
-        scene_video = self._create_scene_video(
-            image_path,
-            audio_path,
-            scene_dir / f"scene_{i:02d}.mp4",
-            aspect_ratio,
-            scene['narration']  # Pass narration for subtitles
-        )
+        # Create or process scene video based on media type
+        if media_type == 'video':
+            # Video already exists - just add audio and subtitles
+            print(f"   🎬 Scene {i}: 비디오 발견! 오디오+자막 추가 중...")
+            scene_video = self._add_audio_and_subtitles_to_video(
+                media_path,
+                audio_path,
+                scene_dir / f"scene_{i:02d}.mp4",
+                scene['narration']
+            )
+        else:
+            # Image - convert to video with audio and subtitles
+            print(f"   🖼️  Scene {i}: 이미지→비디오 변환 중...")
+            image_path = media_data['image_path']
+            scene_video = self._create_scene_video(
+                image_path,
+                audio_path,
+                scene_dir / f"scene_{i:02d}.mp4",
+                aspect_ratio,
+                scene['narration']  # Pass narration for subtitles
+            )
 
         # Save scene script
         scene_script_path = scene_dir / f"scene_{i:02d}_script.txt"
@@ -2462,6 +2541,124 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
 
         except Exception as e:
             self.logger.error(f"Scene video creation failed: {e}")
+            raise
+
+    def _add_audio_and_subtitles_to_video(
+        self,
+        video_path: Path,
+        audio_path: Path,
+        output_path: Path,
+        narration_text: str = None
+    ) -> Path:
+        """Add audio and subtitles to an existing video file.
+
+        Args:
+            video_path: Path to existing video file
+            audio_path: Path to audio file
+            output_path: Path to save the processed video
+            narration_text: Text for subtitle generation
+
+        Returns:
+            Path to the processed video
+        """
+        try:
+            from moviepy.editor import VideoFileClip, AudioFileClip
+
+            # Load existing video
+            video_clip = VideoFileClip(str(video_path))
+
+            # Load audio
+            audio = AudioFileClip(str(audio_path))
+
+            # Set audio on the video
+            video_clip = video_clip.set_audio(audio)
+
+            # Adjust video duration to match audio if needed
+            if video_clip.duration < audio.duration:
+                # Loop the video if it's shorter than audio
+                print(f"      Video duration ({video_clip.duration:.1f}s) < Audio duration ({audio.duration:.1f}s) - looping video...")
+                from moviepy.video.fx.all import loop
+                video_clip = loop(video_clip, duration=audio.duration)
+            elif video_clip.duration > audio.duration:
+                # Trim video if it's longer than audio
+                print(f"      Video duration ({video_clip.duration:.1f}s) > Audio duration ({audio.duration:.1f}s) - trimming video...")
+                video_clip = video_clip.subclip(0, audio.duration)
+
+            # Add subtitles if narration text provided
+            if narration_text and self.config.get("ai", {}).get("add_subtitles", True):
+                print(f"   Adding subtitles...")
+                try:
+                    import whisper
+                    import wave
+                    import numpy as np
+                    import os
+
+                    # Load Whisper model
+                    model_size = os.getenv("WHISPER_MODEL", "base")
+                    print(f"      Loading Whisper model: {model_size}")
+                    model = whisper.load_model(model_size)
+
+                    # Load audio file
+                    with wave.open(str(audio_path), 'rb') as wav_file:
+                        sample_rate = wav_file.getframerate()
+                        n_frames = wav_file.getnframes()
+                        audio_data = wav_file.readframes(n_frames)
+
+                        # Convert to numpy array
+                        audio_array = np.frombuffer(audio_data, dtype=np.int16)
+                        audio_array = audio_array.astype(np.float32) / 32768.0
+
+                        # Convert stereo to mono if needed
+                        if wav_file.getnchannels() == 2:
+                            audio_array = audio_array.reshape(-1, 2).mean(axis=1)
+
+                    # Transcribe
+                    print(f"      Transcribing audio for subtitle timing...")
+                    result = model.transcribe(
+                        audio_array,
+                        language="ko",
+                        verbose=False
+                    )
+
+                    segments = [
+                        {
+                            "start": seg["start"],
+                            "end": seg["end"],
+                            "text": seg["text"].strip()
+                        }
+                        for seg in result["segments"]
+                    ]
+
+                    print(f"      Transcribed {len(segments)} segments")
+
+                    # Add subtitles using Transcriber
+                    if segments:
+                        from .transcriber import Transcriber
+                        transcriber = Transcriber(self.config)
+                        video_clip = transcriber.add_subtitles(video_clip, segments)
+
+                except Exception as e:
+                    self.logger.warning(f"Failed to add subtitles with Whisper: {e}")
+                    print(f"      [Warning] Subtitle generation failed: {e}")
+
+            # Export
+            video_clip.write_videofile(
+                str(output_path),
+                fps=self.config["video"]["fps"],
+                codec=self.config["output"]["codec"],
+                audio_codec=self.config["output"]["audio_codec"],
+                bitrate=self.config["output"]["bitrate"],
+                preset='medium',
+                logger=None
+            )
+
+            video_clip.close()
+            audio.close()
+
+            return output_path
+
+        except Exception as e:
+            self.logger.error(f"Adding audio and subtitles to video failed: {e}")
             raise
 
     def _add_narration_subtitles(self, clip, narration_text: str, duration: float):
