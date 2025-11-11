@@ -463,6 +463,12 @@ class VideoFromFolderCreator:
             fail_count = 0
 
             for scene_num, scene in missing_scenes:
+                # 취소 플래그 파일 체크
+                cancel_file = self.folder_path / '.cancel'
+                if cancel_file.exists():
+                    logger.warning("🛑 취소 플래그 감지됨. 이미지 생성을 중단합니다.")
+                    raise KeyboardInterrupt("User cancelled the operation")
+
                 # image_prompt 추출 (imagefx_prompt도 지원)
                 image_prompt = scene.get('image_prompt') or scene.get('imagefx_prompt', '')
 
@@ -1327,6 +1333,12 @@ class VideoFromFolderCreator:
         scene_data_list = []
 
         for scene in scenes:
+            # 취소 플래그 파일 체크
+            cancel_file = self.folder_path / '.cancel'
+            if cancel_file.exists():
+                logger.warning("🛑 취소 플래그 감지됨. 영상 생성을 중단합니다.")
+                raise KeyboardInterrupt("User cancelled the operation")
+
             # scene_number가 없으면 scene_id에서 추출
             scene_num = scene.get("scene_number")
             if scene_num is None:
