@@ -555,6 +555,12 @@ class VideoFromFolderCreator:
         Returns:
             생성된 이미지 경로 (실패 시 None)
         """
+        # 취소 플래그 체크 (DALL-E 시작 전)
+        cancel_file = self.folder_path / '.cancel'
+        if cancel_file.exists():
+            logger.warning("🛑 취소 플래그 감지됨. DALL-E 이미지 생성을 시작하지 않습니다.")
+            raise KeyboardInterrupt("User cancelled the operation")
+
         if not self.dalle_client:
             logger.error("❌ DALL-E 클라이언트가 초기화되지 않았습니다.")
             return None
@@ -585,6 +591,12 @@ class VideoFromFolderCreator:
                 if attempt > 0:
                     logger.info(f"   수정된 프롬프트: {current_prompt}")
 
+                # 취소 플래그 체크 (DALL-E API 호출 직전)
+                cancel_file = self.folder_path / '.cancel'
+                if cancel_file.exists():
+                    logger.warning("🛑 취소 플래그 감지됨. DALL-E API 호출을 중단합니다.")
+                    raise KeyboardInterrupt("User cancelled the operation")
+
                 # DALL-E 3 API 호출
                 response = self.dalle_client.images.generate(
                     model="dall-e-3",
@@ -596,6 +608,12 @@ class VideoFromFolderCreator:
 
                 # 생성된 이미지 URL 가져오기
                 image_url = response.data[0].url
+
+                # 취소 플래그 체크 (이미지 다운로드 전)
+                cancel_file = self.folder_path / '.cancel'
+                if cancel_file.exists():
+                    logger.warning("🛑 취소 플래그 감지됨. DALL-E 이미지 다운로드를 중단합니다.")
+                    raise KeyboardInterrupt("User cancelled the operation")
 
                 # 이미지 다운로드
                 import requests
