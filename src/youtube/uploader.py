@@ -200,6 +200,8 @@ class YouTubeUploader:
             print(f"[INFO] 업로드 시작: {video_path}")
             response = None
             video_id = None
+            upload_success = False  # 정상 완료 플래그
+            was_cancelled = False  # 취소 플래그
 
             try:
                 # 비디오 업로드
@@ -274,35 +276,41 @@ class YouTubeUploader:
                     except Exception as e:
                         print(f"[WARN] 자막 업로드 실패: {e}")
 
+                # 모든 작업 완료
+                upload_success = True
+                return UploadResult(
+                    success=True,
+                    video_id=video_id,
+                    video_url=video_url
+                )
+
             except KeyboardInterrupt:
-                print("[WARN] 업로드 취소 요청 감지")
-                # video_id가 있으면 (업로드 완료 후 중지) YouTube에서 삭제
-                if video_id:
+                print("[WARN] 업로드 취소 요청 감지 (KeyboardInterrupt)")
+                was_cancelled = True
+                # finally에서 삭제 처리 후 반환
+
+            finally:
+                # video_id가 있고 정상 완료가 아닌 경우 YouTube에서 삭제
+                if video_id and not upload_success:
                     try:
                         print(f"[INFO] YouTube에서 비디오 삭제 중: {video_id}")
                         self.youtube.videos().delete(id=video_id).execute()
                         print(f"[INFO] YouTube 비디오 삭제 완료: {video_id}")
-                        return UploadResult(
-                            success=False,
-                            error="업로드가 취소되었고 YouTube에서 비디오가 삭제되었습니다"
-                        )
                     except Exception as delete_error:
                         print(f"[ERROR] YouTube 비디오 삭제 실패: {delete_error}")
-                        return UploadResult(
-                            success=False,
-                            error=f"업로드가 취소되었지만 YouTube 비디오 삭제 실패: {delete_error}"
-                        )
+
+            # except 블록 후 실행: 취소된 경우 에러 반환
+            if was_cancelled:
+                if video_id:
+                    return UploadResult(
+                        success=False,
+                        error="업로드가 취소되었고 YouTube에서 비디오가 삭제되었습니다"
+                    )
                 else:
                     return UploadResult(
                         success=False,
                         error="업로드가 취소되었습니다 (아직 YouTube에 업로드되지 않음)"
                     )
-
-            return UploadResult(
-                success=True,
-                video_id=video_id,
-                video_url=video_url
-            )
 
         except HttpError as exc:
             error_msg = f"YouTube API 에러: {exc}"
