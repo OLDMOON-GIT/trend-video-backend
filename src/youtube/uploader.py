@@ -190,17 +190,31 @@ class YouTubeUploader:
 
             print(f"[INFO] 업로드 시작: {video_path}")
             response = None
-            while response is None:
-                status, response = request.next_chunk()
-                if status:
-                    progress = int(status.progress() * 100)
-                    print(f"[INFO] 업로드 진행률: {progress}%")
-                    if progress_callback:
-                        progress_callback(progress)
+            video_id = None
 
-            video_id = response["id"]
-            video_url = f"https://youtu.be/{video_id}"
-            print(f"[INFO] 업로드 완료: {video_url}")
+            try:
+                while response is None:
+                    status, response = request.next_chunk()
+                    if status:
+                        progress = int(status.progress() * 100)
+                        print(f"[INFO] 업로드 진행률: {progress}%")
+                        if progress_callback:
+                            progress_callback(progress)
+
+                video_id = response["id"]
+                video_url = f"https://youtu.be/{video_id}"
+                print(f"[INFO] 업로드 완료: {video_url}")
+            except KeyboardInterrupt:
+                print("[WARN] 업로드 취소 요청 감지")
+                # 업로드가 완료되어 video_id가 있으면 YouTube에서 삭제
+                if video_id:
+                    try:
+                        print(f"[INFO] YouTube에서 비디오 삭제 중: {video_id}")
+                        self.youtube.videos().delete(id=video_id).execute()
+                        print(f"[INFO] YouTube 비디오 삭제 완료: {video_id}")
+                    except Exception as delete_error:
+                        print(f"[ERROR] YouTube 비디오 삭제 실패: {delete_error}")
+                raise  # KeyboardInterrupt 다시 발생시켜서 상위로 전파
 
             # 썸네일 업로드 (재시도 로직 포함)
             if thumbnail_path and thumbnail_path.exists():
