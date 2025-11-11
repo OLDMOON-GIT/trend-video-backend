@@ -201,9 +201,13 @@ class YouTubeUploader:
                         if progress_callback:
                             progress_callback(progress)
 
-                video_id = response["id"]
-                video_url = f"https://youtu.be/{video_id}"
-                print(f"[INFO] 업로드 완료: {video_url}")
+                # 업로드 완료 - video_id 저장
+                if response and "id" in response:
+                    video_id = response["id"]
+                    video_url = f"https://youtu.be/{video_id}"
+                    print(f"[INFO] 업로드 완료: {video_url}")
+                else:
+                    raise Exception("업로드 완료되었으나 video_id를 받지 못했습니다")
             except KeyboardInterrupt:
                 print("[WARN] 업로드 취소 요청 감지")
                 # 업로드가 완료되어 video_id가 있으면 YouTube에서 삭제
