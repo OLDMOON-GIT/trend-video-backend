@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "error": null,
+  "product": {
+    "product_id": "mock_electronics_2",
+    "product_name": "애플 에어팟 프로 2세대",
+    "category_name": "electronics",
+    "product_price": 108308,
+    "product_image": "https://via.placeholder.com/300",
+    "product_url": "https://www.coupang.com/vp/products/mock_2",
+    "discount_rate": 0,
+    "is_rocket": false,
+    "rating": 0.0,
+    "review_count": 0,
+    "rank": 2
+  },
+  "chinese_keywords": [
+    "商品"
+  ],
+  "douyin_videos": [
+    {
+      "video_id": "mock_商品_1762280081_0",
+      "video_url": "https://www.douyin.com/video/mock_商品_1762280081_0",
+      "title": "商品 Product Review #1",
+      "author": "TestUser9",
+      "author_id": "user_7486",
+      "view_count": 914986,
+      "like_count": 15718,
+      "share_count": 5778,
+      "product_info": null,
+      "has_text_overlay": false,
+      "duration_seconds": 17
+    },
+    {
+      "video_id": "mock_商品_1762280081_1",
+      "video_url": "https://www.douyin.com/video/mock_商品_1762280081_1",
+      "title": "商品 Product Review #2",
+      "author": "TestUser68",
+      "author_id": "user_9336",
+      "view_count": 807006,
+      "like_count": 60791,
+      "share_count": 7638,
+      "product_info": null,
+      "has_text_overlay": false,
+      "duration_seconds": 37
+    }
+  ],
+  "downloaded_videos": []
+}

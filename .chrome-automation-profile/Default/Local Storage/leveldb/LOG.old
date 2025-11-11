@@ -1,0 +1,8 @@
+2025/11/11-15:44:52.143 9478 Reusing MANIFEST C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2025/11/11-15:44:52.158 9478 Recovering log #164
+2025/11/11-15:44:52.164 9478 Reusing old log C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\Local Storage\leveldb/000164.log 
+2025/11/11-15:45:06.787 7ad8 Level-0 table #168: started
+2025/11/11-15:45:06.800 7ad8 Level-0 table #168: 23234 bytes OK
+2025/11/11-15:45:06.804 7ad8 Delete type=0 #164
+2025/11/11-15:45:42.707 7ad8 Level-0 table #170: started
+2025/11/11-15:45:42.714 7ad8 Level-0 table #170: 20239 bytes OK

@@ -193,6 +193,7 @@ class YouTubeUploader:
             video_id = None
 
             try:
+                # 비디오 업로드
                 while response is None:
                     status, response = request.next_chunk()
                     if status:
@@ -201,16 +202,72 @@ class YouTubeUploader:
                         if progress_callback:
                             progress_callback(progress)
 
-                # 업로드 완료 - video_id 저장
+                # 업로드 완료 - video_id 즉시 저장
                 if response and "id" in response:
                     video_id = response["id"]
                     video_url = f"https://youtu.be/{video_id}"
                     print(f"[INFO] 업로드 완료: {video_url}")
+                    print(f"[INFO] video_id 저장됨: {video_id} (중지 시 자동 삭제)")
                 else:
                     raise Exception("업로드 완료되었으나 video_id를 받지 못했습니다")
+
+                # 썸네일 업로드 (재시도 로직 포함)
+                if thumbnail_path and thumbnail_path.exists():
+                    import time
+                    max_retries = 5
+                    retry_delay = 3  # 3초 대기
+
+                    # YouTube가 비디오를 인식하도록 초기 대기
+                    print("[INFO] 썸네일 업로드 준비 중 (5초 대기)...")
+                    time.sleep(5)
+
+                    for attempt in range(max_retries):
+                        try:
+                            if attempt > 0:
+                                print(f"[INFO] 썸네일 업로드 재시도 {attempt + 1}/{max_retries} (2초 후)...")
+                                time.sleep(retry_delay)
+
+                            media = MediaFileUpload(str(thumbnail_path))
+                            self.youtube.thumbnails().set(
+                                videoId=video_id,
+                                media_body=media
+                            ).execute()
+                            print("[INFO] 썸네일 업로드 완료")
+                            break
+                        except Exception as e:
+                            error_msg = str(e)
+                            if "videoNotFound" in error_msg and attempt < max_retries - 1:
+                                print(f"[WARN] 비디오 처리 중... 재시도 대기")
+                            elif attempt < max_retries - 1:
+                                print(f"[WARN] 썸네일 업로드 실패 (재시도 예정): {e}")
+                            else:
+                                print(f"[WARN] 썸네일 업로드 최종 실패: {e}")
+
+                # 자막 업로드
+                if captions_path and captions_path.exists():
+                    try:
+                        caption_body = {
+                            "snippet": {
+                                "videoId": video_id,
+                                "language": "ko",
+                                "name": "Korean",
+                                "isDraft": False,
+                            }
+                        }
+                        media = MediaFileUpload(str(captions_path), mimetype="application/octet-stream")
+                        self.youtube.captions().insert(
+                            part="snippet",
+                            body=caption_body,
+                            media_body=media,
+                            sync=True
+                        ).execute()
+                        print("[INFO] 자막 업로드 완료")
+                    except Exception as e:
+                        print(f"[WARN] 자막 업로드 실패: {e}")
+
             except KeyboardInterrupt:
                 print("[WARN] 업로드 취소 요청 감지")
-                # 업로드가 완료되어 video_id가 있으면 YouTube에서 삭제
+                # video_id가 있으면 (업로드 완료 후 중지) YouTube에서 삭제
                 if video_id:
                     try:
                         print(f"[INFO] YouTube에서 비디오 삭제 중: {video_id}")
@@ -219,60 +276,6 @@ class YouTubeUploader:
                     except Exception as delete_error:
                         print(f"[ERROR] YouTube 비디오 삭제 실패: {delete_error}")
                 raise  # KeyboardInterrupt 다시 발생시켜서 상위로 전파
-
-            # 썸네일 업로드 (재시도 로직 포함)
-            if thumbnail_path and thumbnail_path.exists():
-                import time
-                max_retries = 5
-                retry_delay = 3  # 3초 대기
-
-                # YouTube가 비디오를 인식하도록 초기 대기
-                print("[INFO] 썸네일 업로드 준비 중 (5초 대기)...")
-                time.sleep(5)
-
-                for attempt in range(max_retries):
-                    try:
-                        if attempt > 0:
-                            print(f"[INFO] 썸네일 업로드 재시도 {attempt + 1}/{max_retries} (2초 후)...")
-                            time.sleep(retry_delay)
-
-                        media = MediaFileUpload(str(thumbnail_path))
-                        self.youtube.thumbnails().set(
-                            videoId=video_id,
-                            media_body=media
-                        ).execute()
-                        print("[INFO] 썸네일 업로드 완료")
-                        break
-                    except Exception as e:
-                        error_msg = str(e)
-                        if "videoNotFound" in error_msg and attempt < max_retries - 1:
-                            print(f"[WARN] 비디오 처리 중... 재시도 대기")
-                        elif attempt < max_retries - 1:
-                            print(f"[WARN] 썸네일 업로드 실패 (재시도 예정): {e}")
-                        else:
-                            print(f"[WARN] 썸네일 업로드 최종 실패: {e}")
-
-            # 자막 업로드
-            if captions_path and captions_path.exists():
-                try:
-                    caption_body = {
-                        "snippet": {
-                            "videoId": video_id,
-                            "language": "ko",
-                            "name": "Korean",
-                            "isDraft": False,
-                        }
-                    }
-                    media = MediaFileUpload(str(captions_path), mimetype="application/octet-stream")
-                    self.youtube.captions().insert(
-                        part="snippet",
-                        body=caption_body,
-                        media_body=media,
-                        sync=True
-                    ).execute()
-                    print("[INFO] 자막 업로드 완료")
-                except Exception as e:
-                    print(f"[WARN] 자막 업로드 실패: {e}")
 
             return UploadResult(
                 success=True,

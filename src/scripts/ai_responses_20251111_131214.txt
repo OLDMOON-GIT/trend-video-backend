@@ -1,0 +1,68 @@
+ChatGPT의 말:
+
+{
+"title": "페레로 페레로로쉐 T3 3개입, 38g, 48개 - 초콜릿/캔디세트 | 쿠팡",
+"version": "product-1.0",
+"product_info": {
+"thumbnail": "https://thumbnail.coupangcdn.com/thumbnails/remote/492x492ex/image/vendor_inventory/2ccc/18114d68d374fa8c56b776594bf436bdfbcfe0a84ed63856f925121020fe.png
+",
+"product_link": "https://link.coupang.com/a/c24xvk
+",
+"description": "별점 4.6점, 리뷰 266개의 사랑받는 초콜릿 세트. 페레로 로쉐 T3 3개입, 38g, 48개. 진한 헤이즐넛과 부드러운 밀크초콜릿이 어우러진 달콤한 선물."
+},
+"metadata": {
+"genre": "상품 소개 영상",
+"format": "9:16 vertical (portrait)",
+"total_duration_seconds": 30,
+"style": "cinematic product showcase",
+"mood": "desirable, appealing, satisfying",
+"key_techniques": ["product focus", "lifestyle context", "detail shots", "emotional connection"],
+"target_platform": "mobile shopping",
+"emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+"scene_count": 4
+},
+"scenes": [
+{
+"scene_id": "scene_00_hook",
+"scene_name": "훅 - 3초 상품 매력",
+"duration_seconds": 3,
+"word_count": 50,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product hero shot with human element, camera starts blurred then racks focus sharply onto hands unwrapping golden foil of Ferrero Rocher chocolates, shimmering gold wrapping reflecting soft light, emphasizing luxurious texture and spherical shape, same person wearing cozy beige sweater, same warm living room setup, golden tones highlighting the indulgent feel, cinematic lighting with gentle rim highlights, focus pull reveals detailed hazelnut texture under glossy chocolate shell, depth and warmth create desire.",
+"narration": "황금빛 포장 속에 숨은 달콤한 비밀, 페레로 로쉐가 당신의 하루를 빛냅니다."
+},
+{
+"scene_id": "scene_01_problem",
+"scene_name": "문제/필요 - 9초 공감",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle problem scene, camera widens from previous close-up to reveal SAME PERSON sitting in same cozy living room, same beige sweater confirming character continuity, looking tired after a long workday, papers scattered on table, soft afternoon light casting shadows, the person sighs and stares blankly, craving something sweet but meaningful, realistic muted tones showing fatigue, cinematic handheld motion adding intimacy, slow zoom on their eyes showing yearning for a small comfort, same warm room and lighting continuity reinforcing emotional tone, product box visible in corner of frame hinting solution to come.",
+"narration": "하루 종일 바쁘게 흘러간 시간, 달콤함이 그리운 순간이 있죠. 단순한 간식이 아닌, 마음을 녹이는 작은 위로가 필요할 때."
+},
+{
+"scene_id": "scene_02_solution",
+"scene_name": "해결/기능 - 9초 설득",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product solution reveal, SAME PERSON from previous scene unwraps a Ferrero Rocher, same cozy living room, same sweater confirming continuity, camera tracks close as golden foil unfolds revealing perfect chocolate sphere, light glows softly on glossy surface, macro lens captures layered texture: crisp wafer, creamy hazelnut, rich chocolate, detailed cinematic focus on indulgence, smooth pull-back shows person savoring first bite, eyes closing in satisfaction, warm tones envelop scene, same composition emphasizing texture and taste, slow motion crumbs fall, light flickers gently enhancing premium mood.",
+"narration": "겹겹이 쌓인 헤이즐넛과 초콜릿의 조화, 바삭한 식감과 부드러운 달콤함이 입안 가득 퍼집니다. 단 한 입으로 여유가 피어나는 순간."
+},
+{
+"scene_id": "scene_03_cta",
+"scene_name": "행동유도 - 9초 구매욕구",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic emotional finale, camera slowly pulls back showing SAME PERSON smiling softly, still in same room, holding Ferrero Rocher box gently, golden light of sunset streaming through window casting warm glow, same cozy atmosphere, product placed elegantly on table, reflections dance on gold foil wrapping, cinematic handheld tilt capturing emotion and product together, soft focus transitions to highlight product branding, same person now relaxed and happy, color palette shifts to golden warmth symbolizing comfort and satisfaction, emotional closure as camera lifts slightly revealing calm smile and glimmering gold wrappers, filmic grain adds tactile luxury, final frame lingers on link text subtly on-screen.",
+"narration": "소중한 순간을 더 달콤하게. 황금빛의 여유를 느껴보세요. 자세한 이야기는 쿠팡 상품 페이지에서 만나보실 수 있습니다."
+}
+],
+"quality_check": {
+"scene_count": 4,
+"total_duration": 30,
+"vertical_format": true,
+"product_focused": true,
+"cinematic_style": true,
+"hook_effectiveness": "strong",
+"problem_solution_clear": true,
+"cta_compelling": true
+}
+}

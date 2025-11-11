@@ -1,0 +1,66 @@
+ChatGPT의 말:
+
+{
+"title": "비안 겨울 스포츠 터치 스키장갑 - 장갑 | 쿠팡",
+"version": "product-1.0",
+"product_info": {
+"thumbnail": "{thumbnail}",
+"product_link": "{product_link}",
+"description": "{product_description}"
+},
+"metadata": {
+"genre": "상품 소개 영상",
+"format": "9:16 vertical (portrait)",
+"total_duration_seconds": 30,
+"style": "cinematic product showcase",
+"mood": "desirable, appealing, satisfying",
+"key_techniques": ["product focus", "lifestyle context", "detail shots", "emotional connection"],
+"target_platform": "mobile shopping",
+"emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+"scene_count": 4
+},
+"scenes": [
+{
+"scene_id": "scene_00_hook",
+"scene_name": "훅 - 3초 상품 매력",
+"duration_seconds": 3,
+"word_count": 50,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product showcase, black and silver winter sports gloves resting on snowy surface catching morning light, sleek waterproof texture and reflective logo visible, product centered with slow push-in motion, dramatic snow sparkle lighting, cinematic cold blue tone with soft white highlights, product-focused composition",
+"narration": "찬 바람 속에서도 따뜻함을 지키는, 비안 겨울 스포츠 터치 스키장갑의 강렬한 첫인상.\n"
+},
+{
+"scene_id": "scene_01_problem",
+"scene_name": "문제/필요 - 9초 공감",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle scene, skier fumbling with phone in freezing mountain wind, snowflakes hitting bare hands, discomfort and frustration visible, muted cool blue palette, shallow depth of field capturing trembling hands, cinematic lighting with harsh winter tone, product absent to highlight problem, relatable and emotional atmosphere, product-focused narrative setup",
+"narration": "겨울 스포츠를 즐기다 보면 손끝이 얼어붙고, 장갑을 벗을 때마다 차가운 공기가 스며듭니다. 휴대폰을 터치하려면 다시 벗어야 하고, 그때마다 체온이 식어갑죠. 편안한 겨울 스포츠, 왜 이렇게 어려울까요?\n"
+},
+{
+"scene_id": "scene_02_solution",
+"scene_name": "해결/기능 - 9초 설득",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product demonstration, close-up of gloves gripping ski poles and seamlessly using smartphone touchscreen, waterproof snow-resistant surface glistening, product centered with soft motion tracking, cinematic contrast between black gloves and white snow, fine detail shots of insulation and stitching, satisfying tactile visuals, premium cinematic lighting, realistic breath vapor in cold air, product-focused showcase emphasizing warmth and control",
+"narration": "비안 겨울 스포츠 터치 스키장갑은 방수와 보온, 그리고 정교한 터치 기능을 한 번에 담았습니다. 장갑을 벗지 않아도 스마트폰을 조작할 수 있고, 부드러운 안감이 손끝까지 따뜻함을 전합니다. 겨울 스포츠의 자유를 다시 느껴보세요.\n"
+},
+{
+"scene_id": "scene_03_cta",
+"scene_name": "행동유도 - 9초 구매욕구",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic satisfaction scene, skier standing atop mountain sunrise view with gloves visible, slow pan revealing confident smile, warm golden sunlight reflecting on glove surface, cinematic bokeh with snow crystals in air, smooth pullback shot revealing serene landscape, product integrated into lifestyle moment, emotional reward tone, premium cinematic feel, mobile-optimized composition focusing on product satisfaction and aspiration",
+"narration": "이제 추위 속에서도 당신의 손은 자유롭습니다. 따뜻함과 스타일, 그 사이의 완벽한 균형을 느껴보세요. 비안 겨울 스포츠 터치 스키장갑 — 더 깊은 설원의 감동은 상품 페이지에서 만날 수 있습니다.\n"
+}
+],
+"quality_check": {
+"scene_count": 4,
+"total_duration": 30,
+"vertical_format": true,
+"product_focused": true,
+"cinematic_style": true,
+"hook_effectiveness": "strong",
+"problem_solution_clear": true,
+"cta_compelling": true
+}
+}

@@ -1,0 +1,64 @@
+{
+  "title": "비안 겨울 스포츠 터치 스키장갑",
+  "version": "product-1.0",
+  "product_info": {
+    "thumbnail": "{thumbnail}",
+    "product_link": "{product_link}",
+    "description": "{product_description}"
+  },
+  "metadata": {
+    "genre": "상품 소개 영상",
+    "format": "9:16 vertical (portrait)",
+    "total_duration_seconds": 30,
+    "style": "cinematic product showcase",
+    "mood": "desirable, appealing, satisfying",
+    "key_techniques": ["product focus", "lifestyle context", "detail shots", "emotional connection"],
+    "target_platform": "mobile shopping",
+    "emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+    "scene_count": 4
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 3초 상품 매력",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product showcase, black sleek touchscreen winter ski gloves laid elegantly on fresh white snow surface, full vertical composition with product centered, textured fabric with conductive fingertip technology clearly visible, dramatic side lighting creating depth and texture shadows, slowly pushing in on product revealing fine stitching details and touchscreen patches, desirable and eye-catching mood, shot on 35mm film, shallow depth of field, premium bokeh, deep black and pure white color palette with subtle blue winter tones, mobile-optimized product framing",
+      "narration": "추운 겨울, 장갑을 벗지 않고도 스마트폰을 자유롭게 사용하는 비안 터치 스키장갑"
+    },
+    {
+      "scene_id": "scene_01_problem",
+      "scene_name": "문제/필요 - 9초 공감",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle scene, frustrated skier on snowy mountain slope struggling to remove thick gloves to check phone for navigation, full vertical composition with person centered in winter sports gear, cold wind blowing, fingers turning red from cold exposure, uncomfortable facial expression, soft overcast winter lighting with relatable atmosphere, slowly tracking with empathy showing the inconvenience, relatable and understanding mood, shot on 35mm film, shallow depth of field, emotional bokeh, cool blue and grey tones suggesting discomfort and frustration, mobile-optimized lifestyle framing",
+      "narration": "스키장에서 길을 찾거나 사진을 찍으려면 매번 장갑을 벗어야 했나요? 차가운 바람에 손이 시리고, 장갑을 잃어버릴까 불안했던 순간들. 겨울 스포츠를 즐기는 동안 불편함은 계속됩니다."
+    },
+    {
+      "scene_id": "scene_02_solution",
+      "scene_name": "해결/기능 - 9초 설득",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product demonstration, gloved hand effortlessly swiping and tapping smartphone screen on snowy mountain, full vertical composition with product in action centered, special conductive fingertip material responding perfectly to touchscreen, close-up shots of textured grip pattern and warm insulated interior lining, bright satisfying winter sunlight with crisp white snow background, slowly orbiting product showcase revealing waterproof exterior and flexible wrist strap, convincing and impressive mood, shot on 35mm film, shallow depth of field, crisp bokeh, vibrant black product against pure white snow creating strong contrast, mobile-optimized demonstration framing",
+      "narration": "특수 전도성 소재로 장갑을 낀 채로도 터치가 자유로워요. 방수 처리된 겉감과 보온성 높은 안감이 손을 따뜻하게 지켜주고, 미끄럼 방지 그립으로 안전하게 스키 폴을 잡을 수 있습니다."
+    },
+    {
+      "scene_id": "scene_03_cta",
+      "scene_name": "행동유도 - 9초 구매욕구",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic satisfaction scene, happy skier gliding down perfect powder snow while casually using phone with gloves on, capturing beautiful mountain scenery photo, full vertical composition with joyful result centered, seamless integration of technology and winter sports lifestyle, warm afternoon golden sunlight breaking through clouds creating magical atmosphere, slowly pulling away revealing complete scene of freedom and enjoyment on pristine ski slope, desirable and rewarding mood, shot on 35mm film, shallow depth of field, dreamy bokeh, premium attractive color palette with warm golden light mixed with cool snow blues, mobile-optimized result framing",
+      "narration": "이제 겨울 스포츠를 더 자유롭게 즐기세요. 소중한 순간을 놓치지 않고 기록하고, 친구들과 실시간으로 공유하세요. 비안 터치 스키장갑과 함께라면 추위도, 불편함도 없는 완벽한 겨울을 경험하실 수 있습니다."
+    }
+  ],
+  "quality_check": {
+    "scene_count": 4,
+    "total_duration": 30,
+    "vertical_format": true,
+    "product_focused": true,
+    "cinematic_style": true,
+    "hook_effectiveness": "strong",
+    "problem_solution_clear": true,
+    "cta_compelling": true
+  }
+}

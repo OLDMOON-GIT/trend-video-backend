@@ -1,0 +1,1 @@
+Error waiting for response: Browser/page closed: Page.query_selector: Target page, context or browser has been closed

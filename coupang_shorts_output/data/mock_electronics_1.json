@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "error": null,
+  "product": {
+    "product_id": "mock_electronics_1",
+    "product_name": "갤럭시 버즈2 프로 무선 이어폰",
+    "category_name": "electronics",
+    "product_price": 28781,
+    "product_image": "https://via.placeholder.com/300",
+    "product_url": "https://www.coupang.com/vp/products/mock_1",
+    "discount_rate": 0,
+    "is_rocket": true,
+    "rating": 0.0,
+    "review_count": 0,
+    "rank": 1
+  },
+  "chinese_keywords": [
+    "商品"
+  ],
+  "douyin_videos": [
+    {
+      "video_id": "mock_商品_1762280067_0",
+      "video_url": "https://www.douyin.com/video/mock_商品_1762280067_0",
+      "title": "商品 Product Review #1",
+      "author": "TestUser22",
+      "author_id": "user_2219",
+      "view_count": 194247,
+      "like_count": 57784,
+      "share_count": 4443,
+      "product_info": null,
+      "has_text_overlay": false,
+      "duration_seconds": 28
+    },
+    {
+      "video_id": "mock_商品_1762280067_1",
+      "video_url": "https://www.douyin.com/video/mock_商品_1762280067_1",
+      "title": "商品 Product Review #2",
+      "author": "TestUser85",
+      "author_id": "user_4237",
+      "view_count": 705021,
+      "like_count": 99139,
+      "share_count": 673,
+      "product_info": null,
+      "has_text_overlay": false,
+      "duration_seconds": 20
+    }
+  ],
+  "downloaded_videos": []
+}

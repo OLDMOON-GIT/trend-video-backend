@@ -1,0 +1,70 @@
+ChatGPT의 말:
+
+{
+"title": "빼빼로 아몬드, 132g, 2개 - 빼빼로/막대과자 | 쿠팡",
+"version": "product-1.0",
+"product_info": {
+"thumbnail": "https://thumbnail.coupangcdn.com/thumbnails/remote/492x492ex/image/1025_amir_coupang_oct_80k/f6ab/7597b23a7ba4c28c83278d01dc8d709a5b520fc702ffe40dad84a7c01d10.jpg
+",
+"product_link": "https://link.coupang.com/a/c24Fea
+",
+"description": "별점 4.7점, 리뷰 55971개를 받은 빼빼로 아몬드 132g, 2개 세트. 진한 초콜릿 위에 고소한 아몬드가 가득한 막대과자. 지금 쿠팡에서 다양한 빼빼로 시리즈를 만나보세요."
+},
+"metadata": {
+"genre": "상품 소개 영상",
+"format": "9:16 vertical (portrait)",
+"total_duration_seconds": 30,
+"style": "cinematic product showcase",
+"mood": "desirable, appealing, satisfying",
+"key_techniques": ["product focus", "lifestyle context", "detail shots", "emotional connection"],
+"target_platform": "mobile shopping",
+"emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+"scene_count": 4
+},
+"scenes": [
+{
+"scene_id": "scene_00_hook",
+"scene_name": "훅 - 3초 상품 매력",
+"duration_seconds": 3,
+"word_count": 50,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product hero shot with human element, camera starts focused on a hand holding two golden-brown chocolate sticks covered in crunchy almonds, glistening under soft warm light, close-up reveals glossy chocolate texture and crispy almond surface, SAME PERSON throughout video wearing casual cream sweater, same cozy indoor setting with soft beige background, gentle slow-motion tilt emphasizes texture and sweetness, cinematic lighting with shallow depth of field highlighting product detail, inviting and delicious tone.",
+"narration": "진한 초콜릿 위에 고소한 아몬드가 빼곡히, 손끝에서 느껴지는 달콤한 유혹. 빼빼로 아몬드의 첫인상."
+},
+{
+"scene_id": "scene_01_problem",
+"scene_name": "문제/필요 - 9초 공감",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle problem scene, SAME PERSON from Scene 0 sitting at a desk in same cozy room, afternoon light through window, reaching for a snack but finding only empty wrappers, subtle frustration on face, product packaging slightly visible on table edge, realistic everyday lighting shifting to neutral tones, camera slowly tracks in from mid-shot to close-up, emphasizing craving for something satisfying and crunchy, cinematic composition with natural color palette matching chocolate tones, same cream sweater confirming continuity, soft handheld motion enhancing realism, focus pull from empty wrapper to thoughtful expression building empathy.",
+"narration": "일하다 잠깐 쉬는 그 순간, 허전한 책상 위엔 달콤한 한 입이 필요하죠. 입안 가득 고소함과 진한 초콜릿이 그리워지는 시간."
+},
+{
+"scene_id": "scene_02_solution",
+"scene_name": "해결/기능 - 9초 설득",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product solution reveal, SAME PERSON from previous scene now opening fresh pack of 빼빼로 아몬드, same cozy room and cream sweater confirming character and environment continuity, camera captures satisfying crinkle of wrapper, slow-motion shot of breaking one stick to reveal crisp texture, glossy chocolate catching warm light, almonds sparkling subtly, cinematic color balance in rich brown and gold tones, product hero moment as same person takes a bite with soft smile, lighting warms to golden hue, shallow depth highlights melting chocolate and crunch, tactile sound of bite enhances sensory appeal, same composition framing person and product harmoniously, close-up transitions to mid-shot showing enjoyment, creating emotional satisfaction.",
+"narration": "바삭한 아몬드와 진한 초콜릿이 완벽하게 어우러진 빼빼로 아몬드. 한 입에 스트레스가 사르르 녹아요. 달콤함이 입안 가득 퍼집니다."
+},
+{
+"scene_id": "scene_03_cta",
+"scene_name": "행동유도 - 9초 구매욕구",
+"duration_seconds": 9,
+"word_count": 150,
+"sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic emotional finale, SAME PERSON from all previous scenes now leaning back comfortably with a cup of coffee, same cozy interior bathed in warm evening light, golden reflections on chocolate and almonds emphasize richness, camera pulls back slowly revealing relaxed satisfaction, soft smile on face, cinematic lens flare from window glow adds warmth, gentle music atmosphere of comfort and contentment, same cream sweater and environment maintaining full continuity, 35mm film look with creamy bokeh, final frame holds on product box placed neatly beside cup, subtle motion of rising steam, emotional closure as viewer feels cozy and fulfilled, ending with product in clear focus as person glances at it with fondness, naturally leading to interest in product link.",
+"narration": "따뜻한 오후, 커피 한 잔과 함께 달콤한 여유를 즐겨보세요. 지금 쿠팡에서 빼빼로 아몬드를 만나, 하루를 조금 더 행복하게 채워보세요."
+}
+],
+"quality_check": {
+"scene_count": 4,
+"total_duration": 30,
+"vertical_format": true,
+"product_focused": true,
+"cinematic_style": true,
+"hook_effectiveness": "strong",
+"problem_solution_clear": true,
+"cta_compelling": true
+}
+}
+
+Is this conversation helpful so far?

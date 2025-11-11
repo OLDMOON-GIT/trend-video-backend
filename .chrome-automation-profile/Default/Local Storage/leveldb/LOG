@@ -1,0 +1,19 @@
+2025/11/11-15:56:34.355 34a4 Reusing MANIFEST C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2025/11/11-15:56:34.365 34a4 Recovering log #167
+2025/11/11-15:56:34.365 34a4 Level-0 table #170: started
+2025/11/11-15:56:34.378 34a4 Level-0 table #170: 20239 bytes OK
+2025/11/11-15:56:34.379 34a4 Recovering log #169
+2025/11/11-15:56:34.386 34a4 Reusing old log C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\Local Storage\leveldb/000169.log 
+2025/11/11-15:56:34.390 34a4 Delete type=0 #167
+2025/11/11-15:56:48.850 ad0 Level-0 table #172: started
+2025/11/11-15:56:48.857 ad0 Level-0 table #172: 29434 bytes OK
+2025/11/11-15:56:48.859 ad0 Delete type=0 #169
+2025/11/11-15:56:48.860 ad0 Compacting 4@0 + 1@1 files
+2025/11/11-15:56:48.868 ad0 Generated table #173@0: 48 keys, 47180 bytes
+2025/11/11-15:56:48.868 ad0 Compacted 4@0 + 1@1 files => 47180 bytes
+2025/11/11-15:56:48.869 ad0 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/11/11-15:56:48.870 ad0 Delete type=2 #163
+2025/11/11-15:56:48.870 ad0 Delete type=2 #165
+2025/11/11-15:56:48.870 ad0 Delete type=2 #168
+2025/11/11-15:56:48.870 ad0 Delete type=2 #170
+2025/11/11-15:56:48.870 ad0 Delete type=2 #172

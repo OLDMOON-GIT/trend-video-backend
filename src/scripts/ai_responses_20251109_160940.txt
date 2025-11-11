@@ -1,0 +1,64 @@
+{
+  "title": "비안 겨울 스포츠 터치 스키장갑",
+  "version": "product-1.0",
+  "product_info": {
+    "thumbnail": "https://thumbnail.coupangcdn.com/thumbnails/remote/492x492ex/image/retail/images/23647110276155-97cc16d9-f3eb-4500-9b3b-bf34ff4eafd5.jpg",
+    "product_link": "https://link.coupang.com/a/c2NzYO",
+    "description": "현재 별점 5.0점, 리뷰 239개를 가진 비안 겨울 스포츠 터치 스키장갑! 지금 쿠팡에서 더 저렴하고 다양한 장갑 제품들을 확인해보세요."
+  },
+  "metadata": {
+    "genre": "상품 소개 영상",
+    "format": "9:16 vertical (portrait)",
+    "total_duration_seconds": 30,
+    "style": "cinematic product showcase",
+    "mood": "desirable, appealing, satisfying",
+    "key_techniques": ["product focus", "lifestyle context", "detail shots", "emotional connection"],
+    "target_platform": "mobile shopping",
+    "emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+    "scene_count": 4
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 3초 상품 매력",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product showcase, black sleek touchscreen ski gloves with vibrant color accents lying on fresh white snow, full vertical composition with product centered, premium waterproof fabric texture with reflective details catching sunlight, dramatic winter mountain lighting with high contrast, slowly pushing in on gloves revealing fine stitching and touchscreen fingertip technology, desirable and eye-catching mood, shot on 35mm film, shallow depth of field, premium bokeh, cool blue and pure white winter tones with black product elegance, mobile-optimized product framing",
+      "narration": "눈 덮인 슬로프 위에서도 스마트폰을 자유롭게, 비안 터치 스키장갑"
+    },
+    {
+      "scene_id": "scene_01_problem",
+      "scene_name": "문제/필요 - 9초 공감",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle scene, frustrated skier struggling to take off thick gloves to use smartphone on snowy slope, cold hands exposed to freezing wind, full vertical composition with person centered in winter mountain environment, harsh cold atmosphere with wind-blown snow particles, soft natural winter lighting with relatable atmosphere, slowly tracking with empathy showing discomfort of bare hands in cold, relatable and understanding mood, shot on 35mm film, shallow depth of field, emotional bokeh, muted realistic color palette with cool blue and grey tones suggesting discomfort and frustration, mobile-optimized lifestyle framing",
+      "narration": "스키장에서 사진 찍으려고 장갑 벗으면 손이 얼어붙고, 리프트 대기 중 문자 확인하려면 매번 번거로웠던 경험. 추운 겨울 스포츠를 즐기면서도 스마트폰을 쓸 수 없다면 정말 불편하죠"
+    },
+    {
+      "scene_id": "scene_02_solution",
+      "scene_name": "해결/기능 - 9초 설득",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product demonstration, gloved hand smoothly scrolling and tapping smartphone screen on snowy mountain, touchscreen fingertips responding perfectly, full vertical composition with product in action centered, clear demonstration of waterproof material repelling snow and moisture while maintaining touch sensitivity, bright satisfying winter sunlight with crisp white snow reflecting warm amber glow creating functional atmosphere, slowly orbiting product showcase revealing thermal insulation layer and flexible grip design, convincing and impressive mood, shot on 35mm film, shallow depth of field, crisp bokeh, vibrant satisfying color palette with winter mountain clarity, mobile-optimized demonstration framing",
+      "narration": "터치 전용 손가락 끝으로 장갑을 낀 채로도 스마트폰이 자유롭게 작동돼요. 방수 소재로 눈과 습기를 막아주고, 보온층이 손을 따뜻하게 감싸줍니다. 별점 5점 만점에 239개 리뷰가 증명하는 실력"
+    },
+    {
+      "scene_id": "scene_03_cta",
+      "scene_name": "행동유도 - 9초 구매욕구",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic satisfaction scene, happy skier capturing beautiful mountain selfie with gloves on, smiling while checking messages on chairlift with warm hands, perfect winter sports routine, full vertical composition with happy result centered, cozy mountain lifestyle atmosphere with product beautifully integrated into active winter life, warm golden hour lighting with rewarding atmosphere creating sense of comfort and convenience, slowly pulling away revealing complete scene of satisfied winter sports enthusiast enjoying technology and warmth simultaneously, desirable and rewarding mood, shot on 35mm film, shallow depth of field, dreamy bokeh, premium attractive color palette with soft winter sunset tones and warm comfort感, mobile-optimized result framing",
+      "narration": "이제 겨울 스포츠를 즐기면서도 소중한 순간들을 놓치지 마세요. 따뜻함과 편리함을 동시에 경험할 수 있어요. 쿠팡에서 지금 바로 만나보실 수 있습니다"
+    }
+  ],
+  "quality_check": {
+    "scene_count": 4,
+    "total_duration": 30,
+    "vertical_format": true,
+    "product_focused": true,
+    "cinematic_style": true,
+    "hook_effectiveness": "strong",
+    "problem_solution_clear": true,
+    "cta_compelling": true
+  }
+}

@@ -1,0 +1,9 @@
+I need to analyze the product information to create a cinematic 30-second product video script. However, I notice that the template contains placeholder variables ({thumbnail}, {product_link}, {product_description}) but no actual product information has been provided.
+
+To create the JSON output as requested, I need:
+
+The actual thumbnail image or URL
+The product link
+The product description
+
+Could you please provide the specific product information for "비안 겨울 스포츠 터치 스키장갑" so I can create the complete video script?
