@@ -36,6 +36,23 @@ base_logging.getLogger("pytorch_lightning").setLevel(base_logging.WARNING)
 from typing import Dict, List, Optional
 import edge_tts
 import asyncio
+
+# Google Cloud TTS (선택적)
+try:
+    from google.cloud import texttospeech
+    GOOGLE_TTS_AVAILABLE = True
+except ImportError:
+    GOOGLE_TTS_AVAILABLE = False
+    logger_msg = "⚠️ google-cloud-texttospeech 패키지가 없습니다. pip install google-cloud-texttospeech"
+
+# AWS Polly (선택적)
+try:
+    import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
+    AWS_POLLY_AVAILABLE = True
+except ImportError:
+    AWS_POLLY_AVAILABLE = False
+    logger_msg = "⚠️ boto3 패키지가 없습니다. pip install boto3"
 from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, VideoFileClip
 import re
 import subprocess
@@ -115,7 +132,24 @@ class VideoFromFolderCreator:
             is_admin: 관리자 모드 (비용 로그 표시)
         """
         self.folder_path = Path(folder_path)
+
+        # TTS 제공자 결정
         self.voice = voice
+        if voice.startswith('google-'):
+            self.tts_provider = 'google'
+            if not GOOGLE_TTS_AVAILABLE:
+                logger.warning(f"⚠️ Google Cloud TTS 패키지가 없습니다. Edge TTS로 대체합니다.")
+                self.tts_provider = 'edge'
+                self.voice = "ko-KR-SoonBokNeural"
+        elif voice.startswith('aws-'):
+            self.tts_provider = 'aws'
+            if not AWS_POLLY_AVAILABLE:
+                logger.warning(f"⚠️ AWS Polly 패키지가 없습니다. Edge TTS로 대체합니다.")
+                self.tts_provider = 'edge'
+                self.voice = "ko-KR-SoonBokNeural"
+        else:
+            self.tts_provider = 'edge'
+
         self.aspect_ratio = aspect_ratio
         self.add_subtitles = add_subtitles
         self.image_source = image_source.lower()
@@ -421,6 +455,84 @@ class VideoFromFolderCreator:
             images = self._download_missing_images(images)
 
         return images
+
+    def _find_videos(self) -> Dict[int, Path]:
+        """씬별 비디오 파일 찾기 (이미지와 동일한 정렬 로직)"""
+        videos = {}
+
+        logger.info("비디오 파일을 찾습니다.")
+
+        # 모든 비디오 파일 찾기 (generated_videos 폴더 제외, 중복 제거)
+        all_videos_set = set()
+        for ext in ['*.mp4', '*.mov', '*.avi', '*.mkv', '*.MP4', '*.MOV', '*.AVI', '*.MKV']:
+            for vid_file in self.folder_path.glob(ext):
+                # generated_videos 폴더 안의 파일은 제외
+                if 'generated_videos' not in str(vid_file):
+                    all_videos_set.add(vid_file)
+
+        # videos 서브폴더에서도 찾기
+        videos_folder = self.folder_path / "videos"
+        if videos_folder and videos_folder.exists():
+            for ext in ['*.mp4', '*.mov', '*.avi', '*.mkv', '*.MP4', '*.MOV', '*.AVI', '*.MKV']:
+                for vid_file in videos_folder.glob(ext):
+                    all_videos_set.add(vid_file)
+
+        # 정렬 로직 (이미지와 동일)
+        def extract_sequence(filepath):
+            """시퀀스 번호 추출 (이미지와 동일한 로직)"""
+            import re
+            name = filepath.stem  # 확장자 제외한 파일명
+
+            # video_01, scene_1 패턴
+            match = re.match(r'^(video|scene|clip)[-_](\d+)$', name, re.IGNORECASE)
+            if match:
+                return (int(match.group(2)), 0)
+
+            # video(1), scene(2) 패턴
+            match = re.match(r'^(video|scene|clip)\((\d+)\)$', name, re.IGNORECASE)
+            if match:
+                return (int(match.group(2)), 0)
+
+            # (1), (2) 패턴
+            match = re.match(r'^\((\d+)\)$', name)
+            if match:
+                return (int(match.group(1)), 0)
+
+            # 파일명 전체가 숫자 (1.mp4, 2.mp4)
+            match = re.match(r'^(\d+)$', name)
+            if match:
+                return (int(match.group(1)), 0)
+
+            # 시퀀스 번호 없음 - 파일 수정 시간 사용
+            try:
+                mtime = filepath.stat().st_mtime
+            except:
+                mtime = 0
+            return (None, mtime)
+
+        # 정렬: 시퀀스 번호가 있으면 우선, 없으면 시간 순서
+        all_videos_list = list(all_videos_set)
+        all_videos = sorted(all_videos_list, key=lambda f: (
+            extract_sequence(f)[0] is None,  # 시퀀스 없는 것을 뒤로
+            extract_sequence(f)[0] if extract_sequence(f)[0] is not None else 0,  # 시퀀스 정렬
+            extract_sequence(f)[1]  # 시간 정렬
+        ))
+
+        # 씬 번호 자동 할당 및 로그 출력
+        logger.info(f"\n🎬 비디오 정렬 완료 (총 {len(all_videos)}개):")
+        for idx, vid_path in enumerate(all_videos, start=1):
+            videos[idx] = vid_path
+            seq_info = extract_sequence(vid_path)
+            if seq_info[0] is not None:
+                logger.info(f"  씬 {idx}: {vid_path.name} (시퀀스: {seq_info[0]})")
+            else:
+                import datetime
+                mtime_str = datetime.datetime.fromtimestamp(seq_info[1]).strftime('%Y-%m-%d %H:%M:%S')
+                logger.info(f"  씬 {idx}: {vid_path.name} (시간: {mtime_str})")
+
+        logger.info(f"비디오 {len(videos)}개 발견")
+
+        return videos
 
     def _download_missing_images(self, images: Dict[int, Path]) -> Dict[int, Path]:
         """
@@ -900,8 +1012,17 @@ class VideoFromFolderCreator:
         return text
 
     async def _generate_tts(self, text: str, output_path: Path) -> tuple:
+        """TTS 생성 (제공자별로 라우팅)"""
+        if self.tts_provider == 'google':
+            return await self._generate_google_tts(text, output_path)
+        elif self.tts_provider == 'aws':
+            return await self._generate_aws_polly(text, output_path)
+        else:
+            return await self._generate_edge_tts(text, output_path)
+
+    async def _generate_edge_tts(self, text: str, output_path: Path) -> tuple:
         """Edge TTS로 음성 생성 + 단어별 타임스탬프 추출"""
-        logger.info(f"TTS 생성 중: {output_path.name}")
+        logger.info(f"Edge TTS 생성 중: {output_path.name}")
 
         # 텍스트 정리
         clean_text = self._clean_narration(text)
@@ -955,13 +1076,27 @@ class VideoFromFolderCreator:
                 if not words:
                     continue
 
-                # 문장 시간을 단어 개수로 균등 분배
+                # 문장 시간을 단어 길이(글자 수)에 비례해서 분배
+                # 예: "할아버지"(4글자) + "의"(1글자) = 5글자
+                # → "할아버지" 80%, "의" 20% 시간 할당
                 sent_duration = (sent["end"] - sent["start"]) if sent["end"] else 1.0
-                time_per_word = sent_duration / len(words)
+                total_chars = sum(len(w) for w in words)
+                if total_chars == 0:
+                    total_chars = len(words)  # 폴백
 
-                for i, word in enumerate(words):
-                    word_start = sent["start"] + (i * time_per_word)
-                    word_end = word_start + time_per_word
+                current_time = sent["start"]
+                for word in words:
+                    word_chars = len(word)
+                    # 글자 수에 비례해서 시간 할당
+                    word_duration = sent_duration * (word_chars / total_chars)
+                    # 최소 시간 보장 (너무 짧으면 안 보임)
+                    if word_duration < 0.2:
+                        word_duration = 0.2
+
+                    word_start = current_time
+                    word_end = current_time + word_duration
+                    current_time = word_end
+
                     word_timings.append({
                         "word": word,
                         "start": word_start,
@@ -990,6 +1125,340 @@ class VideoFromFolderCreator:
             logger.warning(f"TTS 생성 완료: {duration:.2f}초, 타임스탬프 없음 (대본 기반으로 폴백 예정)")
 
         return duration, word_timings
+
+    async def _generate_google_tts(self, text: str, output_path: Path) -> tuple:
+        """Google Cloud TTS로 음성 생성 + 단어별 타임스탬프 추출"""
+        logger.info(f"Google Cloud TTS 생성 중: {output_path.name}")
+
+        # 텍스트 정리
+        clean_text = self._clean_narration(text)
+
+        if not clean_text:
+            logger.warning("텍스트가 비어있어 기본 메시지 사용")
+            clean_text = "무음"
+
+        try:
+            # Google Cloud TTS 클라이언트 초기화
+            client = texttospeech.TextToSpeechClient()
+
+            # 음성 매핑 (google-ko-KR-Neural2-A -> ko-KR-Neural2-A)
+            voice_name = self.voice.replace('google-', '')
+
+            # TTS 요청 설정
+            synthesis_input = texttospeech.SynthesisInput(text=clean_text)
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="ko-KR",
+                name=voice_name
+            )
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3,
+                speaking_rate=0.85,  # Edge TTS의 -15%와 유사
+                effects_profile_id=['small-bluetooth-speaker-class-device']
+            )
+
+            # TTS 생성 (word-level timestamps 포함)
+            response = client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice,
+                audio_config=audio_config,
+                enable_time_pointing=[texttospeech.SynthesisInput.TimepointType.SSML_MARK]
+            )
+
+            # 오디오 파일 저장
+            with open(output_path, "wb") as f:
+                f.write(response.audio_content)
+
+            # 타임스탬프 추출 (Google TTS timepoints)
+            word_timings = []
+            if hasattr(response, 'timepoints') and response.timepoints:
+                for i, timepoint in enumerate(response.timepoints):
+                    word_timings.append({
+                        "word": timepoint.mark_name,
+                        "start": timepoint.time_seconds,
+                        "end": response.timepoints[i + 1].time_seconds if i + 1 < len(response.timepoints) else timepoint.time_seconds + 0.5
+                    })
+
+            # 오디오 길이 가져오기
+            try:
+                audio_clip = AudioFileClip(str(output_path))
+                duration = audio_clip.duration
+                audio_clip.close()
+            except Exception as e:
+                logger.warning(f"오디오 길이 측정 실패, 기본값 1초 사용: {e}")
+                duration = 1.0
+
+            # 타임스탬프가 없으면 텍스트 기반으로 생성
+            if not word_timings:
+                logger.warning("Google TTS에서 타임스탬프를 받지 못했습니다. 텍스트 기반 폴백 사용")
+                words = clean_text.split()
+                time_per_word = duration / len(words) if words else duration
+                for i, word in enumerate(words):
+                    word_timings.append({
+                        "word": word,
+                        "start": i * time_per_word,
+                        "end": (i + 1) * time_per_word
+                    })
+
+            logger.info(f"Google TTS 생성 완료: {duration:.2f}초, 단어 {len(word_timings)}개")
+            return duration, word_timings
+
+        except Exception as e:
+            logger.error(f"Google Cloud TTS 실패: {e}")
+            logger.warning("Edge TTS로 대체합니다.")
+            # Edge TTS로 폴백
+            self.tts_provider = 'edge'
+            self.voice = "ko-KR-SoonBokNeural"
+            return await self._generate_edge_tts(text, output_path)
+
+    async def _generate_aws_polly(self, text: str, output_path: Path) -> tuple:
+        """AWS Polly로 음성 생성 + 단어별 타임스탬프 추출"""
+        logger.info(f"AWS Polly 생성 중: {output_path.name}")
+
+        # 텍스트 정리
+        clean_text = self._clean_narration(text)
+
+        if not clean_text:
+            logger.warning("텍스트가 비어있어 기본 메시지 사용")
+            clean_text = "무음"
+
+        try:
+            # AWS Polly 클라이언트 초기화
+            polly_client = boto3.client('polly', region_name='us-east-1')
+
+            # 음성 매핑 (aws-Seoyeon -> Seoyeon)
+            voice_id = self.voice.replace('aws-', '')
+
+            # Speech marks 요청 (타임스탬프용)
+            marks_response = polly_client.synthesize_speech(
+                Text=clean_text,
+                OutputFormat='json',
+                VoiceId=voice_id,
+                Engine='neural',
+                SpeechMarkTypes=['word'],
+                LanguageCode='ko-KR'
+            )
+
+            # 오디오 요청
+            audio_response = polly_client.synthesize_speech(
+                Text=clean_text,
+                OutputFormat='mp3',
+                VoiceId=voice_id,
+                Engine='neural',
+                LanguageCode='ko-KR'
+            )
+
+            # 오디오 파일 저장
+            with open(output_path, "wb") as f:
+                f.write(audio_response['AudioStream'].read())
+
+            # 타임스탬프 추출
+            word_timings = []
+            marks_data = marks_response['AudioStream'].read().decode('utf-8')
+            for line in marks_data.strip().split('\n'):
+                if line:
+                    mark = json.loads(line)
+                    if mark['type'] == 'word':
+                        word_timings.append({
+                            "word": mark['value'],
+                            "start": mark['time'] / 1000.0,  # ms -> s
+                            "end": mark['time'] / 1000.0 + 0.3  # 임시 duration
+                        })
+
+            # 오디오 길이 가져오기
+            try:
+                audio_clip = AudioFileClip(str(output_path))
+                duration = audio_clip.duration
+                audio_clip.close()
+            except Exception as e:
+                logger.warning(f"오디오 길이 측정 실패, 기본값 1초 사용: {e}")
+                duration = 1.0
+
+            # end 시간 조정 (다음 단어 시작 시간 또는 duration 기준)
+            for i in range(len(word_timings) - 1):
+                word_timings[i]['end'] = word_timings[i + 1]['start']
+            if word_timings:
+                word_timings[-1]['end'] = duration
+
+            logger.info(f"AWS Polly 생성 완료: {duration:.2f}초, 단어 {len(word_timings)}개")
+            return duration, word_timings
+
+        except (BotoCoreError, ClientError) as e:
+            logger.error(f"AWS Polly 실패: {e}")
+            logger.warning("Edge TTS로 대체합니다.")
+            # Edge TTS로 폴백
+            self.tts_provider = 'edge'
+            self.voice = "ko-KR-SoonBokNeural"
+            return await self._generate_edge_tts(text, output_path)
+        except Exception as e:
+            logger.error(f"AWS Polly 예상치 못한 오류: {e}")
+            logger.warning("Edge TTS로 대체합니다.")
+            # Edge TTS로 폴백
+            self.tts_provider = 'edge'
+            self.voice = "ko-KR-SoonBokNeural"
+            return await self._generate_edge_tts(text, output_path)
+
+    def _get_video_duration(self, video_path: Path) -> float:
+        """FFprobe로 비디오 길이 확인"""
+        try:
+            cmd = [
+                'ffprobe',
+                '-v', 'error',
+                '-show_entries', 'format=duration',
+                '-of', 'default=noprint_wrappers=1:nokey=1',
+                str(video_path.resolve())
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            return float(result.stdout.strip())
+        except Exception as e:
+            logger.warning(f"⚠️ 비디오 길이 확인 실패: {e}")
+            return 0.0
+
+    def _combine_video_audio(self, scene_num: int, video_path: Path,
+                            audio_path: Path, output_path: Path) -> Optional[Path]:
+        """비디오 파일에 오디오 결합 - FFmpeg 직접 사용 (자막 없음)"""
+        try:
+            logger.info(f"씬 {scene_num} 비디오에 오디오 결합 중...")
+
+            # FFmpeg 명령어로 비디오 + 오디오 결합
+            # 자막이 없으므로 -c:v copy 사용 (빠름)
+            cmd = [
+                'ffmpeg',
+                '-y',
+                '-i', str(video_path.resolve()),  # 입력 비디오
+                '-i', str(audio_path.resolve()),  # 입력 오디오
+                '-c:v', 'copy',  # 비디오 재인코딩 없이 복사 (빠름)
+                '-c:a', 'aac',  # 오디오 AAC 인코딩
+                '-map', '0:v:0',  # 첫 번째 입력의 비디오
+                '-map', '1:a:0',  # 두 번째 입력의 오디오
+                '-y',  # 덮어쓰기
+                str(output_path.resolve())  # 출력 경로
+            ]
+
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            logger.info(f"씬 {scene_num} 비디오+오디오 결합 완료: {output_path}")
+            return output_path
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"씬 {scene_num} 비디오+오디오 결합 실패: {e.stderr}")
+            return None
+        except Exception as e:
+            logger.error(f"씬 {scene_num} 비디오+오디오 결합 실패: {e}")
+            return None
+
+    def _combine_video_audio_with_subtitles(self, scene_num: int, video_path: Path,
+                                           audio_path: Path, output_path: Path,
+                                           narration: str, audio_duration: float,
+                                           word_timings: list = None) -> Optional[Path]:
+        """비디오 파일에 오디오와 자막 결합 - FFmpeg 직접 사용 (영상병합 방식)"""
+        try:
+            logger.info(f"씬 {scene_num} 비디오에 오디오+자막 결합 중...")
+
+            # 비디오 길이 확인
+            video_duration = self._get_video_duration(video_path)
+            logger.info(f"⏱️ 비디오 길이: {video_duration:.2f}초, 오디오 길이: {audio_duration:.2f}초")
+
+            # Edge TTS 타임스탬프로 ASS 자막 파일 생성 (또는 대본 기반 폴백)
+            srt_path = audio_path.with_suffix('.srt')
+            ass_path = self._create_srt_with_timings(word_timings or [], srt_path, narration, audio_duration, max_chars_per_line=22)
+
+            # FFmpeg ass 필터에 절대 경로 전달 (Windows 경로를 Unix 스타일로 변환 + 콜론 이스케이프)
+            ass_absolute_path = str(ass_path.resolve()).replace('\\', '/').replace(':', '\\\\:')
+
+            # 비디오와 오디오 길이 비교하여 필터 준비 (영상병합 방식)
+            video_filter_parts = []
+            audio_filter = None
+
+            if video_duration < audio_duration:
+                # 비디오가 짧으면: 마지막 프레임을 freeze하여 오디오 길이에 맞춤
+                freeze_duration = audio_duration - video_duration
+                video_filter_parts.append(f"tpad=stop_mode=clone:stop_duration={freeze_duration:.3f}")
+                logger.info(f"⚠️ 비디오가 TTS보다 짧습니다. 마지막 프레임을 {freeze_duration:.2f}초 freeze합니다.")
+            elif audio_duration < video_duration:
+                # 오디오가 짧으면: 무음 추가하여 비디오 길이에 맞춤
+                audio_filter = f"apad=whole_dur={video_duration:.3f}"
+                logger.info(f"⚠️ TTS가 비디오보다 짧습니다. 무음을 추가하여 비디오 길이에 맞춥니다.")
+
+            # 자막 필터 추가
+            video_filter_parts.append(f"ass={ass_absolute_path}")
+            vf_combined = ",".join(video_filter_parts)
+
+            # FFmpeg 명령어로 비디오 + 오디오 + 자막 결합
+            cmd = [
+                'ffmpeg',
+                '-y',
+                '-i', str(video_path.resolve()),  # 입력 비디오
+                '-i', str(audio_path.resolve()),  # 입력 오디오
+                '-vf', vf_combined,  # 비디오 필터 (tpad + ass)
+                '-c:v', self.video_codec,  # 비디오 재인코딩 (자막 때문에)
+                '-preset', self.codec_preset,
+                '-c:a', 'aac',  # 오디오 AAC 인코딩
+                '-map', '0:v:0',  # 첫 번째 입력의 비디오
+                '-map', '1:a:0',  # 두 번째 입력의 오디오
+                '-pix_fmt', 'yuv420p',  # 호환성
+            ]
+
+            # 오디오 필터 추가 (패딩이 필요한 경우)
+            if audio_filter:
+                cmd.extend(['-af', audio_filter])
+
+            cmd.extend([
+                '-y',  # 덮어쓰기
+                str(output_path.resolve())  # 출력 경로
+            ])
+
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            logger.info(f"씬 {scene_num} 비디오+오디오+자막 결합 완료: {output_path}")
+
+            # 자막 파일 삭제
+            if ass_path.exists():
+                ass_path.unlink()
+            if srt_path.exists():
+                srt_path.unlink()
+
+            return output_path
+
+        except subprocess.CalledProcessError as e:
+            # GPU 인코더 실패 시 CPU 폴백
+            if 'h264_nvenc' in str(e.stderr) or 'nvenc' in str(e.stderr):
+                logger.warning(f"씬 {scene_num} GPU 인코더 실패, CPU 인코더로 재시도...")
+                try:
+                    cmd_cpu = [
+                        'ffmpeg',
+                        '-y',
+                        '-i', str(video_path.resolve()),
+                        '-i', str(audio_path.resolve()),
+                        '-vf', vf_combined,  # 비디오 필터 (tpad + ass)
+                        '-c:v', 'libx264',  # CPU 인코더
+                        '-preset', 'ultrafast',
+                        '-c:a', 'aac',
+                        '-map', '0:v:0',
+                        '-map', '1:a:0',
+                        '-pix_fmt', 'yuv420p',
+                    ]
+
+                    if audio_filter:
+                        cmd_cpu.extend(['-af', audio_filter])
+
+                    cmd_cpu.extend(['-y', str(output_path.resolve())])
+
+                    result = subprocess.run(cmd_cpu, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+                    logger.info(f"씬 {scene_num} 비디오+오디오+자막 결합 완료 (CPU): {output_path}")
+
+                    if ass_path.exists():
+                        ass_path.unlink()
+                    if srt_path.exists():
+                        srt_path.unlink()
+
+                    return output_path
+                except subprocess.CalledProcessError as e2:
+                    logger.error(f"씬 {scene_num} CPU 인코더도 실패: {e2.stderr}")
+                    return None
+            else:
+                logger.error(f"씬 {scene_num} 비디오+오디오+자막 결합 실패: {e.stderr}")
+                return None
+        except Exception as e:
+            logger.error(f"씬 {scene_num} 비디오+오디오+자막 결합 실패: {e}")
+            return None
 
     def _create_scene_video(self, scene_num: int, image_path: Path,
                            audio_path: Path, output_path: Path) -> Optional[Path]:
@@ -1206,13 +1675,15 @@ class VideoFromFolderCreator:
         """여러 씬 비디오를 하나로 결합 - FFmpeg concat demuxer 사용"""
         import tempfile
 
-        video_folder = output_path.parent
+        # generated_videos 폴더에서 씬 비디오 찾기
+        video_folder = output_path.parent / "generated_videos"
         logger.info(f"비디오 결합 시작: {len(video_paths)}개 씬")
+        logger.info(f"씬 비디오 검색 경로: {video_folder}")
 
         # scene_XX.mp4 파일 찾기
         scene_videos = sorted(video_folder.glob("scene_*.mp4"))
         if not scene_videos:
-            logger.error("씬 비디오 파일을 찾을 수 없습니다")
+            logger.error(f"씬 비디오 파일을 찾을 수 없습니다 (경로: {video_folder})")
             return None
 
         logger.info(f"발견된 씬 비디오: {len(scene_videos)}개")
@@ -1322,12 +1793,15 @@ class VideoFromFolderCreator:
         # 기존 generated_videos 폴더 백업
         self._backup_previous_videos()
 
-        # 이미지 찾기
+        # 이미지와 비디오 찾기
         images = self._find_images()
+        videos = self._find_videos()
 
-        if not images:
-            logger.error("이미지를 찾을 수 없습니다.")
+        if not images and not videos:
+            logger.error("이미지 또는 비디오를 찾을 수 없습니다. 최소 1개 이상의 미디어 파일이 필요합니다.")
             return None
+
+        logger.info(f"📊 미디어 파일: 이미지 {len(images)}개, 비디오 {len(videos)}개")
 
         # scenes 가져오기
         scenes = self.story_data.get("scenes", [])
@@ -1335,6 +1809,73 @@ class VideoFromFolderCreator:
         if not scenes:
             logger.error("story.json에 scenes가 없습니다.")
             return None
+
+        # 나레이션이 있는 씬 개수 계산 (scene_num > 0)
+        narration_count = 0
+        for scene in scenes:
+            scene_num = scene.get("scene_number")
+            if scene_num is None:
+                scene_id = scene.get("scene_id", "")
+                import re
+                match = re.search(r'scene_(\d+)', scene_id)
+                if match:
+                    scene_num = int(match.group(1))
+            if scene_num and scene_num > 0:
+                narration_count += 1
+
+        # 미디어 개수 (이미지 + 비디오)
+        total_media = len(images) + len(videos)
+
+        logger.info(f"📝 나레이션 씬 개수: {narration_count}개")
+        logger.info(f"🎬 총 미디어 개수: {total_media}개")
+
+        # 나레이션이 미디어보다 많으면 미디어를 균등 분배
+        if narration_count > total_media and total_media > 0:
+            logger.info(f"⚠️ 나레이션({narration_count})이 미디어({total_media})보다 많습니다.")
+            logger.info(f"📊 미디어를 균등 분배하여 각 씬에 할당합니다.")
+
+            # 미디어 리스트 생성 (원본 순서대로: 이미지, 비디오)
+            all_media = []
+            for i in sorted(images.keys()):
+                all_media.append(('image', i, images[i]))
+            for i in sorted(videos.keys()):
+                all_media.append(('video', i, videos[i]))
+
+            # 각 미디어가 처리할 씬 개수 계산 (균등 분배)
+            scenes_per_media = narration_count // total_media  # 기본 개수
+            extra_scenes = narration_count % total_media  # 나머지 (일부 미디어에 +1)
+
+            new_images = {}
+            new_videos = {}
+            current_scene = 1
+
+            for media_idx, (media_type, orig_num, media_path) in enumerate(all_media):
+                # 이 미디어가 처리할 씬 개수 (나머지는 뒤에 할당)
+                # 예: 대본3개/영상2개 → 영상1(1개), 영상2(2개)
+                remaining_media = total_media - media_idx
+                if remaining_media > extra_scenes:
+                    num_scenes = scenes_per_media
+                else:
+                    num_scenes = scenes_per_media + 1
+
+                logger.info(f"  {media_type.upper()} {media_path.name} → {num_scenes}개 씬 처리")
+
+                for _ in range(num_scenes):
+                    if current_scene > narration_count:
+                        break
+
+                    # 원본 미디어 파일을 씬에 할당 (항상 원본 사용!)
+                    if media_type == 'image':
+                        new_images[current_scene] = media_path  # 원본 경로
+                    else:
+                        new_videos[current_scene] = media_path  # 원본 경로
+
+                    logger.info(f"    씬 {current_scene}: {media_path.name} (원본)")
+                    current_scene += 1
+
+            images = new_images
+            videos = new_videos
+            logger.info(f"✅ 균등 분배 완료: 이미지 {len(images)}개, 비디오 {len(videos)}개")
 
         # 기존 generated_videos 폴더 백업 건너뜀 (파일 덮어쓰기 허용)
 
@@ -1349,6 +1890,10 @@ class VideoFromFolderCreator:
 
         tts_tasks = []
         scene_data_list = []
+
+        # 마지막으로 사용한 미디어 추적 (영상병합 방식)
+        last_media_path = None
+        last_media_type = None
 
         for scene in scenes:
             # 취소 플래그 파일 체크
@@ -1372,14 +1917,24 @@ class VideoFromFolderCreator:
 
             narration = scene.get("narration") or scene.get("content", "")
 
-            # scene_num이 0이거나 이미지가 없으면 건너뜀
+            # scene_num이 0이면 건너뜀 (인트로/폭탄씬)
             if scene_num == 0:
-                logger.info(f"씬 {scene_num} (인트로/폭탄씬): 이미지 없이 건너뜀.")
+                logger.info(f"씬 {scene_num} (인트로/폭탄씬): 건너뜀.")
                 continue
 
-            if scene_num not in images:
-                logger.warning(f"씬 {scene_num}의 이미지가 없습니다. 건너뜀.")
+            # 이미지 또는 비디오가 있는지 확인
+            has_image = scene_num in images
+            has_video = scene_num in videos
+
+            # 미디어가 없으면 건너뜀 (순환 할당으로 인해 대부분 있을 것)
+            if not has_image and not has_video:
+                logger.warning(f"씬 {scene_num}: 미디어 파일이 없습니다. 건너뜀.")
                 continue
+
+            # 미디어 타입 결정 (비디오 우선)
+            media_type = 'video' if has_video else 'image'
+            media_path = videos[scene_num] if has_video else images[scene_num]
+            logger.info(f"씬 {scene_num}: {media_type.upper()} 사용 - {media_path.name}")
 
             # 나레이션 텍스트 저장
             narration_txt_path = output_folder / f"scene_{scene_num:02d}_narration.txt"
@@ -1393,7 +1948,8 @@ class VideoFromFolderCreator:
 
             scene_data_list.append({
                 'scene_num': scene_num,
-                'image_path': images[scene_num],
+                'media_path': media_path,
+                'media_type': media_type,
                 'audio_path': audio_path,
                 'clean_narration': clean_narration
             })
@@ -1442,27 +1998,42 @@ class VideoFromFolderCreator:
         # 병렬 처리 함수
         def process_scene(idx, scene_data):
             scene_num = scene_data['scene_num']
-            image_path = scene_data['image_path']
+            media_path = scene_data['media_path']
+            media_type = scene_data['media_type']
             audio_path = scene_data['audio_path']
             clean_narration = scene_data['clean_narration']
 
             progress = f"[{idx}/{len(scene_data_list)}]"
-            logger.info(f"\n{progress} 씬 {scene_num} 처리 중...")
+            logger.info(f"\n{progress} 씬 {scene_num} 처리 중... ({media_type.upper()})")
 
             # 비디오 생성 (자막 포함)
             video_path = output_folder / f"scene_{scene_num:02d}.mp4"
-            logger.info(f"{progress} 씬 {scene_num} 비디오 생성 중... ({encoder_type})")
 
-            # 자막 추가 여부에 따라 다르게 처리
-            if self.add_subtitles:
-                audio_duration = scene_data.get('audio_duration', 1.0)
-                word_timings = scene_data.get('word_timings', [])  # Edge TTS 타임스탬프
-                result = self._create_scene_video_with_subtitles(
-                    scene_num, image_path, audio_path, video_path,
-                    clean_narration, audio_duration, word_timings
-                )
+            # 비디오 파일이 이미 있으면 그대로 사용하거나 오디오와 결합
+            if media_type == 'video':
+                logger.info(f"{progress} 씬 {scene_num}: 비디오 파일에 오디오 결합 중...")
+                # 비디오에 오디오를 결합 (자막은 선택사항)
+                if self.add_subtitles:
+                    audio_duration = scene_data.get('audio_duration', 1.0)
+                    word_timings = scene_data.get('word_timings', [])
+                    result = self._combine_video_audio_with_subtitles(
+                        scene_num, media_path, audio_path, video_path,
+                        clean_narration, audio_duration, word_timings
+                    )
+                else:
+                    result = self._combine_video_audio(scene_num, media_path, audio_path, video_path)
             else:
-                result = self._create_scene_video(scene_num, image_path, audio_path, video_path)
+                # 이미지에서 비디오 생성
+                logger.info(f"{progress} 씬 {scene_num} 비디오 생성 중... ({encoder_type})")
+                if self.add_subtitles:
+                    audio_duration = scene_data.get('audio_duration', 1.0)
+                    word_timings = scene_data.get('word_timings', [])  # Edge TTS 타임스탬프
+                    result = self._create_scene_video_with_subtitles(
+                        scene_num, media_path, audio_path, video_path,
+                        clean_narration, audio_duration, word_timings
+                    )
+                else:
+                    result = self._create_scene_video(scene_num, media_path, audio_path, video_path)
 
             if result:
                 logger.info(f"{progress} ✅ 씬 {scene_num} 완료!")
@@ -1507,8 +2078,10 @@ class VideoFromFolderCreator:
             # 파일명으로 사용 가능하도록 특수문자 제거
             safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-', '.')).strip()
             safe_title = safe_title.replace(' ', '_')
-            final_path = output_folder / f"{safe_title}.mp4"
+            # 최종 영상을 프로젝트 루트에 저장 (영상병합과 같은 위치)
+            final_path = self.folder_path / f"{safe_title}.mp4"
             logger.info(f"📝 최종 영상 제목: {title} → {safe_title}.mp4")
+            logger.info(f"📂 최종 영상 위치: {final_path}")
             return self._combine_videos(scene_videos, final_path, start_time)
         elif scene_videos:
             logger.info(f"씬 비디오 {len(scene_videos)}개 생성 완료 (결합 안 함)")
@@ -1696,10 +2269,10 @@ class VideoFromFolderCreator:
                         })
                         break  # 모든 단어 처리 완료
                     else:
-                        # 정상적으로 줄바꿈
+                        # 정상적으로 줄바꿈 - 현재 라인의 끝 시간은 current_end (이전 단어의 끝)
                         subtitles.append({
                             "start": current_start,
-                            "end": end,
+                            "end": current_end,  # 수정: end 대신 current_end 사용
                             "text": current_text.strip()
                         })
                         current_text = word
@@ -1717,15 +2290,28 @@ class VideoFromFolderCreator:
                     "text": current_text.strip()
                 })
 
-            # 자막이 겹치지 않도록 시간 조정
+            # 자막이 겹치지 않도록 시간 조정 (영상병합 방식)
             for i in range(len(subtitles) - 1):
                 current_sub = subtitles[i]
                 next_sub = subtitles[i + 1]
 
-                # 현재 자막이 다음 자막과 겹치면 현재 자막 종료 시간을 다음 자막 시작 전으로 조정
-                if current_sub["end"] > next_sub["start"]:
-                    # 0.05초 간격 두기
-                    current_sub["end"] = max(current_sub["start"] + 0.1, next_sub["start"] - 0.05)
+                # 현재 자막이 다음 자막과 겹치거나 간격이 너무 좁으면 조정
+                if current_sub["end"] >= next_sub["start"]:
+                    # 다음 자막 시작 직전으로 조정 (0.05초 간격)
+                    gap = 0.05
+                    adjusted_end = next_sub["start"] - gap
+                    # 최소 표시 시간 보장 (0.3초)
+                    min_duration = 0.3
+                    if adjusted_end - current_sub["start"] < min_duration:
+                        # 현재 자막이 너무 짧아지면 다음 자막 시작을 뒤로 밀기
+                        current_sub["end"] = current_sub["start"] + min_duration
+                        next_sub["start"] = current_sub["end"] + gap
+                    else:
+                        current_sub["end"] = adjusted_end
+
+            # 마지막 자막이 오디오 길이를 초과하지 않도록 조정
+            if subtitles and subtitles[-1]["end"] > audio_duration:
+                subtitles[-1]["end"] = audio_duration
 
             # ASS 파일 작성
             ass_path = srt_path.with_suffix('.ass')
