@@ -127,10 +127,18 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
 
     # filter_complex 문자열 생성
     # [0:v][0:a][1:v][1:a]...[n:v][n:a]concat=n=N:v=1:a=1[outv][outa]
-    filter_parts = []
+
+    # ⛔ CRITICAL FEATURE: SAR 필터 정규화
+    # 버그 이력: 2025-01-12 - SAR 불일치로 영상 concat 실패
+    # ❌ setsar=1 필터 제거 금지!
+    # 관련 문서: CRITICAL_FEATURES.md
+    sar_filters = []
+    concat_inputs = []
     for i in range(len(video_paths)):
-        filter_parts.append(f"[{i}:v][{i}:a]")
-    filter_str = "".join(filter_parts) + f"concat=n={len(video_paths)}:v=1:a=1[outv][outa]"
+        sar_filters.append(f"[{i}:v]setsar=1[v{i}]")
+        concat_inputs.append(f"[v{i}][{i}:a]")
+
+    filter_str = ";".join(sar_filters) + ";" + "".join(concat_inputs) + f"concat=n={len(video_paths)}:v=1:a=1[outv][outa]"
 
     logger.info(f"🎬 FFmpeg filter_complex 명령 실행 중...")
 
@@ -944,29 +952,61 @@ async def main():
 
         video_files = [Path(p) for p in config['video_files']]
 
-        # 파일명에 시퀀스 번호가 있는지 확인
-        def extract_sequence(filename: str):
-            """파일명에서 시퀀스 번호 추출 (예: video_001.mp4 -> 1, clip_03.mp4 -> 3)"""
-            match = re.search(r'_(\d+)\.(mp4|mov|avi|mkv)$', filename, re.IGNORECASE)
+        # 파일명에 시퀀스 번호가 있는지 확인 (Frontend와 동일한 로직)
+        def extract_sequence(filepath: Path):
+            """
+            파일명에서 시퀀스 번호 추출 (Frontend extractSequenceNumber와 동일한 로직)
+            - 1.mp4, 02.mp4 (숫자로 시작)
+            - video_01.mp4, scene-02.mp4 (_숫자 또는 -숫자)
+            - Video_fx (47).mp4 (괄호 안 숫자, 랜덤 ID 없을 때만)
+
+            Returns: (sequence_number or None, ctime)
+            """
+            filename = filepath.name
+            # 확장자를 제외한 파일명
+            name_without_ext = filepath.stem
+
+            # 1. 파일명이 숫자로 시작: "1.mp4", "02.mp4"
+            match = re.match(r'^(\d+)\.', filename)
             if match:
-                return int(match.group(1))
-            return None
+                return (int(match.group(1)), 0)
 
-        # 시퀀스 번호가 있는 파일이 하나라도 있는지 확인
-        has_sequence = any(extract_sequence(p.name) is not None for p in video_files)
+            # 2. _숫자. 또는 -숫자. 패턴: "video_01.mp4", "scene-02.mp4"
+            match = re.search(r'[_-](\d{1,3})\.', filename)
+            if match:
+                return (int(match.group(1)), 0)
 
-        if has_sequence:
-            # 시퀀스가 있으면: 시퀀스 번호로 정렬
-            logger.info(f"📋 시퀀스 번호로 정렬")
-            video_files.sort(key=lambda p: (extract_sequence(p.name) or 0, p.name))
-        else:
-            # 시퀀스가 없으면: 파일 생성 시간으로 정렬 (오래된 파일 먼저)
-            logger.info(f"📋 파일 생성 시간으로 정렬 (오래된 파일 먼저)")
-            video_files.sort(key=lambda p: p.stat().st_ctime)
+            # 3. (숫자) 패턴: "Video_fx (47).mp4"
+            # 단, 랜덤 ID가 없을 때만 (8자 이상의 영숫자 조합이 없을 때)
+            match = re.search(r'\((\d+)\)', filename)
+            if match and not re.search(r'[_-]\w{8,}', filename):
+                return (int(match.group(1)), 0)
+
+            # 시퀀스 번호 없음 - 파일 생성 시간 사용
+            try:
+                ctime = filepath.stat().st_ctime
+            except:
+                ctime = 0
+            return (None, ctime)
+
+        # 정렬: 시퀀스 번호가 있으면 우선, 없으면 시간 순서
+        logger.info(f"📋 파일 정렬 중 (시퀀스 번호 우선 → 생성 시간)")
+        video_files.sort(key=lambda p: (
+            extract_sequence(p)[0] is None,  # 시퀀스 없는 것을 뒤로
+            extract_sequence(p)[0] if extract_sequence(p)[0] is not None else 0,  # 시퀀스 정렬
+            extract_sequence(p)[1]  # 시간 정렬
+        ))
+
+        # 정렬 결과 로깅
+        for idx, vf in enumerate(video_files, start=1):
+            seq_info = extract_sequence(vf)
+            seq_str = f"[시퀀스: {seq_info[0]}]" if seq_info[0] is not None else "[시퀀스 없음]"
+            logger.info(f"  {idx}. {vf.name} {seq_str}")
 
         narration_text = config.get('narration_text', '')
         add_subtitles = config.get('add_subtitles', False)
         remove_watermark = config.get('remove_watermark', False)
+        tts_voice = config.get('tts_voice', 'ko-KR-SunHiNeural')  # TTS 음성 (기본값: SunHi)
         title = config.get('title', '')  # 대본의 title
         scenes = config.get('scenes', None)  # scenes 배열 (비디오 배치용)
         output_dir = Path(config['output_dir'])
@@ -1013,7 +1053,7 @@ async def main():
 
                     # 1. 씬별 TTS 생성
                     scene_audio = scenes_dir / f'scene_{i+1}_audio.mp3'
-                    scene_tts_path, scene_subtitle_data = await generate_tts(scene_narration, scene_audio)
+                    scene_tts_path, scene_subtitle_data = await generate_tts(scene_narration, scene_audio, tts_voice)
 
                     # 2. 비디오 + 오디오 결합 (롱폼의 이미지처럼, 비디오를 오디오 길이만큼 사용)
                     scene_video = scenes_dir / f'scene_{i+1}.mp4'
@@ -1041,7 +1081,7 @@ async def main():
 
                 tts_audio = output_dir / 'narration.mp3'
                 # TTS 생성 및 Whisper 세그먼트 수집
-                tts_path, subtitle_data = await generate_tts(narration_text, tts_audio)
+                tts_path, subtitle_data = await generate_tts(narration_text, tts_audio, tts_voice)
 
                 if subtitle_data:
                     logger.info(f"\n🎬 나레이션 세그먼트에 맞춰 비디오 배치")
