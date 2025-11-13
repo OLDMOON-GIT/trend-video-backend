@@ -22,6 +22,13 @@ import warnings
 from time import time
 import signal
 
+# .env 파일 로드
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv가 없어도 계속 진행
+
 # 버전 호환성 경고 메시지 숨기기
 warnings.filterwarnings("ignore", message="Model was trained with")
 warnings.filterwarnings("ignore", message="Lightning automatically upgraded")
@@ -99,14 +106,6 @@ def signal_handler(signum, frame):
 
     sys.exit(1)
 
-# Google Image Search (옵션)
-try:
-    from google_image_search import GoogleImageSearcher, DailyLimitExceededError, GoogleImageSearchError
-    GOOGLE_SEARCH_AVAILABLE = True
-except ImportError:
-    GOOGLE_SEARCH_AVAILABLE = False
-    logger.warning("[WARNING] google_image_search module not found. Auto image search disabled.")
-
 # DALL-E (옵션)
 try:
     from openai import OpenAI
@@ -115,20 +114,29 @@ except ImportError:
     DALLE_AVAILABLE = False
     logger.warning("[WARNING] openai module not found. DALL-E image generation disabled.")
 
+# Anthropic Claude API (프롬프트 수정용)
+try:
+    from anthropic import Anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+    logger.warning("[WARNING] anthropic module not found. Claude prompt refinement disabled.")
+
 
 class VideoFromFolderCreator:
     """story.json과 이미지로 영상을 생성하는 클래스"""
 
     def __init__(self, folder_path: str, voice: str = "ko-KR-SoonBokNeural",
                  aspect_ratio: str = "16:9", add_subtitles: bool = False,
-                 image_source: str = "none", is_admin: bool = False):
+                 image_source: str = "none", image_provider: str = "openai", is_admin: bool = False):
         """
         Args:
             folder_path: story.json과 이미지가 있는 폴더 경로
             voice: TTS 음성 (기본: ko-KR-SoonBokNeural)
             aspect_ratio: 비디오 비율 (기본: 16:9)
             add_subtitles: 자막 추가 여부 (기본: False)
-            image_source: 이미지 소스 ("none", "google", "dalle")
+            image_source: 이미지 소스 ("none", "dalle", "imagen3")
+            image_provider: 이미지 생성 제공자 ("openai", "imagen3")
             is_admin: 관리자 모드 (비용 로그 표시)
         """
         self.folder_path = Path(folder_path)
@@ -153,21 +161,17 @@ class VideoFromFolderCreator:
         self.aspect_ratio = aspect_ratio
         self.add_subtitles = add_subtitles
         self.image_source = image_source.lower()
+        self.image_provider = image_provider.lower()
         self.is_admin = is_admin
 
-        # 이미지 검색기 초기화
-        self.image_searcher = None
+        # 이미지 생성 클라이언트 초기화
         self.dalle_client = None
+        self.imagen_client = None
+        self.imagen_model = None
+        self.imagen_api_key = None
+        self.anthropic_client = None
 
-        if self.image_source == "google" and GOOGLE_SEARCH_AVAILABLE:
-            try:
-                self.image_searcher = GoogleImageSearcher()
-                logger.info("✅ Google Image Search 활성화됨")
-            except GoogleImageSearchError as e:
-                logger.warning(f"⚠️ Google Image Search 초기화 실패: {e}")
-                self.image_source = "none"
-
-        elif self.image_source == "dalle":
+        if self.image_source == "dalle":
             if not DALLE_AVAILABLE:
                 logger.error("❌ openai 패키지가 설치되지 않았습니다. pip install openai")
                 self.image_source = "none"
@@ -180,6 +184,54 @@ class VideoFromFolderCreator:
                 else:
                     self.dalle_client = OpenAI(api_key=api_key)
                     logger.info("✅ DALL-E 3 이미지 생성 활성화됨")
+
+                    # Anthropic Claude 클라이언트 초기화 (프롬프트 수정용)
+                    if ANTHROPIC_AVAILABLE:
+                        anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+                        if anthropic_key:
+                            self.anthropic_client = Anthropic(api_key=anthropic_key)
+                            logger.info("✅ Claude API 활성화됨 (프롬프트 자동 수정)")
+                        else:
+                            logger.warning("⚠️ ANTHROPIC_API_KEY 환경변수가 없습니다. 프롬프트 자동 수정 비활성화")
+
+        elif self.image_source == "imagen3":
+            # Imagen 3 초기화 (Vertex AI 사용)
+            import os
+
+            # Google Cloud 프로젝트 설정
+            project_id = os.getenv('GOOGLE_CLOUD_PROJECT', '66255489700')
+            location = os.getenv('GOOGLE_CLOUD_LOCATION', 'us-central1')
+
+            try:
+                from vertexai.preview.vision_models import ImageGenerationModel
+                import vertexai
+
+                # Vertex AI 초기화
+                vertexai.init(project=project_id, location=location)
+
+                # Imagen 3 모델 로드
+                self.imagen_model = ImageGenerationModel.from_pretrained("imagegeneration@006")
+                self.imagen_client = None
+                self.imagen_api_key = None
+
+                logger.info(f"✅ Google Imagen 3 이미지 생성 활성화됨 (Vertex AI)")
+                logger.info(f"ℹ️  프로젝트: {project_id}, 리전: {location}")
+
+                # Anthropic Claude 클라이언트 초기화 (프롬프트 수정용)
+                if ANTHROPIC_AVAILABLE:
+                    anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+                    if anthropic_key:
+                        self.anthropic_client = Anthropic(api_key=anthropic_key)
+                        logger.info("✅ Claude API 활성화됨 (프롬프트 자동 수정)")
+                    else:
+                        logger.warning("⚠️ ANTHROPIC_API_KEY 환경변수가 없습니다. 프롬프트 자동 수정 비활성화")
+            except ImportError:
+                logger.error("❌ Vertex AI SDK가 설치되지 않았습니다. pip install google-cloud-aiplatform")
+                self.image_source = "none"
+            except Exception as e:
+                logger.error(f"❌ Vertex AI 초기화 실패: {e}")
+                logger.error("💡 Application Default Credentials를 설정하거나 GOOGLE_APPLICATION_CREDENTIALS 환경변수를 설정하세요.")
+                self.image_source = "none"
 
         # 비율 파싱
         if aspect_ratio == "9:16":
@@ -344,7 +396,41 @@ class VideoFromFolderCreator:
         except Exception as e:
             logger.warning(f"썸네일 생성 중 오류 (무시하고 계속): {e}")
 
-    def _find_images(self) -> Dict[int, Path]:
+    def _find_all_media_files(self):
+        """
+        모든 이미지와 비디오 파일을 찾아서 정렬 없이 반환
+        Returns: (image_paths, video_paths)
+        """
+        # 이미지 파일 찾기
+        all_images_set = set()
+        for ext in ['*.png', '*.jpg', '*.jpeg', '*.PNG', '*.JPG', '*.JPEG']:
+            for img_file in self.folder_path.glob(ext):
+                if 'generated_videos' not in str(img_file) and 'thumbnail' not in img_file.name.lower():
+                    all_images_set.add(img_file)
+
+        images_folder = self.folder_path / "images"
+        if images_folder.exists():
+            for ext in ['*.png', '*.jpg', '*.jpeg', '*.PNG', '*.JPG', '*.JPEG']:
+                for img_file in images_folder.glob(ext):
+                    if 'thumbnail' not in img_file.name.lower():
+                        all_images_set.add(img_file)
+
+        # 비디오 파일 찾기
+        all_videos_set = set()
+        for ext in ['*.mp4', '*.mov', '*.avi', '*.mkv', '*.MP4', '*.MOV', '*.AVI', '*.MKV']:
+            for vid_file in self.folder_path.glob(ext):
+                if 'generated_videos' not in str(vid_file):
+                    all_videos_set.add(vid_file)
+
+        videos_folder = self.folder_path / "videos"
+        if videos_folder.exists():
+            for ext in ['*.mp4', '*.mov', '*.avi', '*.mkv', '*.MP4', '*.MOV', '*.AVI', '*.MKV']:
+                for vid_file in videos_folder.glob(ext):
+                    all_videos_set.add(vid_file)
+
+        return list(all_images_set), list(all_videos_set)
+
+    def _find_images_with_scene_numbers(self) -> Dict[int, Path]:
         """씬별 이미지 파일 찾기 (scene_XX 패턴 또는 시간순 자동 정렬)"""
         images = {}
 
@@ -390,42 +476,39 @@ class VideoFromFolderCreator:
             # 2. 없으면 파일 수정 시간으로 정렬 (오래된 것부터)
             def extract_sequence(filepath):
                 """
-                명확한 시퀀스 번호만 추출:
-                - image_01, scene_1, img_5 등
-                - image(1), scene(2) 등
-                - (1), (2) 등
-                - 파일명 전체가 숫자 (1.jpg, 2.png)
+                파일명에서 시퀀스 번호 추출 (Frontend extractSequenceNumber와 동일한 로직)
+                - 1.jpg, 02.png (숫자로 시작)
+                - image_01.jpg, scene-02.png (_숫자 또는 -숫자)
+                - Image_fx (47).jpg (괄호 안 숫자, 랜덤 ID 없을 때만)
 
                 Returns: (sequence_number or None, mtime)
                 """
                 import re
-                name = filepath.stem  # 확장자 제외한 파일명
+                filename = filepath.name
 
-                # image_01, scene_1, img_5 패턴
-                match = re.match(r'^(image|scene|img)[-_](\d+)$', name, re.IGNORECASE)
-                if match:
-                    return (int(match.group(2)), 0)
-
-                # image(1), scene(2) 패턴
-                match = re.match(r'^(image|scene|img)\((\d+)\)$', name, re.IGNORECASE)
-                if match:
-                    return (int(match.group(2)), 0)
-
-                # (1), (2) 패턴
-                match = re.match(r'^\((\d+)\)$', name)
-                if match:
-                    return (int(match.group(1)), 0)
-
-                # 파일명 전체가 숫자 (1, 2, 3)
-                match = re.match(r'^(\d+)$', name)
-                if match:
-                    return (int(match.group(1)), 0)
-
-                # 시퀀스 번호 없음 - 파일 수정 시간 사용
+                # 파일 수정 시간 (항상 가져오기)
                 try:
                     mtime = filepath.stat().st_mtime
                 except:
                     mtime = 0
+
+                # 1. 파일명이 숫자로 시작: "1.jpg", "02.png"
+                match = re.match(r'^(\d+)\.', filename)
+                if match:
+                    return (int(match.group(1)), mtime)
+
+                # 2. _숫자. 또는 -숫자. 패턴: "image_01.jpg", "scene-02.png"
+                match = re.search(r'[_-](\d{1,3})\.', filename)
+                if match:
+                    return (int(match.group(1)), mtime)
+
+                # 3. (숫자) 패턴: "Image_fx (47).jpg"
+                # 단, 랜덤 ID가 없을 때만 (8자 이상의 영숫자 조합이 없을 때)
+                match = re.search(r'\((\d+)\)', filename)
+                if match and not re.search(r'[_-]\w{8,}', filename):
+                    return (int(match.group(1)), mtime)
+
+                # 시퀀스 번호 없음 - 파일 수정 시간 사용
                 return (None, mtime)
 
             # 정렬: 시퀀스 번호가 있으면 우선, 없으면 시간 순서
@@ -451,7 +534,7 @@ class VideoFromFolderCreator:
         logger.info(f"이미지 {len(images)}개 발견")
 
         # 3. 자동 이미지 생성/다운로드 (활성화된 경우)
-        if self.image_source in ["google", "dalle"]:
+        if self.image_source in ["google", "dalle", "imagen3"]:
             images = self._download_missing_images(images)
 
         return images
@@ -479,35 +562,40 @@ class VideoFromFolderCreator:
 
         # 정렬 로직 (이미지와 동일)
         def extract_sequence(filepath):
-            """시퀀스 번호 추출 (이미지와 동일한 로직)"""
+            """
+            파일명에서 시퀀스 번호 추출 (Frontend extractSequenceNumber와 동일한 로직)
+            - 1.mp4, 02.mp4 (숫자로 시작)
+            - video_01.mp4, scene-02.mp4 (_숫자 또는 -숫자)
+            - Video_fx (47).mp4 (괄호 안 숫자, 랜덤 ID 없을 때만)
+
+            Returns: (sequence_number or None, mtime)
+            """
             import re
-            name = filepath.stem  # 확장자 제외한 파일명
+            filename = filepath.name
 
-            # video_01, scene_1 패턴
-            match = re.match(r'^(video|scene|clip)[-_](\d+)$', name, re.IGNORECASE)
-            if match:
-                return (int(match.group(2)), 0)
-
-            # video(1), scene(2) 패턴
-            match = re.match(r'^(video|scene|clip)\((\d+)\)$', name, re.IGNORECASE)
-            if match:
-                return (int(match.group(2)), 0)
-
-            # (1), (2) 패턴
-            match = re.match(r'^\((\d+)\)$', name)
-            if match:
-                return (int(match.group(1)), 0)
-
-            # 파일명 전체가 숫자 (1.mp4, 2.mp4)
-            match = re.match(r'^(\d+)$', name)
-            if match:
-                return (int(match.group(1)), 0)
-
-            # 시퀀스 번호 없음 - 파일 수정 시간 사용
+            # 파일 수정 시간 (항상 가져오기)
             try:
                 mtime = filepath.stat().st_mtime
             except:
                 mtime = 0
+
+            # 1. 파일명이 숫자로 시작: "1.mp4", "02.mp4"
+            match = re.match(r'^(\d+)\.', filename)
+            if match:
+                return (int(match.group(1)), mtime)
+
+            # 2. _숫자. 또는 -숫자. 패턴: "video_01.mp4", "scene-02.mp4"
+            match = re.search(r'[_-](\d{1,3})\.', filename)
+            if match:
+                return (int(match.group(1)), mtime)
+
+            # 3. (숫자) 패턴: "Video_fx (47).mp4"
+            # 단, 랜덤 ID가 없을 때만 (8자 이상의 영숫자 조합이 없을 때)
+            match = re.search(r'\((\d+)\)', filename)
+            if match and not re.search(r'[_-]\w{8,}', filename):
+                return (int(match.group(1)), mtime)
+
+            # 시퀀스 번호 없음 - 파일 수정 시간 사용
             return (None, mtime)
 
         # 정렬: 시퀀스 번호가 있으면 우선, 없으면 시간 순서
@@ -536,7 +624,7 @@ class VideoFromFolderCreator:
 
     def _download_missing_images(self, images: Dict[int, Path]) -> Dict[int, Path]:
         """
-        누락된 이미지를 Google Search 또는 DALL-E로 자동 생성
+        누락된 이미지를 DALL-E 또는 Imagen3으로 자동 생성
 
         Args:
             images: 기존 이미지 딕셔너리
@@ -561,78 +649,106 @@ class VideoFromFolderCreator:
             logger.info("✅ 모든 씬에 이미지가 있습니다.")
             return images
 
-        source_name = "Google Image Search" if self.image_source == "google" else "DALL-E 3"
+        source_name = "DALL-E 3" if self.image_source == "dalle" else "Imagen 3"
         logger.info(f"⚠️ {len(missing_scenes)}개 씬의 이미지가 누락되었습니다. {source_name}로 생성을 시작합니다...")
 
         # 비용 예측
-        if self.image_source == "google":
-            self.image_searcher.log_cost_estimate(len(missing_scenes))
-        elif self.image_source == "dalle":
+        if self.image_source == "dalle":
             self._log_dalle_cost_estimate(len(missing_scenes))
 
         try:
             success_count = 0
             fail_count = 0
 
-            for scene_num, scene in missing_scenes:
+            # 병렬 처리를 위한 헬퍼 함수
+            def generate_single_image(scene_data):
+                scene_num, scene = scene_data
+
                 # 취소 플래그 파일 체크
                 cancel_file = self.folder_path / '.cancel'
                 if cancel_file.exists():
                     logger.warning("🛑 취소 플래그 감지됨. 이미지 생성을 중단합니다.")
-                    raise KeyboardInterrupt("User cancelled the operation")
+                    return (scene_num, None, "cancelled")
 
                 # image_prompt 추출 (imagefx_prompt도 지원)
                 image_prompt = scene.get('image_prompt') or scene.get('imagefx_prompt', '')
 
                 if not image_prompt:
                     logger.warning(f"⚠️ 씬 {scene_num}: image_prompt 또는 imagefx_prompt가 없습니다. 건너뜁니다.")
-                    continue
+                    return (scene_num, None, "no_prompt")
 
                 # 파일명 생성
                 filename = f"scene_{scene_num:02d}_image.jpg"
 
-                if self.image_source == "google":
-                    # Google Image Search
-                    logger.info(f"🔍 씬 {scene_num}: '{image_prompt}' 검색 중...")
-                    downloaded_path = self.image_searcher.search_and_download(
-                        query=image_prompt,
-                        save_dir=self.folder_path,
-                        filename=filename
-                    )
+                try:
+                    if self.image_source == "dalle":
+                        # DALL-E 3 Image Generation
+                        logger.info(f"🎨 씬 {scene_num}: '{image_prompt}' DALL-E 3 생성 중...")
+                        generated_path = self._generate_dalle_image(
+                            prompt=image_prompt,
+                            save_dir=self.folder_path,
+                            filename=filename
+                        )
 
-                    if downloaded_path:
-                        images[scene_num] = downloaded_path
-                        success_count += 1
-                        logger.info(f"✅ 씬 {scene_num}: 이미지 다운로드 완료")
-                    else:
+                        if generated_path:
+                            logger.info(f"✅ 씬 {scene_num}: 이미지 생성 완료")
+                            logger.info(f"   → images[{scene_num}] = {generated_path}")
+                            return (scene_num, generated_path, "success")
+                        else:
+                            logger.error(f"❌ 씬 {scene_num}: 이미지 생성 실패")
+                            return (scene_num, None, "failed")
+
+                    elif self.image_source == "imagen3":
+                        # Google Imagen 3 Image Generation
+                        logger.info(f"🖼️ 씬 {scene_num}: '{image_prompt}' Imagen 3 생성 중...")
+                        generated_path = self._generate_imagen3_image(
+                            prompt=image_prompt,
+                            save_dir=self.folder_path,
+                            filename=filename
+                        )
+
+                        if generated_path:
+                            logger.info(f"✅ 씬 {scene_num}: 이미지 생성 완료")
+                            logger.info(f"   → images[{scene_num}] = {generated_path}")
+                            return (scene_num, generated_path, "success")
+                        else:
+                            logger.error(f"❌ 씬 {scene_num}: 이미지 생성 실패")
+                            return (scene_num, None, "failed")
+                except Exception as e:
+                    logger.error(f"❌ 씬 {scene_num}: 이미지 생성 중 예외 발생: {e}")
+                    return (scene_num, None, "error")
+
+                return (scene_num, None, "unknown")
+
+            # 병렬 처리 실행 (최대 3개 동시 처리)
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            max_workers = 3  # OpenAI API rate limit 고려
+
+            logger.info(f"🚀 {len(missing_scenes)}개 이미지를 최대 {max_workers}개씩 병렬 생성합니다...")
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # 모든 씬에 대해 작업 제출
+                future_to_scene = {
+                    executor.submit(generate_single_image, scene_data): scene_data[0]
+                    for scene_data in missing_scenes
+                }
+
+                # 완료된 작업 처리
+                for future in as_completed(future_to_scene):
+                    scene_num = future_to_scene[future]
+                    try:
+                        scene_num, generated_path, status = future.result()
+
+                        if status == "success" and generated_path:
+                            images[scene_num] = generated_path
+                            success_count += 1
+                        elif status == "cancelled":
+                            raise KeyboardInterrupt("User cancelled the operation")
+                        elif status in ["failed", "error", "no_prompt"]:
+                            fail_count += 1
+                    except Exception as e:
+                        logger.error(f"❌ 씬 {scene_num}: 작업 처리 중 예외: {e}")
                         fail_count += 1
-                        logger.error(f"❌ 씬 {scene_num}: 이미지 다운로드 실패")
-
-                elif self.image_source == "dalle":
-                    # DALL-E 3 Image Generation
-                    logger.info(f"🎨 씬 {scene_num}: '{image_prompt}' DALL-E 생성 중...")
-                    generated_path = self._generate_dalle_image(
-                        prompt=image_prompt,
-                        save_dir=self.folder_path,
-                        filename=filename
-                    )
-
-                    if generated_path:
-                        images[scene_num] = generated_path
-                        success_count += 1
-                        logger.info(f"✅ 씬 {scene_num}: 이미지 생성 완료")
-                        logger.info(f"   → images[{scene_num}] = {generated_path}")
-                    else:
-                        fail_count += 1
-                        logger.error(f"❌ 씬 {scene_num}: 이미지 생성 실패")
-
-        except DailyLimitExceededError as e:
-            logger.error(f"\n{'='*60}")
-            logger.error(str(e))
-            logger.error(f"{'='*60}\n")
-            logger.error("⚠️ 일일 한도 초과로 자동 다운로드를 중단합니다.")
-            logger.error("   - 남은 씬은 이미지를 직접 업로드하거나")
-            logger.error("   - 내일 다시 시도해주세요.")
 
         except Exception as e:
             logger.error(f"❌ 이미지 자동 생성/다운로드 중 오류 발생: {e}")
@@ -645,15 +761,73 @@ class VideoFromFolderCreator:
         for scene_num, img_path in sorted(images.items()):
             logger.info(f"      씬 {scene_num}: {img_path.name}")
 
-        if self.image_source == "google" and self.image_searcher:
-            logger.info(f"{self.image_searcher.get_cost_summary()}")
-        elif self.image_source == "dalle":
+        if self.image_source == "dalle":
             total_cost = success_count * 0.080  # HD quality
             logger.info(f"💰 총 비용: ${total_cost:.2f} (약 ₩{total_cost * 1300:.0f})")
 
         logger.info(f"{'='*60}\n")
 
         return images
+
+    def _refine_prompt_with_claude(self, original_prompt: str, error_message: str, model_name: str) -> Optional[str]:
+        """
+        Claude를 호출해서 프롬프트를 수정하여 content filter를 통과할 수 있도록 함
+
+        Args:
+            original_prompt: 원본 프롬프트
+            error_message: 에러 메시지
+            model_name: 사용 중인 이미지 생성 모델 이름 (DALL-E 3, Imagen 3 등)
+
+        Returns:
+            수정된 프롬프트 (실패 시 None)
+        """
+        if not self.anthropic_client:
+            logger.warning("⚠️ Claude API를 사용할 수 없습니다. 프롬프트 수정을 건너뜁니다.")
+            return None
+
+        try:
+            logger.info(f"🤖 Claude를 호출하여 프롬프트 수정 중...")
+
+            system_prompt = f"""You are an expert at refining image generation prompts to pass content filters for {model_name}.
+Your goal is to modify the given prompt to avoid content policy violations while maintaining the core visual intent and quality.
+
+Guidelines:
+- Remove any potentially sensitive, violent, or inappropriate content
+- Keep photorealistic, professional photography style keywords
+- Maintain the aspect ratio, composition, and lighting instructions
+- Preserve Korean cultural context if present
+- Keep "NO TEXT" instruction at the end
+- Make minimal changes necessary to pass content filters"""
+
+            user_prompt = f"""The following image generation prompt was rejected by {model_name}'s content filter:
+
+Error: {error_message}
+
+Original prompt:
+{original_prompt}
+
+Please rewrite this prompt to pass the content filter while maintaining the visual quality and intent.
+Return ONLY the refined prompt without any explanation or additional text."""
+
+            response = self.anthropic_client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=500,
+                temperature=0.3,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": user_prompt}
+                ]
+            )
+
+            refined_prompt = response.content[0].text.strip()
+            logger.info(f"✅ Claude가 프롬프트를 수정했습니다")
+            logger.info(f"   수정된 프롬프트: {refined_prompt[:150]}...")
+
+            return refined_prompt
+
+        except Exception as e:
+            logger.error(f"❌ Claude 프롬프트 수정 실패: {e}")
+            return None
 
     def _generate_dalle_image(self, prompt: str, save_dir: Path, filename: str) -> Optional[Path]:
         """
@@ -686,22 +860,34 @@ class VideoFromFolderCreator:
         logger.info(f"🎨 DALL-E 이미지 생성 크기: {image_size} ({self.aspect_ratio})")
 
         max_retries = 3
+        current_prompt = prompt
+        last_error_message = ""
+
         for attempt in range(max_retries):
             try:
-                # 재시도 시 프롬프트 수정
+                # 재시도 시 Claude를 호출하여 프롬프트 수정
                 if attempt == 0:
                     current_prompt = prompt
-                elif attempt == 1:
-                    # 첫 번째 재시도: 간단하고 안전한 버전
-                    current_prompt = f"A calm and peaceful scene depicting: {prompt[:100]}"
-                    logger.info(f"🔄 Content filter 우회를 위해 프롬프트 단순화 (시도 {attempt + 1}/{max_retries})")
+                    logger.info(f"🎨 첫 번째 시도: 원본 프롬프트 사용")
                 else:
-                    # 두 번째 재시도: 매우 일반적인 설명
-                    current_prompt = "A beautiful, peaceful landscape with soft lighting"
-                    logger.info(f"🔄 매우 일반적인 프롬프트로 재시도 (시도 {attempt + 1}/{max_retries})")
+                    # Claude를 호출해서 프롬프트 수정
+                    logger.info(f"🔄 Content filter 우회를 위해 Claude로 프롬프트 수정 (시도 {attempt + 1}/{max_retries})")
+                    refined_prompt = self._refine_prompt_with_claude(
+                        original_prompt=current_prompt,
+                        error_message=last_error_message,
+                        model_name="DALL-E 3"
+                    )
 
-                if attempt > 0:
-                    logger.info(f"   수정된 프롬프트: {current_prompt}")
+                    if refined_prompt:
+                        current_prompt = refined_prompt
+                        logger.info(f"   수정된 프롬프트: {current_prompt[:150]}...")
+                    else:
+                        # Claude 호출 실패 시 간단한 폴백 사용
+                        if attempt == 1:
+                            current_prompt = f"A calm and peaceful scene depicting: {prompt[:100]}"
+                        else:
+                            current_prompt = "A beautiful, peaceful landscape with soft lighting"
+                        logger.warning(f"   ⚠️ Claude 수정 실패, 폴백 프롬프트 사용: {current_prompt}")
 
                 # 취소 플래그 체크 (DALL-E API 호출 직전)
                 cancel_file = self.folder_path / '.cancel'
@@ -747,20 +933,152 @@ class VideoFromFolderCreator:
 
             except Exception as e:
                 error_str = str(e)
+                last_error_message = error_str  # 에러 메시지 저장 (Claude에게 전달용)
 
                 # Content policy violation 체크
                 if 'content_policy_violation' in error_str or 'content filters' in error_str:
                     logger.warning(f"⚠️ Content filter에 걸림 (시도 {attempt + 1}/{max_retries})")
+                    logger.info(f"   에러: {error_str}")
 
                     if attempt < max_retries - 1:
-                        logger.info("   → 프롬프트를 수정하여 재시도합니다...")
+                        logger.info("   → Claude를 통해 프롬프트를 수정하여 재시도합니다...")
                         continue
                     else:
                         logger.error(f"❌ {max_retries}회 재시도 후에도 Content filter 통과 실패")
+                        logger.error(f"   최종 프롬프트: {current_prompt}")
                         return None
                 else:
-                    # 다른 에러는 즉시 반환
-                    logger.error(f"❌ DALL-E 이미지 생성 실패: {error_str}")
+                    # 다른 에러도 재시도 (네트워크 오류 등)
+                    logger.warning(f"⚠️ DALL-E 이미지 생성 오류 (시도 {attempt + 1}/{max_retries}): {error_str}")
+                    return None
+
+        return None
+
+    def _generate_imagen3_image(self, prompt: str, save_dir: Path, filename: str) -> Optional[Path]:
+        """
+        Google Imagen 3로 이미지 생성 및 저장 (Vertex AI)
+
+        Args:
+            prompt: 이미지 생성 프롬프트
+            save_dir: 저장 디렉토리
+            filename: 저장 파일명
+
+        Returns:
+            생성된 이미지 경로 (실패 시 None)
+        """
+        # 취소 플래그 체크
+        cancel_file = self.folder_path / '.cancel'
+        if cancel_file.exists():
+            logger.warning("🛑 취소 플래그 감지됨. Imagen 3 이미지 생성을 시작하지 않습니다.")
+            raise KeyboardInterrupt("User cancelled the operation")
+
+        if not self.imagen_model:
+            logger.error("❌ Imagen 3 모델이 초기화되지 않았습니다.")
+            return None
+
+        logger.info(f"🖼️ Imagen 3 이미지 생성 중 (Vertex AI)...")
+
+        max_retries = 3
+        current_prompt = prompt
+        last_error_message = ""
+
+        for attempt in range(max_retries):
+            try:
+                from PIL import Image
+                import io
+
+                # 재시도 시 Claude를 호출하여 프롬프트 수정
+                if attempt == 0:
+                    current_prompt = prompt
+                    logger.info(f"🖼️ 첫 번째 시도: 원본 프롬프트 사용")
+                else:
+                    # Claude를 호출해서 프롬프트 수정
+                    logger.info(f"🔄 Content filter 우회를 위해 Claude로 프롬프트 수정 (시도 {attempt + 1}/{max_retries})")
+                    refined_prompt = self._refine_prompt_with_claude(
+                        original_prompt=current_prompt,
+                        error_message=last_error_message,
+                        model_name="Google Imagen 3"
+                    )
+
+                    if refined_prompt:
+                        current_prompt = refined_prompt
+                        logger.info(f"   수정된 프롬프트: {current_prompt[:150]}...")
+                    else:
+                        # Claude 호출 실패 시 간단한 폴백 사용
+                        if attempt == 1:
+                            current_prompt = f"A calm and peaceful scene depicting: {prompt[:100]}"
+                        else:
+                            current_prompt = "A beautiful, peaceful landscape with soft lighting"
+                        logger.warning(f"   ⚠️ Claude 수정 실패, 폴백 프롬프트 사용: {current_prompt}")
+
+                # 프롬프트 길이 제한 (2048자)
+                if len(current_prompt) > 2048:
+                    current_prompt = current_prompt[:2045] + "..."
+                    logger.warning(f"⚠️ 프롬프트가 2048자를 초과하여 잘렸습니다.")
+
+                # 취소 플래그 체크 (API 호출 직전)
+                cancel_file = self.folder_path / '.cancel'
+                if cancel_file.exists():
+                    logger.warning("🛑 취소 플래그 감지됨. Imagen 3 API 호출을 중단합니다.")
+                    raise KeyboardInterrupt("User cancelled the operation")
+
+                # Imagen 3 이미지 생성 (Vertex AI)
+                logger.info(f"📡 Vertex AI Imagen 3 API 호출 중...")
+
+                # 이미지 생성
+                response = self.imagen_model.generate_images(
+                    prompt=current_prompt,
+                    number_of_images=1,
+                    aspect_ratio="1:1",  # 1:1, 9:16, 16:9, 4:3, 3:4 지원
+                    safety_filter_level="block_only_high",
+                    person_generation="allow_adult",
+                )
+
+                if not response.images:
+                    raise Exception("응답에 이미지가 없습니다")
+
+                # 첫 번째 이미지 가져오기
+                generated_image = response.images[0]
+
+                # PIL Image로 변환
+                img = generated_image._pil_image
+                logger.info(f"✅ 이미지 수신 완료: {img.size}")
+
+                # aspect_ratio에 맞춰 리사이즈
+                if self.aspect_ratio == "9:16":
+                    target_size = (1080, 1920)
+                else:  # 16:9
+                    target_size = (1920, 1080)
+
+                if img.size != target_size:
+                    img = img.resize(target_size, Image.Resampling.LANCZOS)
+                    logger.info(f"📏 이미지 리사이즈: {img.size} → {target_size[0]}x{target_size[1]}")
+
+                # 파일 저장
+                save_path = save_dir / filename
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+
+                img.save(save_path)
+
+                logger.info(f"✅ Imagen 3 이미지 저장 완료: {save_path.name}")
+                if attempt > 0:
+                    logger.info(f"   (재시도 {attempt}회 끝에 성공)")
+                return save_path
+
+            except Exception as e:
+                error_str = str(e)
+                last_error_message = error_str  # 에러 메시지 저장 (Claude에게 전달용)
+
+                logger.warning(f"⚠️ Imagen 3 이미지 생성 오류 (시도 {attempt + 1}/{max_retries}): {error_str}")
+
+                if attempt < max_retries - 1:
+                    logger.info("   → Claude를 통해 프롬프트를 수정하여 재시도합니다...")
+                    continue
+                else:
+                    logger.error(f"❌ {max_retries}회 재시도 후에도 이미지 생성 실패")
+                    logger.error(f"   최종 프롬프트: {current_prompt}")
+                    import traceback
+                    logger.error(traceback.format_exc())
                     return None
 
         return None
@@ -1793,15 +2111,90 @@ class VideoFromFolderCreator:
         # 기존 generated_videos 폴더 백업
         self._backup_previous_videos()
 
-        # 이미지와 비디오 찾기
-        images = self._find_images()
-        videos = self._find_videos()
+        # 이미지와 비디오 파일 찾기 (자동 생성 포함)
+        images_dict = self._find_images_with_scene_numbers()  # 이미지 자동 생성 포함
+        videos_dict = self._find_videos()  # 비디오 파일 찾기
 
-        if not images and not videos:
+        # dict를 씬 번호 순서로 정렬하여 list로 변환
+        image_paths = [images_dict[k] for k in sorted(images_dict.keys())]
+        video_paths = [videos_dict[k] for k in sorted(videos_dict.keys())]
+
+        if not image_paths and not video_paths:
             logger.error("이미지 또는 비디오를 찾을 수 없습니다. 최소 1개 이상의 미디어 파일이 필요합니다.")
             return None
 
-        logger.info(f"📊 미디어 파일: 이미지 {len(images)}개, 비디오 {len(videos)}개")
+        # 이미지와 비디오를 통합 정렬 (타입 구분 없이)
+        logger.info(f"📊 통합 정렬 시작: 이미지 {len(image_paths)}개, 비디오 {len(video_paths)}개")
+
+        # 모든 미디어 파일을 하나의 리스트로 합치기
+        all_media_files = []
+        for path in image_paths:
+            all_media_files.append(('image', path))
+        for path in video_paths:
+            all_media_files.append(('video', path))
+
+        # 통합 정렬 함수
+        def extract_sequence_unified(media_tuple):
+            """시퀀스 번호 추출 (타입 관계없이)"""
+            media_type, filepath = media_tuple
+            import re
+            name = filepath.stem
+
+            # 패턴 매칭 (image_01, video_02, scene_03, clip_01 등)
+            match = re.match(r'^(image|video|scene|clip|img)[-_](\d+)$', name, re.IGNORECASE)
+            if match:
+                return (int(match.group(2)), 0)
+
+            match = re.match(r'^(image|video|scene|clip|img)\((\d+)\)$', name, re.IGNORECASE)
+            if match:
+                return (int(match.group(2)), 0)
+
+            match = re.match(r'^\((\d+)\)$', name)
+            if match:
+                return (int(match.group(1)), 0)
+
+            match = re.match(r'^(\d+)$', name)
+            if match:
+                return (int(match.group(1)), 0)
+
+            # 파일명 어디든 숫자가 있으면 추출 (영상01, 한글01, abc123 등)
+            match = re.search(r'(\d+)', name)
+            if match:
+                return (int(match.group(1)), 0)
+
+            # 숫자가 없으면 파일 시간
+            try:
+                mtime = filepath.stat().st_mtime
+            except:
+                mtime = 0
+            return (None, mtime)
+
+        # 정렬: 시퀀스 번호 우선, 없으면 시간 순
+        all_media_files.sort(key=lambda f: (
+            extract_sequence_unified(f)[0] is None,
+            extract_sequence_unified(f)[0] if extract_sequence_unified(f)[0] is not None else 0,
+            extract_sequence_unified(f)[1]
+        ))
+
+        # 씬 번호 재할당
+        images = {}
+        videos = {}
+        logger.info(f"\n🎯 통합 정렬 결과 (총 {len(all_media_files)}개):")
+        for idx, (media_type, filepath) in enumerate(all_media_files, start=1):
+            if media_type == 'image':
+                images[idx] = filepath
+            else:
+                videos[idx] = filepath
+
+            seq_info = extract_sequence_unified((media_type, filepath))
+            if seq_info[0] is not None:
+                logger.info(f"  씬 {idx}: {filepath.name} ({media_type.upper()}, 시퀀스: {seq_info[0]})")
+            else:
+                import datetime
+                mtime_str = datetime.datetime.fromtimestamp(seq_info[1]).strftime('%Y-%m-%d %H:%M:%S')
+                logger.info(f"  씬 {idx}: {filepath.name} ({media_type.upper()}, 시간: {mtime_str})")
+
+        logger.info(f"✅ 최종: 이미지 {len(images)}개, 비디오 {len(videos)}개")
 
         # scenes 가져오기
         scenes = self.story_data.get("scenes", [])
@@ -1834,12 +2227,16 @@ class VideoFromFolderCreator:
             logger.info(f"⚠️ 나레이션({narration_count})이 미디어({total_media})보다 많습니다.")
             logger.info(f"📊 미디어를 균등 분배하여 각 씬에 할당합니다.")
 
-            # 미디어 리스트 생성 (원본 순서대로: 이미지, 비디오)
+            # 미디어 리스트 생성 (이미 통합 정렬된 순서대로)
+            # images와 videos의 키를 합쳐서 정렬하면 통합 정렬된 순서가 유지됨
             all_media = []
-            for i in sorted(images.keys()):
-                all_media.append(('image', i, images[i]))
-            for i in sorted(videos.keys()):
-                all_media.append(('video', i, videos[i]))
+            all_keys = sorted(set(images.keys()) | set(videos.keys()))
+
+            for idx in all_keys:
+                if idx in images:
+                    all_media.append(('image', idx, images[idx]))
+                elif idx in videos:
+                    all_media.append(('video', idx, videos[idx]))
 
             # 각 미디어가 처리할 씬 개수 계산 (균등 분배)
             scenes_per_media = narration_count // total_media  # 기본 개수
@@ -2656,10 +3053,14 @@ def main():
                        help="자막 추가 (기본: 추가함, --no-subtitles로 끄기)")
     parser.add_argument("--no-subtitles", action="store_false", dest="add_subtitles",
                        help="자막 추가 안 함")
-    parser.add_argument("--image-source", "-i", default="none", choices=["none", "google", "dalle"],
-                       help="이미지 소스 (기본: none - 수동 업로드, google - Google Image Search, dalle - DALL-E 3)")
+    parser.add_argument("--image-source", "-i", default="none", choices=["none", "dalle", "imagen3"],
+                       help="이미지 소스 (기본: none - 수동 업로드, dalle - DALL-E 3, imagen3 - Google Imagen 3)")
+    parser.add_argument("--image-provider", default="openai", choices=["openai", "imagen3"],
+                       help="이미지 생성 제공자 (기본: openai - DALL-E 3, imagen3 - Google Imagen 3)")
     parser.add_argument("--is-admin", action="store_true",
                        help="관리자 모드 (비용 로그 표시)")
+    parser.add_argument("--job-id", default=None,
+                       help="Job ID (추적용)")
 
     args = parser.parse_args()
 
@@ -2669,6 +3070,8 @@ def main():
     print("=" * 70)
     print("VideoFromFolder Creator")
     print("=" * 70)
+    if args.job_id:
+        print(f"🆔 Job ID: {args.job_id}")
     print(f"폴더: {args.folder}")
     print(f"음성: {args.voice}")
     print(f"비율: {args.aspect_ratio}")
@@ -2683,6 +3086,7 @@ def main():
         aspect_ratio=args.aspect_ratio,
         add_subtitles=args.add_subtitles,
         image_source=args.image_source,
+        image_provider=args.image_provider,
         is_admin=args.is_admin
     )
 
@@ -2693,10 +3097,14 @@ def main():
         print("=" * 70)
         print("✓ 성공!")
         print("=" * 70)
+        if args.job_id:
+            print(f"🆔 Job ID: {args.job_id}")
         print(f"출력: {result}")
         print("=" * 70)
     else:
         print("✗ 실패!")
+        if args.job_id:
+            print(f"🆔 Job ID: {args.job_id}")
         sys.exit(1)
 
 
