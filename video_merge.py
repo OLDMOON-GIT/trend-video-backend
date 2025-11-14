@@ -168,7 +168,7 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
         logger.error(f"❌ FFmpeg stderr: {result.stderr}")
         raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
 
-    logger.info(f"✅ 비디오 병합 완료: {output_path.name}")
+    logger.info(f"비디오 병합 완료: {output_path.name}")
 
     if not output_path.exists():
         raise RuntimeError(f"출력 비디오가 생성되지 않았습니다: {output_path}")
@@ -293,7 +293,7 @@ def align_videos_to_scenes(video_paths: list, scenes: list, whisper_segments: li
         logger.error(f"❌ FFmpeg stderr: {result.stderr}")
         raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
 
-    logger.info(f"✅ scenes 기반 비디오 병합 완료: {output_path.name}")
+    logger.info(f"scenes 기반 비디오 병합 완료: {output_path.name}")
 
     if not output_path.exists():
         raise RuntimeError(f"출력 비디오가 생성되지 않았습니다: {output_path}")
@@ -385,7 +385,7 @@ def align_videos_to_segments(video_paths: list, segments: list, output_path: Pat
         logger.error(f"❌ FFmpeg stderr: {result.stderr}")
         raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
 
-    logger.info(f"✅ 세그먼트 기반 비디오 병합 완료: {output_path.name}")
+    logger.info(f"세그먼트 기반 비디오 병합 완료: {output_path.name}")
 
     if not output_path.exists():
         raise RuntimeError(f"출력 비디오가 생성되지 않았습니다: {output_path}")
@@ -966,27 +966,29 @@ async def main():
             # 확장자를 제외한 파일명
             name_without_ext = filepath.stem
 
+            # 파일 생성 시간 (항상 가져오기)
+            try:
+                ctime = filepath.stat().st_ctime
+            except:
+                ctime = 0
+
             # 1. 파일명이 숫자로 시작: "1.mp4", "02.mp4"
             match = re.match(r'^(\d+)\.', filename)
             if match:
-                return (int(match.group(1)), 0)
+                return (int(match.group(1)), ctime)
 
             # 2. _숫자. 또는 -숫자. 패턴: "video_01.mp4", "scene-02.mp4"
             match = re.search(r'[_-](\d{1,3})\.', filename)
             if match:
-                return (int(match.group(1)), 0)
+                return (int(match.group(1)), ctime)
 
             # 3. (숫자) 패턴: "Video_fx (47).mp4"
             # 단, 랜덤 ID가 없을 때만 (8자 이상의 영숫자 조합이 없을 때)
             match = re.search(r'\((\d+)\)', filename)
             if match and not re.search(r'[_-]\w{8,}', filename):
-                return (int(match.group(1)), 0)
+                return (int(match.group(1)), ctime)
 
             # 시퀀스 번호 없음 - 파일 생성 시간 사용
-            try:
-                ctime = filepath.stat().st_ctime
-            except:
-                ctime = 0
             return (None, ctime)
 
         # 정렬: 시퀀스 번호가 있으면 우선, 없으면 시간 순서
@@ -1125,7 +1127,7 @@ async def main():
             logger.info(f"📝 파일명을 대본 제목으로 변경: {safe_title}.mp4")
 
         logger.info(f"\n{'='*60}")
-        logger.info(f"✅ 비디오 병합 완료!")
+        logger.info(f"비디오 병합 완료!")
         logger.info(f"📁 출력 파일: {final_output}")
         logger.info(f"{'='*60}\n")
 
