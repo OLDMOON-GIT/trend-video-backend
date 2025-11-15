@@ -13,6 +13,8 @@ openai>=1.12.0
 openai-whisper  # Whisper for transcription (FREE)
 edge-tts>=6.1.0  # Free Microsoft TTS (HIGH QUALITY)
 gTTS>=2.5.0  # Free Google TTS (backup)
+google-cloud-texttospeech>=2.14.0  # Google Cloud TTS (PREMIUM - 분당 $0.006-0.016)
+boto3>=1.28.0  # AWS Polly (PREMIUM - 분당 $0.004)
 transformers>=4.30.0  # For vision AI (BLIP) - FREE
 torch>=2.0.0  # PyTorch for transformers - FREE
 

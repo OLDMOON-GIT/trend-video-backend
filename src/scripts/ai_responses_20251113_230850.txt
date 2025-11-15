@@ -1,0 +1,59 @@
+{
+  "title": "[테스트14] 소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["가족갈등", "배신", "복수"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "28ad4bad-735d-4d12-adcd-1e173581002d"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking slap moment, extreme close-up of man's shocked face being slapped, hand frozen in mid-air impact, intense dramatic lighting, high contrast, vibrant saturated colors, mobile-optimized framing, NO TEXT",
+      "narration": "소일거리로 주차장 관리하신다던 장인어른께 용돈 드리러 갔다가 뺨을 맞는 걸 본 순간, 저는 믿을 수 없었습니다"
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, elderly man in worn security guard uniform counting bills with trembling hands, dim parking lot background, emotional close-up, warm cinematic lighting, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "장인어른은 70세 나이에 새벽부터 밤까지 주차장을 지키셨습니다. 월급 150만원으로 생활하시며 딸에게 폐 끼치기 싫다고 하셨습니다"
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, revelation moment showing younger man in luxury suit laughing arrogantly while counting large stack of money, sharp contrast lighting, clear visual of wealth disparity, bright focused lighting, shocking composition, NO TEXT",
+      "narration": "그런데 알고 보니 제 아내 오빠는 사업으로 수십억을 벌면서도 아버지께 단 한 푼도 드리지 않았고, 용돈 드리는 저를 비웃었습니다"
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, powerful closing shot of determined man's eyes with fire reflection, intense gaze directly at camera, warm dramatic lighting, memorable impactful visual, revenge energy radiating, addictive lingering mood, NO TEXT",
+      "narration": "그 순간 장인어른이 제 손을 꽉 잡으시며 눈물을 흘리셨습니다. 이제 진짜 가족이 누군지 똑똑히 보여드릴 차례입니다"
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

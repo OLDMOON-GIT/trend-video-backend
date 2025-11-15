@@ -1,0 +1,49 @@
+{
+"title": "할아버지의 1400억 복수 (쇼츠)",
+"version": "shortform-2.0",
+"metadata": {
+"genre": "숏폼 (쇼츠/릴스/틱톡)",
+"format": "세로형 9:16",
+"target_audience": "10-40대 모바일 사용자",
+"emotional_arc": "훅 → 전개 → 행동유도",
+"key_themes": ["복수", "정의", "반전"],
+"total_word_count": 150,
+"estimated_duration_seconds": 30,
+"aspect_ratio": "9:16 (portrait)"
+},
+"scenes": [
+{
+"scene_id": "scene_00_hook",
+"scene_name": "훅 - 1초 안에 잡기",
+"duration_seconds": 10,
+"word_count": 50,
+"image_prompt": "Vertical 9:16 format, portrait orientation, shocking reveal, elderly man in shadows holding old photo, dramatic lighting, centered subject, vibrant contrast, emotional intensity, mobile-optimized, NO TEXT",
+"narration": "절대 믿기 어려운 이야기입니다. 평생 무시당하던 한 할아버지가 세상을 떠난 후, 모두를 경악하게 만든 비밀이 밝혀졌습니다. 그 금액은 무려 1400억 원입니다."
+},
+{
+"scene_id": "scene_01_main",
+"scene_name": "전개/핵심 - 비밀 공개",
+"duration_seconds": 10,
+"word_count": 50,
+"image_prompt": "Vertical 9:16 format, portrait orientation, lawyer's office scene with shocked family members, document on desk showing large inheritance, bright focused lighting, clear emotion contrast, NO TEXT",
+"narration": "알고 보니, 할아버지는 가족에게 버림받은 뒤 조용히 사업을 일구셨습니다. 그리고 유언장엔 단 한 줄이 적혀 있었습니다. ‘날 사랑하지 않은 자에겐 단 한 푼도 없다’였습니다."
+},
+{
+"scene_id": "scene_02_closing",
+"scene_name": "마무리 - 강렬한 행동 촉구",
+"duration_seconds": 10,
+"word_count": 50,
+"image_prompt": "Vertical 9:16 format, portrait orientation, calm sunset over mansion gates closing, warm light symbolizing justice and peace, centered composition, cinematic tone, NO TEXT",
+"narration": "결국 1400억 전 재산은 고아원과 노인복지시설로 기부되었습니다. 진짜 복수는 미움이 아니라 품격이었습니다. 오늘, 당신은 어떤 흔적을 남기고 계십니까?"
+}
+],
+"quality_check": {
+"word_count_pass": true,
+"scene_count": 3,
+"hook_effectiveness": "strong",
+"vertical_format_optimized": true,
+"mobile_friendly": true,
+"no_subscription_request": true,
+"tone_appropriate": true
+}
+}

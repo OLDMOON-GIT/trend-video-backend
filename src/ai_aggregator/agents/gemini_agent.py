@@ -176,8 +176,16 @@ class GeminiAgent(BaseAgent):
                         else:
                             stable_count = 0
                             last_length = current_length
-                except:
-                    pass
+                except Exception as e:
+                    error_str = str(e)
+                    # Handle browser/page closed errors - stop immediately
+                    if "has been closed" in error_str or "closed" in error_str.lower():
+                        print(f"[{self.get_name()}] [ERROR] Browser or page has been closed. Stopping...")
+                        self.response = "Browser closed by user"
+                        return self.response
+                    else:
+                        # Other errors, just continue
+                        pass
 
                 await asyncio.sleep(1)
                 waited += 1

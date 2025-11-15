@@ -1,0 +1,60 @@
+JSON
+{
+  "title": "소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 분노 → 응징",
+    "key_themes": ["가족애", "부당함", "정의구현", "반전"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "97eab6ea-0126-49d2-b05d-e76140d6826f"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Korean people, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of son-in-law's horrified and angry face, a blurred figure of an elderly man being slapped in the background, centered subject, vibrant saturated colors, high contrast lighting, intense emotion, mobile-optimized, NO TEXT",
+      "narration": "소일거리로 주차장 관리를 하신다던 장인어른께 용돈을 드리러 갔다가, 정말 믿을 수 없는 장면을 목격했습니다."
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Korean people, Vertical 9:16 format, portrait orientation, emotional moment, an elderly man in a security guard uniform flinching after being slapped, son-in-law hiding behind a pillar watching with fists clenched, dark dramatic lighting in a parking lot corner, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "장인어른께 폭언을 퍼붓던 한 남자가 결국 손찌검까지 하는 모습을 보았습니다. 제 앞에서 장인어른의 뺨을 때린 것입니다."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Korean people, Vertical 9:16 format, portrait orientation, revelation moment, the arrogant man looking defiant while the son-in-law steps out with a cold expression, the son-in-law holding a file or ID card that reveals his true high-ranking status, bright focused lighting on the face-off, informative yet exciting composition, NO TEXT",
+      "narration": "분노가 치밀어 당장 뛰쳐나가려던 순간, 장인어른이 저를 보고 황급히 눈짓하셨습니다. '괜찮다'는 눈빛이었습니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Korean people, Vertical 9:16 format, portrait orientation, powerful closing shot, the arrogant man suddenly bowing deeply in shame and terror, the son-in-law standing over him with a calm but dominant posture, final shot revealing the son-in-law is the actual owner/CEO of the building/company, optimized for mobile viewing, NO TEXT",
+      "narration": "다음날 저는 그 남자를 제 사무실로 불렀습니다. 놀랍게도 그 남자는 바로 이 건물 회사의 상무였습니다. 참교육의 시작이었습니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

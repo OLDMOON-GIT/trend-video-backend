@@ -1,0 +1,94 @@
+[OK] Chrome debugging port active
+Image-FX 페이지 접속 중...
+
+================================================================================
+DOM Analysis Result
+================================================================================
+
+[ContentEditable Elements]: 0
+
+[Textarea Elements]: 0
+
+[SC- Class Elements (first 10)]: 10
+
+[1]
+  Tag: HEADER
+  Classes: sc-47cffd96-1 fhkvGN
+  ContentEditable: False
+  Text: ImageFXarrow_drop_downWhisk 사용해 보기정보help_outlined옵
+  HTML: <header class="sc-47cffd96-1 fhkvGN"><div class="sc-47cffd96-2 cQPiIg"><div class="sc-47cffd96-4 cDxCka"><div class="sc-ed0815eb-0 kzIKmP"><button type="button" id="radix-:R1clm:" aria-haspopup="menu" aria-expanded="false" data-state="closed" class="sc-ed0815eb-1 cTMQPe"><div class="sc-ed0815eb-2 fu
+
+[2]
+  Tag: DIV
+  Classes: sc-47cffd96-2 cQPiIg
+  ContentEditable: False
+  Text: ImageFXarrow_drop_downWhisk 사용해 보기정보help_outlined옵
+  HTML: <div class="sc-47cffd96-2 cQPiIg"><div class="sc-47cffd96-4 cDxCka"><div class="sc-ed0815eb-0 kzIKmP"><button type="button" id="radix-:R1clm:" aria-haspopup="menu" aria-expanded="false" data-state="closed" class="sc-ed0815eb-1 cTMQPe"><div class="sc-ed0815eb-2 fuyTFw">ImageFX<i class="sc-95c4f607-0 
+
+[3]
+  Tag: DIV
+  Classes: sc-47cffd96-4 cDxCka
+  ContentEditable: False
+  Text: ImageFXarrow_drop_downWhisk 사용해 보기
+  HTML: <div class="sc-47cffd96-4 cDxCka"><div class="sc-ed0815eb-0 kzIKmP"><button type="button" id="radix-:R1clm:" aria-haspopup="menu" aria-expanded="false" data-state="closed" class="sc-ed0815eb-1 cTMQPe"><div class="sc-ed0815eb-2 fuyTFw">ImageFX<i class="sc-95c4f607-0 ieqNmC material-icons sc-ed0815eb-
+
+[4]
+  Tag: DIV
+  Classes: sc-ed0815eb-0 kzIKmP
+  ContentEditable: False
+  Text: ImageFXarrow_drop_down
+  HTML: <div class="sc-ed0815eb-0 kzIKmP"><button type="button" id="radix-:R1clm:" aria-haspopup="menu" aria-expanded="false" data-state="closed" class="sc-ed0815eb-1 cTMQPe"><div class="sc-ed0815eb-2 fuyTFw">ImageFX<i class="sc-95c4f607-0 ieqNmC material-icons sc-ed0815eb-5 glYMgM" font-size="1rem" color="
+
+[5]
+  Tag: BUTTON
+  Classes: sc-ed0815eb-1 cTMQPe
+  ContentEditable: False
+  Text: ImageFXarrow_drop_down
+  HTML: <button type="button" id="radix-:R1clm:" aria-haspopup="menu" aria-expanded="false" data-state="closed" class="sc-ed0815eb-1 cTMQPe"><div class="sc-ed0815eb-2 fuyTFw">ImageFX<i class="sc-95c4f607-0 ieqNmC material-icons sc-ed0815eb-5 glYMgM" font-size="1rem" color="hsla(0, 0%, 18.8%)">arrow_drop_dow
+
+[6]
+  Tag: DIV
+  Classes: sc-ed0815eb-2 fuyTFw
+  ContentEditable: False
+  Text: ImageFXarrow_drop_down
+  HTML: <div class="sc-ed0815eb-2 fuyTFw">ImageFX<i class="sc-95c4f607-0 ieqNmC material-icons sc-ed0815eb-5 glYMgM" font-size="1rem" color="hsla(0, 0%, 18.8%)">arrow_drop_down</i></div>
+
+[7]
+  Tag: I
+  Classes: sc-95c4f607-0 ieqNmC material-icons sc-ed0815eb-5 glYMgM
+  ContentEditable: False
+  Text: arrow_drop_down
+  HTML: <i class="sc-95c4f607-0 ieqNmC material-icons sc-ed0815eb-5 glYMgM" font-size="1rem" color="hsla(0, 0%, 18.8%)">arrow_drop_down</i>
+
+[8]
+  Tag: A
+  Classes: sc-9b2e762c-0 dcXHzR sc-e740095a-0 fEzqSX
+  ContentEditable: False
+  Text: Whisk 사용해 보기
+  HTML: <a class="sc-9b2e762c-0 dcXHzR sc-e740095a-0 fEzqSX" href="/fx/ko/tools/whisk">Whisk 사용해 보기<div class="sc-c177465c-0 hWqLBn"></div></a>
+
+[9]
+  Tag: DIV
+  Classes: sc-c177465c-0 hWqLBn
+  ContentEditable: False
+  Text: 
+  HTML: <div class="sc-c177465c-0 hWqLBn"></div>
+
+[10]
+  Tag: DIV
+  Classes: sc-47cffd96-3 eoJKyS
+  ContentEditable: False
+  Text: 
+  HTML: <div class="sc-47cffd96-3 eoJKyS"></div>
+
+[Input Elements]: 1
+
+[1]
+  Type: number
+  Classes: sc-4a1b59-4 koVBbC sc-e06823c-1 fKVOWe
+  ID: imagefx-seed-input
+  HTML: <input id="imagefx-seed-input" type="number" class="sc-4a1b59-4 koVBbC sc-e06823c-1 fKVOWe" value="768789">
+
+[Iframes]: 0
+
+================================================================================

@@ -1,0 +1,71 @@
+I'll analyze the product information and create a complete video script in JSON format.
+
+json
+{
+  "title": "[광고] 슈페르바 저소음 큰숫자 학생 수능 아날로그 손목 시계 수능시계",
+  "version": "product-1.0",
+  "product_info": {
+    "thumbnail": "{thumbnail}",
+    "product_link": "{product_link}",
+    "description": "{product_description}"
+  },
+  "metadata": {
+    "genre": "상품 소개 영상",
+    "format": "9:16 vertical (portrait)",
+    "total_duration_seconds": 30,
+    "style": "cinematic product showcase",
+    "mood": "desirable, appealing, satisfying",
+    "key_techniques": ["product focus", "lifestyle context", "detail shots", "emotional connection"],
+    "target_platform": "mobile shopping",
+    "emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+    "scene_count": 4,
+    "category": "상품",
+    "scriptId": "47fe6656-373b-4dce-aa20-2bbe9c2875d2"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 3초 상품 매력",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product hero shot with human element, camera starts slightly blurred then racks focus sharply onto Korean student's wrist wearing sleek analog watch with large clear numbers and minimalist white face, Korean person's hands centered in vertical frame examining watch closely with East Asian skin tone visible, premium silent movement mechanism highlighted with close-up of smooth second hand gliding without ticking sound, same Korean person throughout entire video wearing navy blue school uniform, hands rotating wrist to show watch from multiple angles revealing lightweight design and comfortable fit, dramatic rim lighting with subtle shadows creating depth on watch face, slow push-in on hands and watch revealing intricate details of large easy-to-read numbers, establishing the main Korean character who will appear in all following scenes, desirable and eye-catching mood, shot on 35mm film with anamorphic bokeh, shallow depth gradually deepening to reveal clean study room backdrop with desk and books, cool academic tones with watch's white face and black strap popping against navy uniform, consistent Korean character and location established from the start, camera movement leads viewer's eye naturally as hands lower preparing for transition to wider lifestyle context",
+      "narration": "시험 시간, 딱딱거리는 시계 소리에 집중력이 흔들린 적 있나요? 큰 숫자로 시간을 한눈에 확인할 수 있는 조용한 시계"
+    },
+    {
+      "scene_id": "scene_01_problem",
+      "scene_name": "문제/필요 - 9초 공감",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle problem scene, camera transitions from previous hands shot by pulling back to reveal full upper body of the SAME KOREAN PERSON from Scene 0 with East Asian features clearly visible struggling during exam with noisy ticking watch on wrist, distracted facial expression glancing at old watch during test, same navy blue school uniform visible confirming character continuity, same Korean person now shown from waist up in vertical frame in exam setting, Korean face with East Asian facial features showing frustrated expression squinting to read small watch numbers while trying to focus on exam paper, furrowed brow revealing concentration difficulty, same clean study room location established in Scene 0 now visible in wider shot with desk cluttered with exam papers, lighting gradually shifts from product focus to harsh fluorescent exam room reality creating stressful atmosphere, slow tracking sideways with same Korean person revealing the full uncomfortable testing situation with clock pressure, maintaining Korean character and environmental consistency, relatable and empathetic mood building connection with students, shot on 35mm film maintaining visual continuity from previous scene, depth of field opens up showing same study room backdrop with wall clock visible, muted realistic color palette with desaturated cool tones contrasting with previous product warmth emphasizing exam stress, same Korean person looks down at wrist checking time anxiously searching for solution as camera slowly drifts toward where better product will appear",
+      "narration": "수능 시험장에서 옆 사람 시계 소리 때문에 신경 쓰였던 경험 있으시죠? 작은 숫자 때문에 시간 확인하려고 눈을 찡그렸던 순간들. 시험 집중력을 방해하는 시계 소리와 보기 힘든 작은 숫자, 학생들에게는 큰 스트레스예요"
+    },
+    {
+      "scene_id": "scene_02_solution",
+      "scene_name": "해결/기능 - 9초 설득",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product solution reveal, camera continues previous movement as the SAME KOREAN PERSON from previous scenes now wears the NEW silent large-number watch with Korean hands clearly visible checking time effortlessly during exam without any distraction, peaceful focused expression replacing previous stress, same navy blue school uniform confirming character continuity, same clean study room location, seamless transition as same Korean person's hands with East Asian skin tone come into frame wearing the solution product on wrist, close-up of Korean hands showing new watch with dramatically larger numbers easily readable at a glance, smooth second hand moving silently without any ticking sound creating peaceful exam environment, same vertical framing maintaining Korean character consistency, lighting transforms from cold problem atmosphere to warm satisfied solution with natural soft window light creating premium product showcase emphasizing clarity and silence, camera orbits 180 degrees around same Korean person's wrist and watch revealing all angles and features including comfortable lightweight band and crystal-clear large font while maintaining continuous story with same Korean character, convincing and satisfying mood as solution unfolds on same Korean person experiencing zero distraction, shot on 35mm film with consistent bokeh character, same Korean person's satisfied peaceful expression with East Asian features gradually visible as camera pulls slightly back showing confident test-taking posture, vibrant yet natural academic color palette with watch face standing out, camera movement mirrors same Korean person's natural wrist checking motion building tactile connection, same study room backdrop visible confirming location continuity with organized desk, preparing for final emotional payoff with same Korean character achieving focus",
+      "narration": "슈페르바 저소음 시계는 완전히 조용한 무소음 무브먼트로 시험장 어디서도 소리가 나지 않아요. 큰 숫자 디자인으로 고개를 숙이지 않고도 시간을 한눈에 파악할 수 있죠. 가볍고 편안한 착용감으로 장시간 시험에도 손목이 편안합니다"
+    },
+    {
+      "scene_id": "scene_03_cta",
+      "scene_name": "행동유도 + CTA - 9초 구매욕구",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic emotional finale, camera gracefully pulls back from previous hands-on-watch moment revealing the SAME KOREAN PERSON from all previous scenes now completely satisfied and focused with East Asian facial features clearly visible confidently finishing exam paper with peaceful smile, checking watch one final time with ease before submitting completed test, same Korean person in full frame showing complete lifestyle transformation from stressed to confident student, vertical composition widens from wrist to full upper body of same Korean character with East Asian appearance, product beautifully integrated into successful student routine, same navy blue school uniform throughout entire video confirming continuity, natural study room scenery with achievement atmosphere, same clean study room location visible throughout entire video journey with organized desk and completed exam papers, lighting reaches golden hour perfection with warm afternoon glow through window suggesting comfort, capability, and academic success, slow crane movement upward and back revealing same Korean person's complete happy moment of exam completion confidence, same Korean character's face now fully visible with East Asian features showing genuine satisfaction with product contribution to focus, same study room backdrop establishing consistent location throughout all 4 scenes, desirable and rewarding mood crescendos as we see same Korean person's journey complete from product introduction to problem to solution to satisfaction, shot on 35mm film with final bokeh blooming beautifully around same Korean person, depth of field creates dreamy separation while maintaining Korean character focus, premium color palette with warm academic achievement tones with watch details still visible on wrist, camera movement completes full narrative journey with same Korean person from initial product showcase to final academic success, final frame holds on same Korean person wearing watch with confident satisfied smile as emotional anchor inviting viewer to own this moment and join this journey of focused success",
+      "narration": "수능 준비하는 학생들에게 꼭 필요한 집중력 도우미예요. 조용하고 보기 편한 시계로 시험 당일 자신감을 더해보세요. 상품 링크는 댓글에 있습니다. 구독과 좋아요 부탁드립니다"
+    }
+  ],
+  "quality_check": {
+    "scene_count": 4,
+    "total_duration": 30,
+    "vertical_format": true,
+    "product_focused": true,
+    "cinematic_style": true,
+    "hook_effectiveness": "strong",
+    "problem_solution_clear": true,
+    "cta_compelling": true,
+    "product_link_mention_included": true,
+    "subscription_request_included": true
+  }
+}

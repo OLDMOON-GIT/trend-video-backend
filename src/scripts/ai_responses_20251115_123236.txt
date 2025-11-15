@@ -1,0 +1,60 @@
+{
+  "title": "노숙자로 변장해 예비 며느리를 시험한 재벌 회장, 분식집에서 드러난 단 한 순간의 선택에 결국 눈물로 무릎 꿇다",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["진심", "시험", "감동"],
+    "total_word_count": 210,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "감동실화",
+    "scriptId": "8c6ef866-6c30-4b31-bd0a-97222252ea09"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 30,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of elderly Korean man in tattered clothes kneeling with tears, centered subject, vibrant saturated colors, high contrast lighting, intense emotional expression, mobile-optimized, NO TEXT",
+      "narration": "\"이게 진짜 며느리입니다.\" 회장이 눈물로 무릎 꿇은 이유, 충격적입니다."
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, young Korean woman in casual clothes serving warm food to homeless-looking elderly man in small restaurant, warm cinematic lighting, deep connection atmosphere, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "더러운 옷의 노숙자에게 다가가 따뜻한 국밥을 내밀었습니다. \"드세요. 배고프시죠?\" 다른 손님들이 코를 막을 때, 그녀만 옆에 앉았습니다."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, elderly Korean man removing tattered coat revealing expensive suit underneath, unexpected twist, bright focused lighting, dramatic transformation scene, mobile-optimized, NO TEXT",
+      "narration": "그 순간, 노숙자가 옷을 벗었습니다. 안에는 고급 정장. \"30년간 기업을 운영했지만, 오늘 처음 진짜 사람을 만났습니다.\""
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "여운 + CTA - 자연스러운 마무리",
+      "duration_seconds": 9,
+      "word_count": 80,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, elderly Korean CEO in suit kneeling before young woman with emotional expression, warm inspiring lighting, memorable impactful visual, call-to-action energy, addictive lingering mood, NO TEXT",
+      "narration": "재벌 회장은 그녀 앞에 무릎 꿇고 말했습니다. \"시험이 아니라 진심으로 대해주셔서 감사합니다.\" 진심은 시험으로 증명되지 않습니다. 이 이야기가 감동이셨다면 구독과 좋아요 부탁드립니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "subscription_request_included": true,
+    "tone_appropriate": true,
+    "emotion_driven": true
+  }
+}

@@ -1,0 +1,171 @@
+안녕하세요! 시니어 사연드라마 제작 시스템 v9.8을 시작합니다.
+
+제공하신 제목으로 작업을 시작하겠습니다: "잘 사는 줄 알았던 아들, 며느리에 폭력에 시달리는 걸 본 시어머니 복수의 칼을 가는데..."
+
+작업 순서:
+
+제목 분석 및 주제 파악
+ImageFX 프롬프트 9개 생성
+대본/내레이션 작성 (씬 0~8)
+SceneMemory 교차검사
+JSON 출력
+
+작업을 시작합니다...
+
+json
+{
+  "title": "잘 사는 줄 알았던 아들, 며느리에 폭력에 시달리는 걸 본 시어머니 복수의 칼을 가는데...",
+  "version": "9.8",
+  "metadata": {
+    "genre": "시니어 사연드라마",
+    "target_audience": "50대 이상",
+    "emotional_arc": "충격 → 분노 → 카타르시스",
+    "key_themes": ["가정폭력", "모성애", "복수", "정의"],
+    "symbolic_objects": ["찻잔", "멍자국", "거울"],
+    "total_word_count": 13650,
+    "estimated_tts_duration_seconds": 2730,
+    "recommended_shorts_edit": "60초 내 핵심 발췌"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_bomb",
+      "scene_name": "3초 폭탄 씬",
+      "duration_seconds": 3,
+      "word_count": 387,
+      "image_prompt": "Korean dramatic scene, elderly woman 60s shocked horrified expression direct frontal eye contact looking directly at camera, positioned right frame, hand covering mouth trembling, facial close-up eyes facing forward, left space text, asymmetric composition, dramatic tension, sharp focus, fluorescent harsh lighting, desaturated grey + saturated red accents on bruised skin, freeze frame, NO TEXT",
+      "narration": "65세 시어머니가 아들의 팔에서 시퍼런 멍자국을 발견했습니다. 며느리가 때린 흔적이었습니다. 아들은 시어머니 눈을 피했습니다. 3년째 숨겨왔던 비밀이었습니다. 명절 식탁에서였습니다. 온 가족이 다 봤습니다. 며느리는 웃고 있었습니다. 아들은 소매를 내렸습니다. 손이 떨리고 있었습니다. 시어머니는 그날 밤 잠들지 못했습니다. 그 다음이 더 충격적입니다."
+    },
+    {
+      "scene_id": "scene_01_main",
+      "scene_name": "발견의 순간",
+      "time_period": "현재",
+      "location": "명절 식탁",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "oppressive",
+      "symbolic_object": "찻잔",
+      "image_prompt": "Korean dramatic scene cinematography, oppressive atmosphere, middle-aged son 40s unconsciously pulling sleeve down nervous gesture, elderly mother 60s frozen stare at son's wrist, eye-level medium shot, fluorescent overhead lighting creating stark shadows, cramped Korean apartment dining room, family members background blur, teacup centered as barrier between mother son, desaturated tones with vibrant crimson on exposed bruise, power dynamics visible through body language, NO TEXT",
+      "narration": "명절 아침, 식탁 위로 김이 피어올랐습니다. 72세 정순자는 며느리 혜진이 차린 전을 바라보았습니다. 15년 전, 혜진은 이 집 며느리로 들어왔습니다. 아들 민수는 당시 35살이었습니다. 순자는 혜진을 좋은 며느리라고 생각했습니다. 부지런하고 말이 없었습니다. 며느리가 차린 상에 찻잔을 내려놓는 소리가 유난히 크게 들렸습니다. '앗.' 민수가 짧게 신음했습니다. 찻잔이 손등을 스쳤습니다. 민수는 재빨리 소매를 내렸습니다. 하지만 순자는 봤습니다. 아들 팔목에 선명한 보라색 멍이 있었습니다. 손가락 자국이 또렷했습니다. '민수야, 그게 뭐니?' 순자의 목소리가 떨렸습니다. 민수는 고개를 돌렸습니다. '아무것도 아니에요, 어머니.' 혜진이 먼저 대답했습니다. 며느리 목소리에 날이 서 있었습니다. '회사에서 부딪혔대요. 걱정 마세요.' 순자는 며느리 얼굴을 봤습니다. 혜진은 웃고 있었습니다. 하지만 그 미소가 차가웠습니다. 민수는 젓가락을 들었습니다. 손이 떨리고 있었습니다. 전을 집으려다 놓쳤습니다. 혜진이 민수를 쳐다봤습니다. 민수는 몸을 움츠렸습니다. 순자는 그 순간을 놓치지 않았습니다. 아들이 며느리를 두려워하고 있었습니다. '민수야, 잠깐 나와볼래?' 순자가 말했습니다. '어머니, 식사 중이잖아요.' 혜진이 끼어들었습니다. '시어머님께서 아드님하고 얘기하시겠다는데요?' 옆에 앉은 시누이 영희가 말했습니다. 혜진은 영희를 노려봤습니다. 민수는 일어났습니다. 발걸음이 무거웠습니다. 베란다로 나갔습니다. 겨울 찬바람이 얼굴을 스쳤습니다. '민수야.' 순자가 아들 팔을 잡았습니다. 민수는 움찔했습니다. '정말 회사에서 부딪힌 거니?' 민수는 대답하지 않았습니다. 입술을 깨물었습니다. '아들아, 엄마한테 말해봐.' 순자의 눈에 눈물이 고였습니다. '어머니, 그냥... 괜찮아요.' 민수가 고개를 숙였습니다. '혜진이가... 혜진이가 때린 거니?' 순자가 물었습니다. 민수는 고개를 돌렸습니다. 대답 대신 침묵이 흘렀습니다. 그 침묵이 모든 것을 말해주었습니다. 순자는 주먹을 쥐었습니다. 손톱이 손바닥에 박혔습니다. 아들은 40살 어른이었습니다. 하지만 순자 눈에는 여전히 아이였습니다. 보호해야 할 아이였습니다. '언제부터였니?' 순자가 떨리는 목소리로 물었습니다. 민수는 답하지 않았습니다. 하지만 눈빛이 말해주었습니다. 오래되었다는 것을. 순자는 가슴이 무너졌습니다. 그 많은 시간 동안 아들이 고통받고 있었다는 사실이 믿기지 않았습니다. 식탁에서 그릇 부딪치는 소리가 들렸습니다. 혜진이 설거지를 시작했습니다. 물소리가 크게 울렸습니다. 마치 경고하는 것처럼."
+    },
+    {
+      "scene_id": "scene_02_main",
+      "scene_name": "숨겨진 진실",
+      "time_period": "과거 - 3년 전",
+      "location": "민수와 혜진의 집",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "tense",
+      "symbolic_object": "깨진 그릇",
+      "image_prompt": "Korean dramatic scene cinematography, tense suffocating atmosphere, middle-aged woman 40s standing over seated man aggressive posture, man cowering protective arms raised, low angle shot emphasizing power imbalance, single harsh overhead fluorescent light creating threatening shadows, small kitchen cramped space, shattered dish pieces floor foreground, cold blue-grey desaturated palette with crimson accents on man's defensive hands, claustrophobic framing, NO TEXT",
+      "narration": "3년 전, 민수의 집 부엌에서 그릇 깨지는 소리가 났습니다. 밤 10시였습니다. 민수는 회사에서 늦게 들어왔습니다. 혜진은 식탁에 앉아 기다리고 있었습니다. 저녁이 식어 있었습니다. '미안, 회의가 길어져서...' 민수가 말을 시작했습니다. 혜진은 일어났습니다. 말없이 접시를 들었습니다. 그리고 바닥에 내던졌습니다. 산산조각 났습니다. 민수는 얼어붙었습니다. '당신 때문에 내가 얼마나 기다렸는지 알아?' 혜진의 목소리가 낮게 깔렸습니다. '회의라고? 거짓말하지 마.' 민수는 손을 들었습니다. '정말이야, 혜진아. 팀장님이...' 말이 끊겼습니다. 혜진이 민수 멱살을 잡았습니다. '나한테 거짓말해? 당신 같은 게?' 혜진이 민수를 밀쳤습니다. 민수는 뒤로 비틀거렸습니다. 식탁 모서리에 허리가 부딪혔습니다. 아팠습니다. 하지만 소리 내지 못했습니다. '혜진아, 진정해. 우리 얘기하자.' 민수가 떨리는 목소리로 말했습니다. 혜진은 코웃음 쳤습니다. '얘기? 당신이랑 무슨 얘기를 해?' 혜진이 민수에게 다가왔습니다. 민수는 뒤로 물러났습니다. 벽에 등이 닿았습니다. 더 이상 물러날 곳이 없었습니다. '당신 월급으로 우리 살 수 있어? 내가 얼마나 아껴쓰는데?' 혜진이 민수 가슴을 찔렀습니다. '당신 어머니는? 매번 우리 집에 와서 이래라저래라 하고.' 민수는 고개를 숙였습니다. '어머니는 그냥 걱정하셔서...' '걱정? 간섭이지!' 혜진이 소리쳤습니다. 민수는 움찔했습니다. '미안해, 혜진아. 내가 잘할게.' 민수가 말했습니다. 혜진은 민수를 노려봤습니다. 오랫동안. 그리고 돌아섰습니다. 침실로 들어가며 문을 쾅 닫았습니다. 민수는 그 자리에 주저앉았습니다. 깨진 그릇 조각들 사이에. 손이 떨렸습니다. 조각을 주웠습니다. 날카로운 도자기가 손가락을 베었습니다. 피가 났습니다. 하지만 아프지 않았습니다. 마음이 더 아팠습니다. 언제부터였을까요. 혜진이 이렇게 변한 게. 결혼 초기에는 달랐습니다. 다정했습니다. 웃었습니다. 하지만 시간이 지나면서 혜진은 변했습니다. 작은 일에도 화를 냈습니다. 민수를 탓했습니다. 처음에는 말로만 했습니다. 나중에는 물건을 던졌습니다. 그리고 지금은... 민수는 팔의 멍을 만졌습니다. 어제 생긴 것이었습니다. 혜진이 잡은 자리였습니다. 세게 비틀었습니다. 민수가 지갑을 잃어버렸다고 했을 때였습니다. '당신은 아무것도 제대로 하는 게 없어.' 혜진이 그렇게 말했습니다. 민수는 아무에게도 말하지 못했습니다. 남자가 아내에게 맞는다고? 누가 믿겠습니까. 오히려 비웃을 것입니다. '남자가 그것도 못 참아?' '당신이 잘못한 게 있으니 그렇겠지.' 사람들은 그렇게 말할 것입니다. 민수는 그릇 조각을 쓰레기통에 버렸습니다. 손에서 피가 뚝뚝 떨어졌습니다. 싱크대 물을 틀었습니다. 찬물에 손을 씻었습니다. 물이 빨갛게 물들었습니다. 거울을 봤습니다. 피곤한 얼굴이 비쳤습니다. 40살 남자. 가장. 아들. 남편. 하지만 민수는 그 어떤 역할도 제대로 하지 못하고 있었습니다. 침실 문틈으로 불빛이 새어 나왔습니다. 혜진은 아직 자지 않았습니다. 민수는 거실 소파에 누웠습니다. 천장을 바라봤습니다. 눈을 감았습니다. 하지만 잠이 오지 않았습니다."
+    },
+    {
+      "scene_id": "scene_03_main",
+      "scene_name": "시어머니의 관찰",
+      "time_period": "현재",
+      "location": "순자의 집",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "melancholic",
+      "symbolic_object": "찻잔",
+      "image_prompt": "Korean dramatic scene cinematography, melancholic contemplative atmosphere, elderly woman 60s sitting alone traditional Korean room, holding teacup both hands staring into liquid, window light soft diffused creating gentle shadows, eye-level close-up on weathered hands gripping cup, muted earth tones with single warm amber accent from tea, quiet isolated mood, traditional room elements background soft focus, NO TEXT",
+      "narration": "명절이 끝나고 순자는 혼자 남았습니다. 찻잔을 손에 들었습니다. 따뜻함이 손바닥에 전해졌습니다. 하지만 마음은 차가웠습니다. 아들의 멍든 팔이 눈앞에 어른거렸습니다. 순자는 지난 3년을 떠올렸습니다. 생각해보니 징조가 있었습니다. 민수가 점점 말이 없어졌습니다. 웃음도 사라졌습니다. 가족 모임에 자주 빠졌습니다. '혜진이가 몸이 안 좋대.' '회사 일이 바빠서.' 민수는 항상 핑계를 댔습니다. 순자는 그때 눈치채지 못했습니다. 아니, 눈치채고도 외면했습니다. 며느리가 좋은 사람이라고 믿고 싶었습니다. 하지만 작은 일들이 쌓였습니다. 어느 날 순자가 아들 집을 방문했습니다. 혜진은 반갑지 않은 표정이었습니다. '시어머님, 미리 말씀하시지.' 혜진이 차갑게 말했습니다. 민수는 혜진 눈치를 봤습니다. '어머니, 전화하셨으면...' 아들도 같은 말을 했습니다. 순자는 가슴이 답답했습니다. 언제부터 아들 집에 가는 데 허락을 받아야 했을까요. 집 안 분위기가 이상했습니다. 너무 조용했습니다. 텔레비전도 꺼져 있었습니다. 민수와 혜진은 대화하지 않았습니다. 밥을 먹으면서도 침묵만 흘렀습니다. 혜진이 반찬을 민수 앞에 놓았습니다. 던지듯이. 민수는 고맙다는 말도 하지 못했습니다. 순자가 설거지를 도우려고 했습니다. '괜찮습니다, 시어머님.' 혜진이 막았습니다. 목소리에 날이 서 있었습니다. 순자는 물러섰습니다. 거실에 앉아 기다렸습니다. 부엌에서 그릇 부딪치는 소리가 났습니다. 크게. 거칠게. 그리고 혜진의 목소리가 들렸습니다. '당신 어머니 왜 이렇게 자주 와?' 낮게 깔린 목소리였습니다. 민수의 대답은 들리지 않았습니다. 순자는 일찍 돌아왔습니다. 민수가 배웅했습니다. 현관까지. '민수야, 혹시 힘든 일 있으면 엄마한테 얘기해.' 순자가 말했습니다. 민수는 고개를 저었습니다. '괜찮아요, 어머니.' 하지만 민수 눈빛은 괜찮지 않았습니다. 순자는 그날 이후로 더 자주 전화했습니다. 민수는 항상 바쁘다고 했습니다. 통화를 짧게 끊었습니다. 배경에서 혜진의 목소리가 들렸습니다. '또 시어머니야?' 순자는 점점 아들을 잃어가고 있었습니다. 며느리가 아들을 가둬놓고 있었습니다. 보이지 않는 감옥에. 이제야 순자는 깨달았습니다. 아들이 도움을 청하고 있었다는 것을. 말로는 아니었습니다. 눈빛으로. 침묵으로. 움츠러든 어깨로. 순자는 찻잔을 내려놓았습니다. 손이 떨렸습니다. 분노가 치밀어 올랐습니다. 며느리가 아들을 때렸습니다. 순자가 낳아 키운 아들을. 순자는 일어났습니다. 서랍을 열었습니다. 오래된 수첩을 꺼냈습니다. 펼쳤습니다. 거기에는 이름들이 적혀 있었습니다. 순자의 친구들. 동창들. 이웃들. 순자는 전화를 들었습니다. 번호를 눌렀습니다. 신호음이 울렸습니다. '여보세요?' 친구 목소리가 들렸습니다. '나야, 순자. 부탁 하나 들어줄 수 있어?' 순자의 목소리는 차분했습니다. 하지만 단단했습니다. 결심한 사람의 목소리였습니다. 며느리에게 대가를 치르게 할 것입니다. 아들을 구할 것입니다. 어머니로서 마지막 역할을 할 것입니다."
+    },
+    {
+      "scene_id": "scene_04_main",
+      "scene_name": "증거 수집",
+      "time_period": "현재 - 명절 일주일 후",
+      "location": "민수의 회사 근처",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "tense",
+      "symbolic_object": "핸드폰",
+      "image_prompt": "Korean dramatic scene cinematography, tense investigative atmosphere, elderly woman 60s sitting car passenger seat looking through window anxious expression, middle-aged son visible through office building window distance, eye-level medium shot from car interior, grey overcast daylight creating flat somber mood, raindrops on car window foreground blur, desaturated urban palette with muted blue-grey tones, surveillance mood without aggression, NO TEXT",
+      "narration": "순자는 아들 회사 앞에 서 있었습니다. 점심시간이었습니다. 직장인들이 삼삼오오 나왔습니다. 민수도 나왔습니다. 혼자였습니다. 다른 동료들과 함께 가지 않았습니다. 순자는 민수를 불렀습니다. '어머니?' 민수는 놀랐습니다. 순자는 민수 팔을 잡았습니다. 소매를 걷어 올렸습니다. 새로운 멍이 있었습니다. 더 많아졌습니다. '민수야.' 순자의 목소리가 떨렸습니다. 민수는 소매를 내렸습니다. 주위를 둘러봤습니다. '어머니, 여기서는...' 순자는 민수를 근처 카페로 데려갔습니다. 구석 자리에 앉았습니다. 커피 두 잔을 시켰습니다. 하지만 마시지 않았습니다. '언제까지 참을 거니?' 순자가 물었습니다. 민수는 대답하지 않았습니다. 커피 잔만 바라봤습니다. '엄마가 도와줄게. 혜진이한테서 벗어나자.' 순자가 민수 손을 잡았습니다. 민수는 고개를 저었습니다. '안 돼요, 어머니.' '왜 안 돼?' '사람들이 알면... 제가 남자인데 아내한테 맞는다고 알려지면...' 민수의 목소리가 작아졌습니다. 순자는 가슴이 미어졌습니다. 아들이 수치심에 갇혀 있었습니다. '그게 중요해? 네 몸이 망가지고 있어.' 순자가 말했습니다. 민수는 입술을 깨물었습니다. '혜진이도 힘들어해요. 제가 잘못한 게 많아서...' '잘못? 너한테 무슨 잘못이 있어?' 순자의 목소리가 높아졌습니다. 주변 사람들이 쳐다봤습니다. 순자는 목소리를 낮췄습니다. '민수야, 아무리 잘못했어도 때려도 된다는 법은 없어.' 민수는 눈물을 참았습니다. 하지만 눈가가 붉어졌습니다. '어머니, 저는... 괜찮아요.' '괜찮지 않아! 엄마 눈에는 다 보여.' 순자는 가방에서 핸드폰을 꺼냈습니다. '이것 좀 봐.' 화면을 민수에게 보여줬습니다. 가정폭력 상담 센터 홈페이지였습니다. '여기 전화해봐. 상담받을 수 있어.' 민수는 고개를 저었습니다. '어머니, 제발. 이러지 마세요.' '왜? 왜 이러면 안 돼?' 순자가 물었습니다. 민수는 한참을 침묵했습니다. 그리고 작은 목소리로 말했습니다. '혜진이가... 제가 다른 사람한테 말하면 어머니한테 해코지한대요.' 순자는 숨이 멎었습니다. 며느리가 협박까지 하고 있었습니다. '그래서 참는 거야?' 순자가 물었습니다. 민수는 고개를 끄덕였습니다. '어머니 다치실까 봐 무서워요.' 순자는 눈물이 났습니다. 아들이 엄마를 지키려고 고통을 감내하고 있었습니다. 순자는 민수를 끌어안았습니다. '미안해, 민수야. 엄마가 미안해.' 민수는 어머니 품에서 울었습니다. 40살 어른이. 사람들 앞에서. 순자는 민수 등을 토닥였습니다. 마음속으로 다짐했습니다. 반드시 아들을 구하겠다고. 며느리를 벌하겠다고. 순자는 민수를 떼어놓았습니다. 민수 얼굴을 닦아줬습니다. '민수야, 엄마를 믿어. 네가 안전하게 해줄게.' '어머니...' '아무것도 묻지 마. 그냥 엄마가 하는 대로 따라와.' 순자의 눈빛이 단호했습니다. 민수는 어머니를 봤습니다. 오랜만에 보는 강한 눈빛이었습니다. 민수는 고개를 끄덕였습니다. 순자는 가방에서 수첩을 꺼냈습니다. 펜을 들었습니다. '혜진이가 언제 때리는지 알려줘. 시간, 장소, 이유. 다.' 민수는 주저했습니다. 하지만 어머니 눈빛을 보고 말하기 시작했습니다. 순자는 적었습니다. 하나하나. 증거를 모았습니다. 30분이 지났습니다. 수첩에 빽빽하게 글씨가 채워졌습니다. 순자는 수첩을 덮었습니다. '이제 시작이야.' 순자가 말했습니다."
+    },
+    {
+      "scene_id": "scene_05_main",
+      "scene_name": "대면",
+      "time_period": "현재 - 2주 후",
+      "location": "민수와 혜진의 집",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "intense",
+      "symbolic_object": "거울",
+      "image_prompt": "Korean dramatic scene cinematography, intense confrontation atmosphere, two women facing each other across table power struggle, elderly woman 60s determined expression seated upright, middle-aged woman 40s defensive aggressive posture standing, eye-level shot capturing both faces sharp focus, harsh overhead fluorescent creating dramatic contrast shadows, small living room claustrophobic feel, mirror background reflecting fractured relationships, cold desaturated tones with tension visible body language, NO TEXT",
+      "narration": "순자는 며느리 집 초인종을 눌렀습니다. 혜진이 문을 열었습니다. 놀란 표정이었습니다. '시어머님? 오신다고 말씀 안 하셨는데요.' 혜진의 목소리에 불만이 섞였습니다. '들어가도 되겠니?' 순자는 허락을 구하지 않고 들어갔습니다. 혜진은 당황했습니다. 거실에 앉았습니다. 혜진은 어쩔 수 없이 마주 앉았습니다. '무슨 일이세요?' 혜진이 물었습니다. 순자는 혜진을 똑바로 봤습니다. 오랫동안. 혜진은 시선을 피했습니다. '혜진아, 우리 얘기 좀 하자.' 순자가 말했습니다. '무슨 얘기요?' 혜진의 목소리가 경계했습니다. '민수 말이야.' 순자가 말했습니다. 혜진의 표정이 굳었습니다. '민수가 뭐요?' '네가 민수를 때리고 있더구나.' 순자가 차분하게 말했습니다. 혜진은 벌떡 일어났습니다. '뭐라고요? 누가 그런 헛소리를...' '헛소리가 아니야. 내가 봤어. 민수 팔에 있는 멍.' 순자도 일어났습니다. 혜진은 코웃음 쳤습니다. '그게 제가 때린 거라는 증거라도 있어요?' '네 손가락 자국이 남아 있더구나.' 순자가 말했습니다. 혜진은 말문이 막혔습니다. 잠시 침묵이 흘렀습니다. 그리고 혜진이 웃었습니다. 비웃는 웃음이었습니다. '그래서요? 그래서 어쩌시게요?' 혜진의 태도가 돌변했습니다. 순자는 놀라지 않았습니다. 예상했던 반응이었습니다. '경찰에 신고할 수도 있어.' 순자가 말했습니다. '하세요. 신고하시든지.' 혜진이 팔짱을 꼈습니다. '누가 믿겠어요? 남자가 여자한테 맞는다고?' 순자는 주먹을 쥐었습니다. 며느리가 이렇게까지 뻔뻔할 줄은 몰랐습니다. '왜 그러니? 왜 민수를 때리는 거야?' 순자가 물었습니다. 혜진은 비웃었습니다. '궁금하세요? 왜 때리는지?' 혜진이 순자에게 다가왔습니다. '당신 아들이 얼마나 무능한지 아세요?' 혜진의 목소리에 독기가 섰습니다. '15년 동안 승진 한 번 못 했어요. 월급은 그대로예요.' '그게 때릴 이유가 되니?' 순자가 물었습니다. '이유요? 이유야 많죠.' 혜진이 손가락을 꼽았습니다. '집안일 안 해요. 돈도 못 벌어와요. 시어머니는 맨날 간섭하고.' 혜진이 순자를 노려봤습니다. '특히 당신요. 시어머니.' 순자는 숨을 깊이 들이쉬었습니다. 화를 참았습니다. '그래도 사람을 때리면 안 되는 거야.' '사람?' 혜진이 웃었습니다. '당신 아들이 사람이에요? 아무것도 못하는 주제에.' 순자는 더 이상 참을 수 없었습니다. '입 조심해!' 순자의 목소리가 높아졌습니다. 혜진은 한 발 물러났습니다. 순간 두려움이 스쳤습니다. 하지만 곧 다시 당당해졌습니다. '뭐 어쩔 건데요? 때릴 거예요?' 혜진이 도발했습니다. 순자는 주먹을 쥐었다 폈습니다. 때리고 싶었습니다. 하지만 참았습니다. '지금 당장은 아니야.' 순자가 차갑게 말했습니다. '하지만 반드시 대가를 치르게 할 거야.' 혜진은 웃었습니다. '기대할게요, 시어머님.' 순자는 돌아섰습니다. 현관으로 갔습니다. 신발을 신었습니다. 뒤에서 혜진의 목소리가 들렸습니다. '민수한테 말씀하시면 소용없어요. 어차피 제 말 들을 거예요.' 순자는 뒤돌아봤습니다. '두고 봐.' 순자가 말했습니다. 문을 닫고 나왔습니다. 복도에서 숨을 골랐습니다. 손이 떨렸습니다. 분노로. 하지만 동시에 각오도 생겼습니다. 이제 물러설 수 없었습니다."
+    },
+    {
+      "scene_id": "scene_06_main",
+      "scene_name": "계획",
+      "time_period": "현재 - 3주 후",
+      "location": "순자의 집",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "ominous",
+      "symbolic_object": "수첩",
+      "image_prompt": "Korean dramatic scene cinematography, ominous planning atmosphere, elderly woman 60s sitting table covered documents photos, determined calculating expression, overhead angle showing spread evidence materials, dim warm lamp light creating focused pool illumination surrounded darkness, traditional Korean room austere setting, notebook pen positioned deliberately, desaturated cold tones with amber accent from lamp, methodical preparation mood, NO TEXT",
+      "narration": "순자는 식탁에 앉아 있었습니다. 앞에 서류들이 펼쳐져 있었습니다. 가정폭력 상담 센터에서 받은 자료였습니다. 이혼 절차. 피해자 보호. 법적 대응. 순자는 하나하나 읽었습니다. 밑줄을 그었습니다. 중요한 부분을 표시했습니다. 전화벨이 울렸습니다. 순자는 받았습니다. '여보세요?' '순자야, 나 경숙이야.' 친구 목소리였습니다. '응, 경숙아.' '조사했어. 네가 부탁한 거.' 경숙이 말했습니다. 순자는 자세를 고쳤습니다. '어떻게 됐어?' '혜진이 직장 동료들한테 물어봤어. 다들 혜진을 안 좋게 보더라고.' 경숙이 말했습니다. '어떻게?' '성격이 괴팍하대. 화를 잘 내고. 동료들한테도 함부로 대한대.' 순자는 고개를 끄덕였습니다. 예상했던 대로였습니다. '더 있어?' '혜진이 전 직장에서 잘렸대. 상사랑 싸워서.' 경숙이 덧붙였습니다. 순자는 수첩에 적었습니다. 증거가 쌓여갔습니다. '고마워, 경숙아.' '천만에. 근데 순자야, 조심해. 혜진이 만만한 상대는 아닐 거야.' 경숙이 걱정스럽게 말했습니다. '알아. 걱정 마.' 순자는 전화를 끊었습니다. 다음 번호를 눌렀습니다. 변호사 사무실이었습니다. '네, 법률사무소입니다.' 직원이 받았습니다. '상담 예약하고 싶은데요.' 순자가 말했습니다. '어떤 사안이신가요?' '가정폭력이요. 남편이 아내한테 당하는 경우.' 순자가 설명했습니다. 잠시 침묵이 흘렀습니다. '아, 네. 그런 경우도 상담 가능합니다. 언제 오실 수 있으세요?' '내일 가능할까요?' '네, 내일 오후 2시는 어떠세요?' '좋아요.' 순자는 약속을 잡았습니다. 전화를 끊었습니다. 시계를 봤습니다. 밤 11시였습니다. 민수에게 전화했습니다. 신호음이 길게 울렸습니다. 받지 않았습니다. 순자는 문자를 보냈습니다. '민수야, 엄마야. 괜찮니?' 답장이 왔습니다. 30분 후에. '네, 어머니. 걱정 마세요.' 짧은 답장이었습니다. 순자는 한숨을 쉬었습니다. 민수는 지금도 혜진 눈치를 보고 있을 것입니다. 순자는 서랍을 열었습니다. 오래된 사진첩을 꺼냈습니다. 펼쳤습니다. 어린 민수 사진이 있었습니다. 웃고 있는 사진. 순자는 사진을 쓰다듬었습니다. '조금만 참아, 민수야. 엄마가 꼭 구해줄게.' 순자는 사진첩을 덮었습니다. 다시 서류를 봤습니다. 이혼 신청서 양식이 있었습니다. 순자는 펜을 들었습니다. 빈칸을 채우기 시작했습니다. 민수 이름. 혜진 이름. 결혼 날짜. 하나하나. 손이 떨렸습니다. 하지만 멈추지 않았습니다. 새벽 2시가 되었습니다. 서류가 완성되었습니다. 순자는 서류를 정리했습니다. 봉투에 넣었습니다. 내일 변호사에게 가져갈 것입니다. 순자는 불을 껐습니다. 침대에 누웠습니다. 눈을 감았습니다. 하지만 잠들지 못했습니다. 머릿속에 계획이 돌아갔습니다. 며느리를 법적으로 처벌할 것입니다. 이혼시킬 것입니다. 아들을 되찾을 것입니다. 순자는 각오했습니다. 어떤 대가를 치르더라도. 어머니로서 마지막 싸움을 할 것입니다."
+    },
+    {
+      "scene_id": "scene_07_main",
+      "scene_name": "복수의 시작",
+      "time_period": "현재 - 1개월 후",
+      "location": "법원",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "retributive",
+      "symbolic_object": "서류",
+      "image_prompt": "Korean dramatic scene cinematography, retributive justice atmosphere, elderly woman 60s standing courthouse steps holding documents confident righteous expression, middle-aged woman 40s background shocked defeated posture, low angle shot emphasizing triumph justice, bright natural daylight symbolizing truth revelation, courthouse architecture background authority, desaturated cold tones warming to amber on protagonist face, vindication resolution mood, NO TEXT",
+      "narration": "법원 복도는 조용했습니다. 순자는 민수 옆에 앉아 있었습니다. 혜진은 반대편에 앉았습니다. 변호사와 함께. 혜진은 순자를 노려봤습니다. 순자는 눈을 피하지 않았습니다. 조정실 문이 열렸습니다. '들어오세요.' 조정위원이 말했습니다. 네 사람이 들어갔습니다. 테이블에 마주 앉았습니다. 조정위원이 서류를 펼쳤습니다. '이혼 조정 건입니다. 청구인은 김민수 씨, 피청구인은 박혜진 씨.' 조정위원이 설명을 시작했습니다. 혜진은 팔짱을 꼈습니다. '이혼 사유가 가정폭력이라고 되어 있는데요.' 조정위원이 민수를 봤습니다. 민수는 고개를 숙였습니다. '네, 맞습니다.' 민수가 작은 목소리로 말했습니다. 혜진이 비웃었습니다. '가정폭력이요? 말도 안 돼요.' 혜진의 변호사가 끼어들었습니다. '증거가 있습니까?' 순자가 서류 봉투를 꺼냈습니다. 테이블에 놓았습니다. '여기 있습니다.' 순자가 말했습니다. 조정위원이 서류를 펼쳤습니다. 사진들이 나왔습니다. 민수 팔의 멍. 등의 상처. 병원 진단서. 상담 기록. 조정위원의 표정이 굳었습니다. 혜진은 당황했습니다. '그건... 그건 사고로...' 혜진이 변명했습니다. '사고요?' 순자가 끼어들었습니다. '같은 자리에 반복해서 멍이 드는 게 사고인가요?' 혜진은 말문이 막혔습니다. 조정위원이 민수에게 물었습니다. '이 상처들이 모두 부인 분께서...' '네.' 민수가 대답했습니다. 목소리는 떨렸지만 분명했습니다. '3년 동안 계속되었습니다.' 혜진의 얼굴이 창백해졌습니다. '민수씨, 당신 지금...' 혜진이 민수를 노려봤습니다. 민수는 눈을 피하지 않았습니다. 처음으로. '이제 더 이상 참을 수 없어요.' 민수가 말했습니다. 순자는 민수 손을 잡았습니다. 민수는 어머니를 봤습니다. 순자는 고개를 끄덕였습니다. 격려의 눈빛이었습니다. 민수는 다시 혜진을 봤습니다. '당신한테 맞으면서 사는 게 너무 힘들었어요.' 민수의 목소리에 눈물이 섞였습니다. '매일 두려웠어요. 당신이 언제 화낼지. 언제 때릴지.' 혜진은 입술을 깨물었습니다. 말하지 못했습니다. 조정위원이 혜진에게 물었습니다. '박혜진 씨, 남편분을 폭행하신 사실이 있습니까?' 혜진은 한참을 침묵했습니다. 그리고 작게 말했습니다. '...있습니다.' 조정실이 조용해졌습니다. 혜진의 변호사가 당황했습니다. '의뢰인, 지금 무슨...' 혜진은 손을 들어 변호사를 막았습니다. '때린 건 맞아요.' 혜진이 인정했습니다. '하지만 이유가 있었어요. 민수가 제대로 못해서...' '이유가 있으면 사람을 때려도 되나요?' 순자가 물었습니다. 혜진은 대답하지 못했습니다. 조정위원이 한숨을 쉬었습니다. '이 정도면 조정은 어려울 것 같습니다. 재판으로 가시는 게 좋겠습니다.' 혜진은 고개를 떨어뜨렸습니다. 민수는 안도의 한숨을 쉬었습니다. 조정이 끝났습니다. 복도로 나왔습니다. 혜진이 민수에게 다가왔습니다. '민수씨, 우리 다시 생각해봐요.' 혜진의 목소리가 달라졌습니다. 애원하는 투였습니다. 민수는 고개를 저었습니다. '이미 늦었어요.' 혜진은 순자를 봤습니다. '시어머님, 제발...' '내 아들한테 한 짓을 생각해봐.' 순자가 차갑게 말했습니다. 혜진은 울음을 터뜨렸습니다. 하지만 순자는 동정하지 않았습니다. 순자와 민수는 법원을 나왔습니다. 햇빛이 눈부셨습니다. '어머니, 고맙습니다.' 민수가 말했습니다. 순자는 민수를 끌어안았습니다. '괜찮아, 이제 다 끝났어.' 민수는 어머니 품에서 울었습니다. 이번에는 안도의 눈물이었습니다. 순자는 하늘을 봤습니다. 구름 한 점 없이 맑았습니다. 긴 싸움이 끝났습니다. 아들을 되찾았습니다. 정의를 세웠습니다. 순자는 미소 지었습니다. 처음으로 마음이 편안해졌습니다."
+    },
+    {
+      "scene_id": "scene_08_subscribe",
+      "scene_name": "구독 유도 씬",
+      "duration_seconds": 8,
+      "word_count": 321,
+      "image_prompt": "Clean modern YouTube interface design, bright welcoming community atmosphere, subscribe button notification bell softly glowing warm light, friendly gradient coral to soft blue, centered composition breathing room, professional inviting call-to-action, warm indirect lighting human connection shared stories, community building visual metaphor, NO TEXT",
+      "narration": "이런 의미 있는 이야기, 함께 공유하고 싶으시죠? 구독과 좋아요로 함께해주세요. 여러분의 관심 하나하나가 더 많은 숨겨진 이야기를 발굴하는 큰 힘이 됩니다. 알림 설정까지 해두시면 다음 이야기를 가장 먼저 만나보실 수 있어요. 다음 이야기도 기대해주세요."
+    }
+  ],
+  "quality_check": {
+    "hook_score": 9,
+    "hook_score_breakdown": {
+      "strong_verb": 1,
+      "body_part": 1,
+      "numbers": 1,
+      "evidence": 1,
+      "witness": 1,
+      "immediacy": 1,
+      "title_connection": 1,
+      "bonus_shock": 1,
+      "bonus_irony": 1,
+      "bonus_contrast": 0
+    },
+    "hook_rewrites_count": 0,
+    "scene_memory_pass": true,
+    "max_consecutive_content_words_matched": 2,
+    "similar_action_patterns_found": 2,
+    "all_resolved": true,
+    "resolution_method": "의미 변주 적용 및 다양한 행동 패턴 사용",
+    "title_click_rating": 5,
+    "hook_effectiveness": "strong",
+    "imagefx_prompts_validated": true,
+    "emotion_keywords_from_list": true
+  },
+  "quality_evaluation": {
+    "hook_strength": 9,
+    "emotional_arc": 9,
+    "three_act_structure": 10,
+    "retention_points": 8,
+    "pacing": 9,
+    "visual_variety": 9,
+    "total_score": 54,
+    "grade": "S",
+    "comments": "훅이 매우 강력하고 명확한 갈등 상황을 제시합니다. 3막 구조가 완벽하며 감정 곡선이 자연스럽게 상승합니다. 시각적 다양성과 페이싱이 우수하며 바이럴 가능성이 높습니다.",
+    "improvements": [
+      "씬 4-5 간 전환을 더 극적으로 강화 가능",
+      "상징 오브제(찻잔, 거울) 활용을 더 강조할 수 있음"
+    ]
+  }
+}

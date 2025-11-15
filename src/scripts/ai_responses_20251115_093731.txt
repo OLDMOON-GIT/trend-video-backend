@@ -1,0 +1,59 @@
+{
+  "title": "노숙자로 변장해 예비 며느리를 시험한 재벌 회장, 분식집에서 드러난 단 한 순간의 선택에 결국 눈물로 무릎 꿇다",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["진정성", "인간미", "계층의식"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "감동실화",
+    "scriptId": "d2587c00-4e67-4970-93fb-86684bd6dce8"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, wealthy chairman disguised as homeless person in torn clothes, extreme close-up, vibrant saturated colors, high contrast lighting, intense eye contact, mobile-optimized, NO TEXT",
+      "narration": "재벌 회장이 노숙자로 변장했습니다. 예비 며느리를 시험하기 위해서였습니다. 그런데 분식집에서 벌어진 일에 회장이 눈물을 흘렸습니다."
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, young woman serving hot meal to homeless person in small restaurant, warm cinematic lighting, deep connection atmosphere, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "다른 손님들은 모두 그를 피했습니다. 하지만 예비 며느리는 달랐습니다. 가장 따뜻한 국밥을 직접 가져다주며 말했습니다. 아버님처럼 편히 드세요."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, chairman removing disguise with tears in eyes, unexpected twist, bright focused lighting, informative yet exciting composition, NO TEXT",
+      "narration": "회장은 변장을 벗었습니다. 그녀는 충격에 얼어붙었습니다. 하지만 회장의 다음 행동이 더 놀라웠습니다. 그녀 앞에 무릎 꿇고 감사 인사를 했습니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, person with warm smile and hopeful expression, warm inspiring lighting, memorable impactful visual, call-to-action energy, addictive lingering mood, NO TEXT",
+      "narration": "진짜 재산은 돈이 아니라 마음이었습니다. 그녀의 따뜻한 인간미가 모든 것을 이겼습니다. 당신도 오늘 누군가에게 따뜻함을 건네보세요."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

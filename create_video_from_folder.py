@@ -390,11 +390,19 @@ class VideoFromFolderCreator:
 
             if result.returncode == 0:
                 logger.info("✅ 썸네일 생성 완료")
+                if result.stdout:
+                    logger.info(f"썸네일 출력: {result.stdout[:200]}")
             else:
-                logger.warning(f"썸네일 생성 실패: {result.stderr}")
+                logger.error(f"썸네일 생성 실패 (return code: {result.returncode})")
+                if result.stderr:
+                    logger.error(f"썸네일 에러: {result.stderr}")
+                if result.stdout:
+                    logger.error(f"썸네일 출력: {result.stdout}")
 
         except Exception as e:
-            logger.warning(f"썸네일 생성 중 오류 (무시하고 계속): {e}")
+            logger.error(f"썸네일 생성 중 예외 발생: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
 
     def _find_all_media_files(self):
         """
@@ -1025,8 +1033,8 @@ Return ONLY the refined prompt without any explanation or additional text."""
                 # Imagen 3 이미지 생성 (Vertex AI)
                 logger.info(f"📡 Vertex AI Imagen 3 API 호출 중...")
 
-                # 이미지 생성
-                response = self.imagen_model.generate_images(
+                # 이미지 생성 - 올바른 메서드 사용
+                images = self.imagen_model.generate_images(
                     prompt=current_prompt,
                     number_of_images=1,
                     aspect_ratio="1:1",  # 1:1, 9:16, 16:9, 4:3, 3:4 지원
@@ -1034,11 +1042,11 @@ Return ONLY the refined prompt without any explanation or additional text."""
                     person_generation="allow_adult",
                 )
 
-                if not response.images:
+                if not images:
                     raise Exception("응답에 이미지가 없습니다")
 
                 # 첫 번째 이미지 가져오기
-                generated_image = response.images[0]
+                generated_image = images[0]
 
                 # PIL Image로 변환
                 img = generated_image._pil_image
@@ -2108,8 +2116,8 @@ Return ONLY the refined prompt without any explanation or additional text."""
         """모든 씬의 비디오 생성 및 결합"""
         start_time = time()
 
-        # 기존 generated_videos 폴더 백업
-        self._backup_previous_videos()
+        # 기존 generated_videos 폴더 백업 (비활성화 - backup 폴더 생성 방지)
+        # self._backup_previous_videos()
 
         # 이미지와 비디오 파일 찾기 (자동 생성 포함)
         images_dict = self._find_images_with_scene_numbers()  # 이미지 자동 생성 포함

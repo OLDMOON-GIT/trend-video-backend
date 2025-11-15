@@ -1,0 +1,59 @@
+{
+  "title": "[테스트9] 소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["가족 갈등", "숨겨진 진실", "충격 반전"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "auto_generated_001"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking moment of elderly man being slapped, extreme close-up of horrified witness face, vibrant saturated colors, high contrast dramatic lighting, intense shocked expression, mobile-optimized framing, NO TEXT",
+      "narration": "소일거리로 주차장 관리하신다던 장인어른께 용돈 드리러 갔다가 뺨 맞는 장면을 목격한 순간, 절대 믿을 수 없는 진실이 드러났습니다"
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, emotional moment of daughter crying in shock, parking lot background, warm cinematic lighting, deep despair atmosphere, empathy-inducing composition, relatable family situation, mobile-optimized, NO TEXT",
+      "narration": "주차장에서 장인어른을 때리는 사람의 정체를 보는 순간 온몸이 얼어붙었습니다. 믿기지 않지만 실화입니다. 바로 제 남편이었습니다"
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, revelation moment showing angry man confronting elderly person, unexpected truth revealed, clear visual demonstration, bright focused lighting, shocking twist composition, dramatic reveal, NO TEXT",
+      "narration": "알고 보니 장인어른은 주차장 관리가 아니라 노숙 생활을 하고 계셨습니다. 남편은 그 사실을 숨기려고 폭력을 휘둘렀던 겁니다"
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, powerful closing shot of determined woman with divorce papers, warm inspiring lighting, memorable impactful visual, justice-seeking energy, addictive lingering mood, confident expression, NO TEXT",
+      "narration": "그날 즉시 이혼 서류를 작성했습니다. 장인어른을 모시고 새 출발을 했습니다. 가족을 때리는 사람과는 단 하루도 함께할 수 없습니다"
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "title": "'시아버지는 가족이 아니잖아요?'라고 말하는 며느리 친정 간 사이에 집 팔고 떠난 시아버지!",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["가족 갈등", "효도와 배신", "인과응보"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of young woman's contemptuous face with crossed arms, centered subject, cold harsh lighting, high contrast, defiant expression, dramatic shadows, mobile-optimized, NO TEXT",
+      "narration": "\"시아버지는 가족이 아니잖아요?\" 며느리의 충격 발언! 그런데 친정 다녀온 사이 벌어진 일은 상상 이상이었습니다"
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, emotional scene, elderly man sitting alone in empty living room with packed boxes, warm melancholic lighting, sad atmosphere, nostalgic mood, relatable family situation, mobile-optimized, NO TEXT",
+      "narration": "20년간 손자 뒷바라지하던 시아버지, 며느리의 차가운 말에도 묵묵히 참아왔습니다. 하지만 이번엔 달랐습니다"
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking revelation, woman's panicked face holding phone in empty house, stark lighting, dramatic tension, visual emphasis on confusion and regret, mobile-friendly composition, NO TEXT",
+      "narration": "며느리가 친정 다녀온 사이, 시아버지는 집을 팔고 흔적도 없이 떠났습니다. 알고 보니 그 집은 시아버지 명의였습니다"
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, powerful closing shot, empty room with only shadows remaining, symbolic visual of consequences, soft melancholic lighting, memorable impactful composition, justice-served atmosphere, NO TEXT",
+      "narration": "가족이 아니라던 그 말, 결국 본인에게 돌아왔습니다. 함부로 한 말은 반드시 대가를 치르게 됩니다"
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

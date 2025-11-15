@@ -7,6 +7,19 @@ import sys
 import json
 import os
 import pathlib
+
+# Fix Windows console encoding BEFORE any imports that might use it
+if sys.platform == 'win32':
+    # Set UTF-8 encoding via environment variables
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ['PYTHONUTF8'] = '1'
+
+    # Set console to UTF-8
+    try:
+        os.system('chcp 65001 > nul 2>&1')
+    except:
+        pass
+
 from playwright.async_api import async_playwright
 
 async def open_claude_with_prompt(prompt_text: str):

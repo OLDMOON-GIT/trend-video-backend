@@ -27,7 +27,7 @@ async def setup_login(agents_list: list = None):
 
     # AI service URLs
     ai_urls = {
-        'chatgpt': 'https://chat.openai.com/',
+        'chatgpt': 'https://chatgpt.com/',
         'claude': 'https://claude.ai/',
         'gemini': 'https://gemini.google.com/',
         'grok': 'https://x.com/i/grok',
@@ -100,7 +100,22 @@ async def setup_login(agents_list: list = None):
                 url = ai_urls[agent_name.lower()]
                 print(f"\n{Fore.CYAN}Opening {agent_name.upper()}...{Style.RESET_ALL}")
                 page = await context.new_page()
-                await page.goto(url, wait_until='domcontentloaded', timeout=30000)
+
+                # Try to load page with retries
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        print(f"{Fore.YELLOW}  [Attempt {attempt + 1}/{max_retries}] Loading {url}...{Style.RESET_ALL}")
+                        await page.goto(url, wait_until='load', timeout=60000)
+                        print(f"{Fore.GREEN}  [SUCCESS] {agent_name.upper()} loaded successfully{Style.RESET_ALL}")
+                        break
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            print(f"{Fore.YELLOW}  [WARNING] Loading failed, retrying... ({e}){Style.RESET_ALL}")
+                            await asyncio.sleep(3)
+                        else:
+                            print(f"{Fore.RED}  [ERROR] {agent_name.upper()} failed to load (please login manually): {e}{Style.RESET_ALL}")
+
                 pages.append((agent_name, page))
                 await asyncio.sleep(2)
 
@@ -115,7 +130,11 @@ async def setup_login(agents_list: list = None):
             print(f"  - {agent_name.upper()}")
 
         print(f"\n{Fore.CYAN}When you're done logging in to all services:{Style.RESET_ALL}")
-        input(f"{Fore.CYAN}Press ENTER to save and close...{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Press ENTER to save and close...{Style.RESET_ALL}")
+
+        # Simple synchronous input (blocks until Enter is pressed)
+        import sys
+        sys.stdin.read(1)  # Wait for any input
 
         print(f"\n{Fore.YELLOW}[INFO] Saving session data...{Style.RESET_ALL}")
 

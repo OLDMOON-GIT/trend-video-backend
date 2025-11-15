@@ -1,0 +1,59 @@
+{
+  "title": "소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["가족 배신", "숨겨진 진실"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "33077ed7-5ca2-45cc-bd5f-4035073399d2"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of elderly Korean man's face being slapped, hand in motion blur hitting cheek, intense dramatic lighting, vibrant saturated colors, high contrast, centered subject, mobile-optimized, NO TEXT",
+      "narration": "소일거리로 주차장 관리하신다던 장인어른께 용돈 드리러 갔다가 제가 목격한 장면은 충격 그 자체였습니다"
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, middle-aged Korean man in expensive suit slapping elderly man in parking lot uniform, tears on elderly man's face, warm cinematic lighting, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "장인어른께서 아들한테 뺨을 맞고 계셨습니다 처남이 아버지한테 폭력을 휘두르는 믿기지 않는 광경이었습니다"
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, luxury car and parking lot office in background, son pointing accusingly at elderly father, scattered gambling receipts on ground, bright focused lighting, dramatic revelation composition, NO TEXT",
+      "narration": "알고 보니 장인어른은 주차장 수익금을 전부 도박으로 날리고 계셨고 처남은 그걸 이제야 알게 된 겁니다"
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, young Korean man walking away from elderly father in parking lot, back view, lonely father standing alone, warm sunset lighting, memorable impactful visual, addictive lingering mood, NO TEXT",
+      "narration": "제가 건넨 용돈도 도박자금이 될 뻔했습니다 가족을 속이면 결국 이렇게 외면당하게 되는 겁니다"
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

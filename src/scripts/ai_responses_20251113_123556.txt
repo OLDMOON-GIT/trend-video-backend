@@ -1,0 +1,64 @@
+{
+  "title": "[광고] 리얼 그레이티드 파마산치즈, 227g, 1개",
+  "version": "product-1.0",
+  "product_info": {
+    "thumbnail": "https://thumbnail.coupangcdn.com/thumbnails/remote/492x492ex/image/retail/images/328143004271595-538aab93-1635-4a04-ba56-6ff91374e8e3.jpg",
+    "product_link": "https://link.coupang.com/a/c3gQtK",
+    "description": "현재 별점 4.7점, 리뷰 31406개를 가진 리얼 그레이티드 파마산치즈, 227g, 1개! 지금 쿠팡에서 더 저렴하고 다양한 파마산 제품들을 확인해보세요."
+  },
+  "metadata": {
+    "genre": "상품 소개 영상",
+    "format": "9:16 vertical (portrait)",
+    "total_duration_seconds": 30,
+    "style": "cinematic product showcase",
+    "mood": "desirable, appealing, satisfying",
+    "key_techniques": ["product focus", "lifestyle context", "detail shots", "emotional connection"],
+    "target_platform": "mobile shopping",
+    "emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+    "scene_count": 4
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 3초 상품 매력",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product hero shot with human element, camera starts slightly blurred then racks focus sharply onto Korean person's hands wearing casual home apron holding iconic green cylindrical canister of Real grated Parmesan cheese with distinctive red cap and vintage label design, Korean person's hands centered in vertical frame examining product closely with East Asian skin tone visible, premium aged cheese container texture with classic Italian branding, same Korean person throughout entire video wearing comfortable beige cotton apron over casual home clothes, hands turning green canister to show product label and red cap from multiple angles, dramatic warm kitchen lighting with subtle shadows creating depth on product surface, slow push-in on hands and green cheese container revealing intricate vintage label details and premium quality indicators, establishing the main Korean character who will appear in all following scenes, desirable and eye-catching mood, shot on 35mm film with anamorphic bokeh, shallow depth gradually deepening to reveal modern Korean home kitchen backdrop with marble countertop, warm inviting color palette with green product canister and red cap popping against neutral kitchen tones, consistent Korean character and location established from the start, camera movement leads viewer's eye naturally as hands lower preparing for transition to wider lifestyle context",
+      "narration": "진짜 파마산의 풍미, 녹색 용기 속 깊은 치즈 향이 주방을 채웁니다"
+    },
+    {
+      "scene_id": "scene_01_problem",
+      "scene_name": "문제/필요 - 9초 공감",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle problem scene, camera transitions from previous hands shot by pulling back to reveal full upper body of the SAME KOREAN PERSON from Scene 0 with East Asian features clearly visible standing at kitchen counter with bowl of bland pasta looking disappointed, ordinary cheese product package discarded nearby showing inadequate flavor result, same beige apron visible confirming character continuity, same Korean person now shown from waist up in vertical frame facing the problem of tasteless home-cooked meal, Korean face with East Asian facial features showing frustrated expression while tasting plain pasta with fork, slightly disappointed body language suggesting cooking effort wasted, same modern Korean kitchen location established in Scene 0 now visible in wider shot with marble countertop and cooking ingredients scattered, lighting gradually shifts from product focus to harsh overhead kitchen reality exposing the flatness of ordinary meal, slow tracking sideways with same Korean person revealing the full disappointing cooking situation with family waiting in background, maintaining Korean character and environmental consistency, relatable and empathetic mood building connection with home cooks, shot on 35mm film maintaining visual continuity from previous scene, depth of field opens up showing same kitchen backdrop with dining area, muted realistic color palette with desaturated food tones contrasting with previous product warmth and vibrancy, same Korean person looks down at their bland pasta searching for solution as camera slowly drifts toward where better product will appear",
+      "narration": "매번 요리할 때마다 밋밋한 맛에 실망하셨나요? 평범한 치즈 가루로는 레스토랑 같은 풍미를 낼 수 없죠. 파스타도, 샐러드도, 리조또도 뭔가 부족한 그 느낌. 31,406명이 선택한 이유가 있습니다"
+    },
+    {
+      "scene_id": "scene_02_solution",
+      "scene_name": "해결/기능 - 9초 설득",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product solution reveal, camera continues previous movement as the SAME KOREAN PERSON from previous scenes now picks up the green Real Parmesan canister with Korean hands clearly visible unscrewing the distinctive red cap with satisfying twist motion, same beige apron confirming character continuity, same modern Korean kitchen location, seamless transition as same Korean person's hands with East Asian skin tone come into frame holding the solution product above steaming fresh pasta, close-up of Korean hands generously sprinkling authentic aged Parmesan cheese from iconic green container with fine golden cheese strands cascading down onto creamy pasta surface creating appetizing visual texture, same vertical framing maintaining Korean character consistency, lighting transforms from cold problem atmosphere to warm golden satisfied solution with natural kitchen window light creating premium product showcase and making cheese particles glow like culinary gold dust, camera orbits 180 degrees around same Korean person's hands and green product canister revealing all angles of cheese application and premium quality while maintaining continuous story with same Korean character, convincing and satisfying mood as solution unfolds on same Korean person's cooking, shot on 35mm film with consistent bokeh character softening background while keeping product sharp, same Korean person's satisfied expression with East Asian features gradually visible as camera pulls slightly back showing transformed dish, vibrant yet natural warm color palette with golden cheese tones and rich pasta colors, camera movement mirrors same Korean person's hand sprinkling motion building tactile sensory connection, same kitchen backdrop visible confirming location continuity, preparing for final emotional payoff with same Korean character",
+      "narration": "227g의 진짜 파마산이 만드는 차이를 느껴보세요. 이탈리아 전통 방식으로 숙성된 깊은 풍미가 한 스푼에 담겨있어요. 파스타, 샐러드, 수프 위에 뿌리는 순간 레스토랑이 부럽지 않은 맛이 완성됩니다"
+    },
+    {
+      "scene_id": "scene_03_cta",
+      "scene_name": "행동유도 - 9초 구매욕구",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic emotional finale, camera gracefully pulls back from previous cheese-sprinkling moment revealing the SAME KOREAN PERSON from all previous scenes now sitting at dining table with family members enjoying beautifully plated pasta dishes with East Asian facial features clearly visible showing genuine satisfaction and happiness, same Korean person in full frame showing complete lifestyle transformation from disappointed cook to proud home chef, vertical composition widens from hands to full upper body of same Korean character with East Asian appearance, perfectly plated gourmet pasta with visible golden Parmesan topping and green canister prominently displayed on marble countertop in background, same beige apron throughout entire video confirming continuity, family members reaching with forks showing authentic enjoyment, same modern Korean kitchen location visible throughout entire video journey with dining area now included, lighting reaches golden hour perfection with warm evening sunlight streaming through kitchen window suggesting comfort, culinary success, and family satisfaction, slow crane movement upward and back revealing same Korean person's complete happy moment with family gathered around table, same Korean character's face now fully visible with East Asian features showing genuine pride and satisfaction with cooking result and product choice, same kitchen backdrop establishing consistent location throughout all 4 scenes, desirable and rewarding mood crescendos as we see same Korean person's journey complete from product introduction to cooking problem to culinary solution to family satisfaction, shot on 35mm film with final bokeh blooming beautifully around same Korean person and family creating intimate atmosphere, depth of field creates dreamy separation while maintaining Korean character focus and keeping green Parmesan canister visible in background, premium warm color palette with golden hour sunset tones mixing with rich food colors and product green container still visible as quality anchor, camera movement completes full narrative journey with same Korean person from initial product showcase to final lifestyle satisfaction with family connection, final frame holds on same Korean person and family sharing meal with satisfied smiles as emotional anchor inviting viewer to own this moment and elevate their home cooking journey",
+      "narration": "31,406개의 리뷰가 증명하는 4.7점의 믿음. 지금 바로 만나보세요. 매일의 요리가 특별한 순간으로 바뀝니다. 가족과 함께하는 식사 시간이 더욱 풍성해지는 경험을 놓치지 마세요"
+    }
+  ],
+  "quality_check": {
+    "scene_count": 4,
+    "total_duration": 30,
+    "vertical_format": true,
+    "product_focused": true,
+    "cinematic_style": true,
+    "hook_effectiveness": "strong",
+    "problem_solution_clear": true,
+    "cta_compelling": true
+  }
+}

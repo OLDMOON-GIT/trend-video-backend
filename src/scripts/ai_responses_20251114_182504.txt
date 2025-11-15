@@ -1,0 +1,59 @@
+{
+  "title": "중국집에서 시어머니가 짜장면 그릇을 며느리에게 던졌습니다. 며느리에게 무슨 사연이 있었을까요?",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["가족갈등", "복수", "반전"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "b646478c-d8b3-4c72-9a06-bc8d096fccb2"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of shattered jajangmyeon bowl on floor, black bean sauce splattered dramatically, centered subject, vibrant saturated colors, high contrast lighting, intense dramatic atmosphere, mobile-optimized, NO TEXT",
+      "narration": "중국집에서 시어머니가 며느리에게 짜장면 그릇을 던졌습니다. 모든 손님이 얼어붙었습니다. 며느리에게 무슨 일이 있었을까요?"
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, young Korean daughter-in-law with tears streaming down face, vulnerable expression, warm cinematic lighting, deep connection atmosphere, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "사실 며느리는 시어머니를 극진히 모셨습니다. 매일 새벽 5시에 일어나 식사를 준비했고, 병원 간병까지 도맡아 했습니다."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, elderly Korean mother-in-law with shocked guilty expression holding smartphone, unexpected twist, bright focused lighting, informative yet exciting composition, NO TEXT",
+      "narration": "그런데 알고 보니 며느리가 시어머니 은행계좌에서 3억을 몰래 빼돌렸습니다. 시어머니는 그날 아침 은행에서 통장을 확인하고 중국집으로 달려왔습니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, Korean daughter-in-law being escorted by police officers, handcuffs visible, confident determined expression on elderly mother-in-law in background, warm inspiring lighting, memorable impactful visual, justice served energy, addictive lingering mood, NO TEXT",
+      "narration": "며느리는 결국 경찰에 신고되었고 사기죄로 처벌받았습니다. 겉모습만 보고 판단하면 안 됩니다. 진실은 언제나 드러나게 되어 있습니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

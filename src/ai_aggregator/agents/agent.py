@@ -73,7 +73,7 @@ class UnifiedAgent(BaseAgent):
             },
             'chatgpt': {
                 'name': 'ChatGPT',
-                'url': 'https://chat.openai.com/',
+                'url': 'https://chatgpt.com/',
                 'login_check_page_content': False,
                 'input_selectors': [
                     '#prompt-textarea',

@@ -209,8 +209,13 @@ class ClaudeAgent(BaseAgent):
                             pass
                 except Exception as e:
                     error_str = str(e)
+                    # Handle browser/page closed errors - stop immediately
+                    if "has been closed" in error_str or "closed" in error_str.lower():
+                        print(f"[{self.get_name()}] [ERROR] Browser or page has been closed. Stopping...")
+                        self.response = "Browser closed by user"
+                        return self.response
                     # Handle navigation/context destruction errors
-                    if "Execution context was destroyed" in error_str or "navigation" in error_str.lower():
+                    elif "Execution context was destroyed" in error_str or "navigation" in error_str.lower():
                         print(f"[{self.get_name()}] [WARN] Page navigation detected, waiting for page to stabilize...")
                         await asyncio.sleep(3)
                         # Reset stability counters
@@ -254,7 +259,12 @@ class ClaudeAgent(BaseAgent):
                             break
                 except Exception as e:
                     error_str = str(e)
-                    if "Execution context was destroyed" in error_str or "navigation" in error_str.lower():
+                    # Handle browser/page closed errors - stop immediately
+                    if "has been closed" in error_str or "closed" in error_str.lower():
+                        print(f"[{self.get_name()}] [ERROR] Browser closed during extraction. Stopping...")
+                        self.response = "Browser closed by user"
+                        return self.response
+                    elif "Execution context was destroyed" in error_str or "navigation" in error_str.lower():
                         print(f"[{self.get_name()}] [WARN] Navigation during extraction, retrying after stabilization...")
                         await asyncio.sleep(2)
                         # Try this selector one more time

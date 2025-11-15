@@ -1,0 +1,59 @@
+{
+  "title": "중국집에서 시어머니가 짜장면 그릇을 며느리에게 던졌습니다. 며느리에게 무슨 사연이 있었을까요?",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["시댁갈등", "숨겨진진실", "반전"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "ee6f2b88-9a43-4d4c-9f29-c6193b7ca989"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment in Chinese restaurant, black bean noodle bowl flying through air mid-throw, extreme close-up dramatic action shot, centered subject, vibrant saturated colors, high contrast lighting, frozen motion capture, mobile-optimized, NO TEXT",
+      "narration": "중국집에서 시어머니가 며느리에게 짜장면 그릇을 던졌습니다. 그런데 며느리는 웃고 있었습니다. 도대체 무슨 일이?"
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, Korean mother-in-law with tears streaming down face, anguished expression, traditional Korean restaurant interior background, warm cinematic lighting, deep connection atmosphere, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "사연인즉슨, 시어머니는 10년간 며느리에게 찬밥만 주며 구박했습니다. 그런데 오늘, 며느리가 짜장면을 시켰습니다."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, young Korean woman in elegant business suit standing confidently, luxury watch visible, CEO office background blurred, bright focused lighting, unexpected twist atmosphere, powerful composition, NO TEXT",
+      "narration": "알고 보니 며느리는 대기업 상속녀였습니다. 시어머니가 몰랐던 거죠. 이제 모든 걸 밝힐 시간이었습니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, Korean woman with confident determined smile, luxury car keys in hand, warm inspiring lighting, memorable impactful visual, call-to-action energy, addictive lingering mood, NO TEXT",
+      "narration": "며느리는 이혼 서류를 내밀며 말했습니다. \"10년 치 찬밥값, 이 짜장면으로 갚으세요.\" 진짜 복수는 이제 시작입니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

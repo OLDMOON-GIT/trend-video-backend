@@ -1,0 +1,59 @@
+{
+  "title": "소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["가족관계", "배신", "반전"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "be34e273-2b55-407c-8980-6706521d6280"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of elderly man's hand striking someone's face, centered subject, vibrant saturated colors, high contrast lighting, intense dramatic moment, mobile-optimized, NO TEXT",
+      "narration": "용돈 30만원 드리러 갔다가 제 남편이 장인어른한테 뺨 맞는 걸 봤습니다. 소일거리로 주차장 관리한다던 분이 왜 그랬을까요?"
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, middle-aged Korean man looking shocked with red mark on cheek, warm cinematic lighting, deep connection atmosphere, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "결혼 5년 동안 매달 용돈 드렸습니다. 장인어른이 검소하게 사신다고 칭찬했던 남편인데, 그날 주차장에서 본 광경은 충격 그 자체였습니다."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, elderly Korean man in expensive suit standing next to luxury car in parking lot, bright focused lighting, shocking contrast composition, mobile-optimized, NO TEXT",
+      "narration": "알고 보니 장인어른은 주차장 관리가 아니라 빌딩 주인이셨습니다. 우리가 준 용돈으로 술값 쓴다며 남편 뺨을 때리신 겁니다. 그동안 시험이었습니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, young Korean couple looking shocked and regretful, warm inspiring lighting, memorable impactful visual, addictive lingering mood, mobile-optimized, NO TEXT",
+      "narration": "진짜 부자는 티 안 낸다는 말, 이제야 이해됩니다. 장인어른 재산이 200억이라는 사실을 그날 알았습니다. 여러분 장인어른 함부로 대하지 마세요."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

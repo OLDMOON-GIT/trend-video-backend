@@ -1,0 +1,59 @@
+{
+  "title": "[테스트9] 소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["막장드라마", "가족갈등", "반전"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "auto_generated_20250514"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking moment of an elderly man slapping someone, dramatic Korean family confrontation, extreme close-up of stunned facial expression, high contrast lighting, intense atmosphere, mobile-optimized framing, NO TEXT",
+      "narration": "소일거리로 주차장 관리하신다던 장인어른께 용돈 드리러 갔다가, 며느리가 뺨 맞는 걸 목격한 순간입니다. 절대 믿을 수 없는 일이 벌어졌습니다."
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, Korean parking lot management office, elderly man in uniform counting money with serious expression, dim lighting through window, tense atmosphere, realistic contemporary setting, mobile-friendly composition, NO TEXT",
+      "narration": "장인어른은 소박하게 주차장 관리로 용돈 벌이를 하신다고 하셨습니다. 그런데 며느리가 그분께 무례하게 굴었고, 그 대가로 뺨을 맞았습니다. 이유가 뭘까요?"
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking revelation scene showing luxury apartment building exterior and expensive car keys, dramatic lighting contrast, wealth symbols visible, korean urban landscape, jaw-dropping visual, mobile-optimized, NO TEXT",
+      "narration": "알고 보니 장인어른은 그 건물 전체의 주인이셨습니다. 주차장만 20억 상당, 소일거리가 아니라 자신의 재산을 직접 관리하고 계셨던 겁니다. 며느리는 몰랐습니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, daughter-in-law with pale shocked face realizing her mistake, husband looking disappointed beside her, dramatic shadows, regretful atmosphere, korean family drama style, powerful closing visual, NO TEXT",
+      "narration": "겸손을 무시로 착각한 며느리는 그날 이후 상속에서 제외되었습니다. 겉모습만 보고 판단하면 평생 후회합니다. 진짜 부자는 티를 내지 않습니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

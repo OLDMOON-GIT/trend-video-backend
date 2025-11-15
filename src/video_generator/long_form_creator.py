@@ -12,6 +12,7 @@ import requests
 from PIL import Image, ImageOps
 import io
 from tqdm import tqdm
+import time
 
 
 class LongFormStoryCreator:
@@ -35,6 +36,18 @@ class LongFormStoryCreator:
         self.replicate_api_token = os.getenv("REPLICATE_API_TOKEN")
         if self.replicate_api_token:
             self.logger.info("Replicate API token found - will use for image generation")
+
+        # Initialize Google Generative AI (optional, for Imagen 3)
+        self.google_api_key = os.getenv("GOOGLE_API_KEY")
+        self.google_genai = None
+        if self.google_api_key:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=self.google_api_key)
+                self.google_genai = genai
+                self.logger.info("Google API key found - Imagen 3 available for image generation")
+            except ImportError:
+                self.logger.warning("google-generativeai not installed. Install with: pip install google-generativeai")
 
         # Get image generation provider from config
         self.image_provider = config.get("ai", {}).get("image_generation", {}).get("provider", "openai")
@@ -1380,14 +1393,19 @@ class LongFormStoryCreator:
             # Build user prompt for STRUCTURE ONLY (not full narration yet)
             user_prompt = f"""제목: {title}
 
-위 제목으로 **충격적이고 재미있는** 장편 스토리 구조를 만들어주세요.
+위 제목으로 **감동적이고 몰입감 있는** 롱폼 사연 스토리를 만들어주세요.
 
 [Warning] 필수 요구사항:
-- 제목을 **가장 예상 못한 방향**으로 해석
-- 클리셰 금지 (뻔한 전개, 예측 가능한 반전 절대 금지)
-- **최소 2회 이상 충격적 반전** 포함
-- 컨셉이 신선하고 독창적이어야 함
-- 감정 롤러코스터 설계 (극단적 대비)
+- **첫 번째 씬(scene_1)에 반드시 다음 순서로 작성:**
+  1) 강력한 훅 (극적인 대사/상황으로 시작)
+  2) 기본 상황 설명
+  3) **구독/좋아요 CTA (필수!)**: "사연 시작 전에 무료로 할 수 있는 구독과 좋아요 부탁드립니다. 사연봉투를 찾아 주신 모든 분들께 건강과 행복이 가득하시길 바랍니다. 오늘의 사연 시작하겠습니다."
+  4) 본격적인 사연 전개 시작
+
+- 감동적이고 현실적인 스토리 전개
+- 인물의 감정과 내면 심리 풍부하게 표현
+- 시청자가 공감할 수 있는 갈등과 반전
+- 따뜻한 메시지와 여운 있는 결말
 
  기본 정보:
 - 총 러닝타임: 약 {target_minutes}분
@@ -1397,7 +1415,7 @@ class LongFormStoryCreator:
 
 [Warning] 씬 개요 작성:
 각 씬의 narration은 **200-300자 개요**로 작성하되,
-**컨셉의 재미와 충격이 명확히 드러나게** 작성하세요.
+**scene_1은 반드시 훅 + CTA를 포함하여 400-500자로 작성**하세요.
 (상세한 대사/묘사는 나중에 생성됨)
 
  **절대 중요**: 반드시 정확히 **{num_scenes}개 씬**을 만드세요!
@@ -1662,8 +1680,35 @@ JSON만 출력하세요:"""
                 next_scene = story_data['scenes'][i]
                 context += f"\n다음 씬: {next_scene['title']}"
 
-            # Generate detailed narration
-            narration_prompt = f"""위 씬을 **{target_per_scene}자 이상의 매우 상세한 나레이션**으로 작성하세요.
+            # Generate detailed narration (different for scene 1)
+            if scene_num == 1:
+                # Scene 1: Must include hook + CTA
+                narration_prompt = f"""위 씬을 **{target_per_scene}자 이상의 매우 상세한 나레이션**으로 작성하세요.
+
+[Warning] 첫 번째 씬 필수 구조:
+1) **강력한 훅** (30초-1분): 가장 극적인 대사나 상황으로 시작
+2) 기본 상황 설명 및 인물 소개
+3) **구독/좋아요 CTA (필수!)**:
+   "사연 시작 전에 무료로 할 수 있는 구독과 좋아요 부탁드립니다. 사연봉투를 찾아 주신 모든 분들께 건강과 행복이 가득하시길 바랍니다. 오늘의 사연 시작하겠습니다."
+4) 본격적인 사연 전개 시작
+
+[Warning] 일반 요구사항:
+- 최소 {min_per_scene}자, 목표 {target_per_scene}자 (더 길어도 좋음!)
+- 대사는 반드시 **풀네임** 사용 (이니셜/약칭 금지)
+- 행동, 소리, 감정을 구체적으로 묘사
+- 내면 독백과 대화를 풍부하게
+- 장면의 시각적/청각적 요소 상세히 표현
+- 감정 변화를 세밀하게 표현
+- 구어체 말투 사용 ("~했습니다", "~했어요", "~했죠" 등)
+
+JSON 형식으로 출력:
+{{
+  "narration": "상세한 나레이션 (최소 {min_per_scene}자, 반드시 CTA 포함)",
+  "actual_length": 글자수
+}}"""
+            else:
+                # Other scenes: Normal narration
+                narration_prompt = f"""위 씬을 **{target_per_scene}자 이상의 매우 상세한 나레이션**으로 작성하세요.
 
 [Warning] 필수 요구사항:
 - 최소 {min_per_scene}자, 목표 {target_per_scene}자 (더 길어도 좋음!)
@@ -1672,7 +1717,7 @@ JSON만 출력하세요:"""
 - 내면 독백과 대화를 풍부하게
 - 장면의 시각적/청각적 요소 상세히 표현
 - 감정 변화를 세밀하게 표현
-- [무음 X초] 같은 연출 디바이스 활용
+- 구어체 말투 사용 ("~했습니다", "~했어요", "~했죠" 등)
 
 JSON 형식으로 출력:
 {{
@@ -2014,6 +2059,53 @@ JSON 형식으로 평가 결과를 출력하시오:
         except Exception as e:
             raise Exception(f"Failed to generate image with Replicate: {e}")
 
+    def _generate_image_imagen3(self, prompt: str, width: int = 1024, height: int = 1024) -> Image.Image:
+        """Generate image using Google Imagen 3."""
+        if not self.google_genai:
+            raise ValueError("Google Generative AI not initialized. Set GOOGLE_API_KEY environment variable.")
+
+        try:
+            # Imagen 3는 1:1 (1024x1024) 비율만 지원
+            # 다른 비율이 요청되면 1024x1024로 생성하고 크롭/리사이즈
+            target_width, target_height = width, height
+            gen_size = "1024x1024"  # Imagen 3 기본 크기
+
+            # Generate image using Imagen 3
+            model = self.google_genai.GenerativeModel("imagen-3.0-generate-001")
+
+            # Imagen 3 생성 (최대 2048자 프롬프트)
+            if len(prompt) > 2048:
+                prompt = prompt[:2045] + "..."
+
+            print(f"   Generating with Imagen 3...")
+            result = model.generate_images(
+                prompt=prompt,
+                number_of_images=1,
+                safety_filter_level="block_only_high",  # 낮은 필터 레벨
+                person_generation="allow_all",  # 사람 생성 허용
+                aspect_ratio="1:1"  # 1024x1024
+            )
+
+            if not result.images:
+                raise Exception("No images generated from Imagen 3")
+
+            # Convert to PIL Image
+            imagen_image = result.images[0]
+
+            # Imagen 3 이미지는 PIL Image로 변환
+            # imagen_image._pil_image 사용
+            img = imagen_image._pil_image
+
+            # 크기 조정이 필요한 경우
+            if target_width != 1024 or target_height != 1024:
+                # 종횡비 유지하며 리사이즈
+                img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+            return img
+
+        except Exception as e:
+            raise Exception(f"Failed to generate image with Imagen 3: {e}")
+
     def _generate_scene_image(
         self,
         scene: Dict[str, Any],
@@ -2148,6 +2240,14 @@ Important: Create a visually striking scene with NATURAL, EXPRESSIVE faces that 
             # Parse size for Hugging Face
             width, height = map(int, dalle_size.split('x'))
             img = self._generate_image_huggingface(dalle_prompt, width, height)
+
+            image_path = scene_dir / f"scene_{scene_num:02d}_image.png"
+            img.save(image_path)
+        elif self.image_provider == "imagen3" and self.google_genai:
+            print(f"   Using Google Imagen 3 for image generation...")
+            # Parse size for Imagen 3
+            width, height = map(int, dalle_size.split('x'))
+            img = self._generate_image_imagen3(dalle_prompt, width, height)
 
             image_path = scene_dir / f"scene_{scene_num:02d}_image.png"
             img.save(image_path)

@@ -1,0 +1,94 @@
+{
+  "title": "노숙자로 변장해 예비 며느리를 시험한 재벌 회장, 분식집에서 드러난 단 한 순간의 선택에 결국 눈물로 무릎 꿇다",
+  "version": "shortform-4.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 갈등 → 몰입 → 반전 → 여운+CTA",
+    "key_themes": ["진정한 인품", "계급 차별", "선입견"],
+    "total_word_count": 800,
+    "estimated_duration_seconds": 120,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "감동실화",
+    "scriptId": "09edcf96-9227-4fd7-a499-d71576625a42"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 강력한 시작",
+      "duration_seconds": 5,
+      "word_count": 40,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of elderly Korean businessman in dirty torn clothes kneeling down, tears streaming down face, centered subject, vibrant saturated colors, high contrast lighting, intense emotional expression, mobile-optimized, NO TEXT",
+      "narration": "\"미안합니다... 제가 틀렸습니다.\" 재벌 회장이 무릎 꿇고 울었습니다. 도대체 무슨 일이 있었던 걸까요?"
+    },
+    {
+      "scene_id": "scene_01_background",
+      "scene_name": "배경 - 상황 설정",
+      "duration_seconds": 15,
+      "word_count": 100,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, establishing shot, luxury office interior with elderly Korean CEO at desk looking at photo, serious contemplative expression, natural lighting, documentary style atmosphere, mobile-optimized, NO TEXT",
+      "narration": "강태성 회장. 국내 굴지의 건설사 회장입니다. 아들이 결혼을 앞두고 있었습니다. 하지만 예비 며느리가 마음에 들지 않았습니다. \"저 여자가 우리 돈을 노리는 건 아닐까?\" 회장은 직접 시험하기로 결심했습니다."
+    },
+    {
+      "scene_id": "scene_02_conflict",
+      "scene_name": "갈등 - 문제 전개",
+      "duration_seconds": 20,
+      "word_count": 130,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, tense moment, Korean elderly man disguised as homeless person with dirty torn clothes and messy hair standing in front of small restaurant, worried or stressed expressions, dramatic shadows, building tension atmosphere, mobile-optimized, NO TEXT",
+      "narration": "다음 날 오후. 회장은 낡은 옷을 입고 얼굴에 때를 묻혔습니다. 완벽한 노숙자 변장이었습니다. 예비 며느리 지은이가 자주 가는 분식집 앞에서 기다렸습니다. \"이제 진짜 모습을 보겠어.\" 1시간 후, 지은이가 나타났습니다. 회장은 떨리는 손으로 다가갔습니다."
+    },
+    {
+      "scene_id": "scene_03_immersion",
+      "scene_name": "몰입 - 감정 공감",
+      "duration_seconds": 20,
+      "word_count": 130,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, young Korean woman in casual clothes looking at homeless man with compassionate expression, warm cinematic lighting, intimate connection atmosphere, mobile-optimized, NO TEXT",
+      "narration": "\"아저씨... 언제 식사하셨어요?\" 지은이가 먼저 말을 걸었습니다. 회장은 고개를 돌렸습니다. \"괜찮습니다. 신경 쓰지 마세요.\" 그런데 지은이는 분식집으로 들어갔습니다. 5분 후, 따뜻한 떡볶이와 김밥을 들고 나왔습니다. \"드세요. 제가 살게요.\""
+    },
+    {
+      "scene_id": "scene_04_tension",
+      "scene_name": "긴장 - 갈등 심화",
+      "duration_seconds": 20,
+      "word_count": 130,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, peak tension moment, close-up of elderly man's wrinkled hands reaching for food with trembling motion, young woman's hands offering plate gently, dramatic lighting with strong shadows, heart-pounding atmosphere, mobile-optimized, NO TEXT",
+      "narration": "회장의 손이 떨렸습니다. 감동이 아니었습니다. 화가 났습니다. \"이게 동정이야? 위선이야?\" 그때 지은이의 전화가 울렸습니다. 약혼자인 아들이었습니다. \"어디야? 지금 바빠?\" 지은이는 잠깐만 기다리라고 했습니다. 그리고 회장 옆에 계속 앉아있었습니다."
+    },
+    {
+      "scene_id": "scene_05_twist",
+      "scene_name": "반전 - 클라이맥스",
+      "duration_seconds": 20,
+      "word_count": 130,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking revelation, young Korean woman with tears in eyes talking softly, close-up of emotional sincere expression, dramatic lighting shift, mind-blowing atmosphere, mobile-optimized, NO TEXT",
+      "narration": "\"제 아버지도 노숙자셨어요.\" 지은이가 조용히 말했습니다. \"사업 실패하고... 저를 남겨두고 집 나가셨죠. 10년 동안 못 찾았습니다.\" 눈물이 흘렀습니다. \"그래서 거리에서 어르신 보면... 혹시 아빠일까 싶어서... 그냥 지나칠 수가 없어요.\""
+    },
+    {
+      "scene_id": "scene_06_result",
+      "scene_name": "결과 - 변화",
+      "duration_seconds": 15,
+      "word_count": 100,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, transformation scene, elderly Korean man removing dirty outer layer revealing clean suit underneath, shocked realization expression, transitional lighting, resolution atmosphere, mobile-optimized, NO TEXT",
+      "narration": "회장은 입술을 깨물었습니다. 더 이상 참을 수 없었습니다. 옷을 벗고 정체를 밝혔습니다. \"저... 저는...\" 지은이는 얼어붙었습니다. \"회장님...?\""
+    },
+    {
+      "scene_id": "scene_07_ending",
+      "scene_name": "여운 + CTA - 강력한 마무리",
+      "duration_seconds": 20,
+      "word_count": 140,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, elderly Korean man kneeling down bowing deeply to young woman, confident or peaceful expression on woman's face, warm inspiring lighting, memorable impactful visual, lingering emotional mood, mobile-optimized, NO TEXT",
+      "narration": "\"미안합니다. 당신을 시험했습니다.\" 회장이 무릎 꿇었습니다. \"당신 같은 며느리를 얻게 되어... 영광입니다.\" 진짜 부자는 돈이 아니라 마음이었습니다. 지은이는 회장을 일으켜 세웠습니다. 그리고 조용히 말했습니다. \"아버지... 저도 감사합니다.\" 구독과 좋아요 부탁드립니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 8,
+    "total_duration": 120,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "subscription_request_included": true,
+    "tone_appropriate": true,
+    "emotion_driven": true,
+    "story_arc_complete": true
+  }
+}

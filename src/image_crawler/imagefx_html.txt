@@ -1,0 +1,35 @@
+<html lang="ko" style=""><head><meta charset="utf-8" data-next-head=""><title data-next-head="">ImageFX - labs.google/fx</title><meta name="theme-color" content="black" data-next-head=""><link rel="icon" href="/fx/icons/favicon/favicon.svg" data-next-head=""><meta name="viewport" content="initial-scale=1, maximum-scale=5, minimum-scale=0.5, width=device-width, height=device-height" data-next-head=""><link rel="canonical" href="https://labs.google/fx/tools/image-fx" data-next-head=""><meta http-equiv="ScreenOrientation" content="autoRotate:disabled" data-next-head=""><link rel="preload" href="https://lh3.googleusercontent.com/a/ACg8ocJemrVxYhcND97Iu3-soe0m3TOSLH37xZEyz_4rgbkzKL5bbPRf=s96-c" as="image" referrerpolicy="no-referrer" data-next-head=""><script async="" src="https://www.googletagmanager.com/gtm.js?id=GTM-NZ9M8LQL"></script><script src="https://www.gstatic.com/glue/cookienotificationbar/cookienotificationbar.min.js" data-glue-cookie-notification-bar-category="2A" data-glue-cookie-notification-bar-site-id="labs.google/fx"></script><link href="https://www.gstatic.com/glue/cookienotificationbar/cookienotificationbar.min.css" rel="stylesheet"><link rel="mask-icon" href="/fx/icons/favicon/favicon.svg"><link rel="apple-touch-icon" href="/fx/icons/favicon/touch-icon.png"><link rel="manifest" href="/fx/icons/favicon/manifest.webmanifest" crossorigin="use-credentials"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="use-credentials"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Google+Sans:wght@400;500;600;700&amp;family=Google+Sans+Text:wght@400;500;600;700&amp;family=Google+Sans+Flex:wght@400;500&amp;family=Google+Sans+Display:wght@500;700&amp;family=Google+Sans+Mono:wght@400;500;700&amp;family=Space+Mono:wght@400;700&amp;family=Caveat:wght@400..700&amp;family=Nanum+Myeongjo:wght@400;700&amp;family=Just+Me+Again+Down+Here:wght@400&amp;family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&amp;family=Cedarville+Cursive:wght@400&amp;display=block" rel="preload" as="style"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Google+Sans:wght@400;500;600;700&amp;family=Google+Sans+Text:wght@400;500;600;700&amp;family=Google+Sans+Flex:wght@400;500&amp;family=Google+Sans+Display:wght@500;700&amp;family=Google+Sans+Mono:wght@400;500;700&amp;family=Space+Mono:wght@400;700&amp;family=Caveat:wght@400..700&amp;family=Nanum+Myeongjo:wght@400;700&amp;family=Just+Me+Again+Down+Here:wght@400&amp;family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&amp;family=Cedarville+Cursive:wght@400&amp;display=block" rel="stylesheet"><link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Round|Material+Symbols+Outlined|Material+Symbols" rel="preload" as="style"><link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Round|Material+Symbols+Outlined|Material+Symbols" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Google+Symbols:FILL@0..1&amp;display=block" rel="preload" as="style"><link href="https://fonts.googleapis.com/css2?family=Google+Symbols:FILL@0..1&amp;display=block" rel="stylesheet"><script id="gtm-setup" data-nscript="beforeInteractive">
+            if (typeof window !== 'undefined') {
+              window.dataLayer = window.dataLayer || [];
+
+              function initializeGTM() {
+                (function (w, d, s, l, i) {
+                  w[l] = w[l] || [];
+                  w[l].push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
+                  var f = d.getElementsByTagName(s)[0];
+                  if (f) {
+                    var j = d.createElement(s),
+                      dl = l != 'dataLayer' ? '&l=' + l : '';
+                    j.async = true;
+                    j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+                    f.parentNode?.insertBefore(j, f);
+                  }
+                })(window, document, 'script', 'dataLayer', 'GTM-NZ9M8LQL');
+              }
+
+              const cookieBar = window.glue?.CookieNotificationBar;
+              if (cookieBar?.instance) {
+                cookieBar.instance.listen('loaded', (event) => {
+                  initializeGTM();
+                  console.log({event, detail: event.detail});
+                  window.dataLayer.push({
+                    event: 'user_consent',
+                    isEEA: (event.detail?.eea ?? false).toString(),
+                  });
+                });
+              } else {
+                // Fallback if cookie bar is not available
+                initializeGTM();
+              }
+            }
+          </script><link rel="preload" href="/fx/_next/static/css/ac8027afa1bb8221.css" as="style"><link rel="stylesheet" href="/fx/_next/static/css/ac8027afa1bb8221.css" data-n-g=""><noscript data-n-css=""></

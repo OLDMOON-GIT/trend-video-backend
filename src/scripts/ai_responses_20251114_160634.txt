@@ -1,0 +1,59 @@
+{
+  "title": "중국집에서 시어머니가 짜장면 그릇을 며느리에게 던졌습니다. 며느리에게 무슨 사연이 있었을까요?",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["시댁갈등", "배신", "충격반전"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "78f2b3ee-f5a8-4c63-bdf1-d63a8d81716c"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of middle-aged Korean woman's angry face throwing black bean noodle bowl, jjajangmyeon splashing dramatically, centered subject, vibrant saturated colors, high contrast lighting, intense rage expression, mobile-optimized, NO TEXT",
+      "narration": "중국집에서 시어머니가 며느리에게 짜장면 그릇을 던졌습니다. 대체 며느리에게 무슨 일이 있었던 걸까요? 99%가 모르는 충격적인 진실이 밝혀집니다."
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, young Korean daughter-in-law crying with black bean sauce on her face and clothes, restaurant background blurred, warm cinematic lighting, deep sadness and humiliation atmosphere, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "며느리는 시어머니가 시키는 대로 10년을 살았습니다. 밤낮없이 집안일을 하고, 친정은 한 번도 못 갔습니다. 그런데 오늘 중국집에서 이런 일이 벌어진 이유는 뭘까요?"
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, unexpected twist, smartphone screen showing bank account transfer records and text messages, clear visual of evidence, bright focused lighting, shocking discovery composition, mobile-optimized, NO TEXT",
+      "narration": "알고 보니 며느리는 10년간 시댁 카드로 몰래 수천만원을 빼돌렸습니다. 친정 오빠 사업자금으로 보낸 거였습니다. 시어머니가 이 사실을 알게 된 순간, 참았던 분노가 폭발한 겁니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, Korean woman with regretful devastated expression sitting alone, police station or divorce lawyer office background, cold harsh lighting, memorable impactful visual, consequences of betrayal, addictive lingering mood, NO TEXT",
+      "narration": "결국 며느리는 횡령죄로 고소당했고 이혼까지 당했습니다. 10년간 쌓은 신뢰를 배신한 대가는 이렇게 혹독했습니다. 절대 가족의 돈을 함부로 하면 안 됩니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

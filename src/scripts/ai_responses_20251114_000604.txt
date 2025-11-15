@@ -1,0 +1,64 @@
+JSON
+{
+  "title": "[테스트022] 소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": [
+      "가족의 비밀",
+      "반전",
+      "응징"
+    ],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "25ba2749-b7e6-4818-a1d6-1450f9d621c4"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of son-in-law's wide-eyed, horrified face, sound of a sharp slap, centered subject, vibrant saturated colors, high contrast lighting, intense emotional reaction, mobile-optimized, NO TEXT",
+      "narration": "소일거리로 주차장 관리하신다던 장인어른이, 누군가에게 뺨을 맞는 충격적인 장면을 목격했습니다."
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, emotional moment, a stern, arrogant middle-aged man yelling at an elderly man in a security guard uniform in a parking lot, elderly man looks distressed and helpless, warm cinematic lighting, deep connection atmosphere, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "장인어른께 용돈을 드리려 주차장에 갔다가, 젊은 관리자에게 소리를 지르고 무시당하는 모습을 보고야 말았습니다."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, revelation moment, the son-in-law (suit) standing protectively in front of the father-in-law (uniform), confronting the arrogant manager, clear visual demonstration of sudden confrontation, bright focused lighting, mobile-optimized, NO TEXT",
+      "narration": "장인어른은 저희에게 걱정시키지 않으려고 수백억대 건물주라는 사실을 숨기셨던 것입니다. 충격적인 진실입니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, satisfying conclusion shot, the arrogant manager is now kneeling and begging for forgiveness in the parking lot, the father-in-law and son-in-law stand tall and determined, warm inspiring lighting, addictive lingering mood, optimized for mobile viewing, NO TEXT",
+      "narration": "곧바로 장인어른의 건물임을 밝히고, 무례한 관리자를 해고했습니다. 인과응보의 결말에 모두 소름 돋았습니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

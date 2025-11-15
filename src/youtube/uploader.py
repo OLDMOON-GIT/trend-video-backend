@@ -195,7 +195,11 @@ class YouTubeUploader:
             }
 
             if metadata.publish_at:
+                # YouTube API 요구사항: publishAt 사용 시 privacyStatus는 반드시 private
                 body["status"]["publishAt"] = metadata.publish_at
+                body["status"]["privacyStatus"] = "private"
+                print(f"[INFO] 예약 공개 설정: {metadata.publish_at}")
+                print(f"[INFO] 공개 설정을 private으로 변경 (예약 공개 후 {metadata.privacy_status}로 자동 변경됨)")
 
             media = MediaFileUpload(str(video_path), chunksize=-1, resumable=True)
             request = self.youtube.videos().insert(
@@ -259,12 +263,16 @@ class YouTubeUploader:
                             break
                         except Exception as e:
                             error_msg = str(e)
-                            if "videoNotFound" in error_msg and attempt < max_retries - 1:
-                                print(f"[WARN] 비디오 처리 중... 재시도 대기")
+                            # YouTube 처리 중 메시지는 정상 상태로 간주
+                            if ("videoNotFound" in error_msg or
+                                "processing" in error_msg.lower() or
+                                "check back later" in error_msg.lower()) and attempt < max_retries - 1:
+                                print(f"[WARN] 비디오 처리 중... 재시도 대기 ({retry_delay}초)")
                             elif attempt < max_retries - 1:
                                 print(f"[WARN] 썸네일 업로드 실패 (재시도 예정): {e}")
                             else:
                                 print(f"[WARN] 썸네일 업로드 최종 실패: {e}")
+                                print(f"[INFO] 비디오는 성공적으로 업로드되었습니다: {video_url}")
 
                 # 자막 업로드
                 if captions_path and captions_path.exists():
@@ -334,6 +342,17 @@ class YouTubeUploader:
                     )
 
         except HttpError as exc:
+            error_msg = str(exc)
+            # 비디오 처리 중 메시지는 일시적 상태 (실제 에러 아님)
+            if "processing" in error_msg.lower() or "check back later" in error_msg.lower():
+                print(f"[WARN] YouTube 처리 상태: {error_msg}")
+                # video_id가 있다면 업로드는 성공한 것
+                if video_id:
+                    return UploadResult(
+                        success=True,
+                        video_id=video_id,
+                        video_url=f"https://youtu.be/{video_id}"
+                    )
             error_msg = f"YouTube API 에러: {exc}"
             print(f"[ERROR] {error_msg}")
             return UploadResult(success=False, error=error_msg)

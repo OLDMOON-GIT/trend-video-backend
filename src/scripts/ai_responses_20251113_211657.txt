@@ -1,0 +1,57 @@
+{
+  "title": "[테스트5] 소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["가족갈등", "배신", "충격반전"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking moment of man getting slapped, extreme close-up of stunned facial expression, hand motion blur across face, dramatic lighting, high contrast, vibrant colors, mobile-optimized framing, NO TEXT",
+      "narration": "장인어른께 용돈 드리러 갔다가 뺨 맞는 걸 목격한 순간... 99%가 상상도 못할 충격적인 진실이 숨어있었습니다"
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, emotional scene of elderly man working at parking lot, tired expression, humble parking attendant uniform, warm afternoon lighting, relatable working class struggle, cinematic composition, NO TEXT",
+      "narration": "소일거리로 주차장 관리하신다던 장인어른... 매일 새벽 5시에 출근하시고 밤 9시에 퇴근하시는 걸 본 순간 가슴이 찢어졌습니다"
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, dramatic revelation moment, luxury car in background contrasted with humble worker, shocked facial expressions, bright revealing lighting, betrayal atmosphere, arrows highlighting key details, NO TEXT",
+      "narration": "알고보니 장인어른이 번 돈을 몽땅 가져간 건... 바로 제 아내였습니다. 명품백 수십개가 숨겨진 창고를 발견한 순간 소름이 돋았습니다"
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, powerful confrontation scene, determined man's face with divorce papers in hand, justice-served atmosphere, warm inspiring lighting, satisfying resolution visual, call-to-action energy, NO TEXT",
+      "narration": "그날 바로 이혼서류 들고 찾아갔습니다. 장인어른 모시고 새 출발했고 지금은 행복합니다. 가족이라는 이름의 배신... 절대 용서하지 마세요"
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

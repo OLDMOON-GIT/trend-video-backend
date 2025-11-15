@@ -477,6 +477,8 @@ Examples:
     # Other options
     parser.add_argument("-c", "--config", default="config/config.json",
                         help="Config file path")
+    parser.add_argument("--job-id", default=None,
+                        help="Job ID for tracking")
 
     args = parser.parse_args()
 
@@ -547,6 +549,13 @@ Examples:
             output_name = Path(args.prompt_file).stem
 
         app = SoraExtend(config_path=args.config, output_name=output_name)
+
+        # Log Job ID if provided
+        if args.job_id:
+            print(f"\n{'='*70}")
+            print(f"🆔 Job ID: {args.job_id}")
+            print(f"{'='*70}\n")
+
         app.generate(
             base_prompt=config["base_prompt"],
             seconds_per_segment=config["seconds_per_segment"],
@@ -554,6 +563,14 @@ Examples:
             size=config["size"],
             model=config["model"]
         )
+
+        # Log completion with Job ID
+        if args.job_id:
+            print(f"\n{'='*70}")
+            print(f"✓ 완료!")
+            print(f"🆔 Job ID: {args.job_id}")
+            print(f"{'='*70}\n")
+
         return 0
     except KeyboardInterrupt:
         print("\n\nInterrupted by user")

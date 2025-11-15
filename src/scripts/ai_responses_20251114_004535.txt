@@ -1,0 +1,65 @@
+JSON
+{
+  "title": "소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "안심 → 충격 → 분노 → 응징 (속시원)",
+    "key_themes": [
+      "가족애",
+      "부당함",
+      "응징",
+      "배신"
+    ],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "662e47fc-c02b-4cbd-bd1c-5cdba01ed6e8"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Korean man, Vertical 9:16 format, portrait orientation, close-up of a shocked and angry face, looking towards the right side of the frame, high contrast shadows, bright light on the subject's face, dynamic intense emotion, mobile-optimized, NO TEXT",
+      "narration": "절대 믿을 수 없는 일이 눈앞에서 벌어졌습니다. 소일거리로 주차장 관리를 하신다던 장인어른께 용돈을 드리러 간 순간, 경악하고 말았습니다."
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Parking lot setting, Vertical 9:16 format, portrait orientation, older Korean man in a simple uniform being yelled at or physically pushed by a younger, well-dressed person, emotional distress visible on the older man's face, dramatic tension, mobile-optimized, NO TEXT",
+      "narration": "제가 본 것은, 장인어른께서 어떤 젊은 사람에게 뺨을 맞으시는 충격적인 장면이었습니다. '나이 헛먹었냐'며 온갖 욕설까지 퍼붓고 있었습니다. 정말 분노가 치밀었습니다."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Vertical 9:16 format, portrait orientation, shocking revelation of a hidden family relationship, the young assailant is revealed to be the son-in-law's own brother-in-law (장모님 아들), extreme close-up of a name tag or key detail, dramatic color grading, mobile-optimized, NO TEXT",
+      "narration": "그 젊은 사람의 정체는 더욱 소름 끼쳤습니다. 바로 장모님의 아들, 제 처남이었습니다. '용돈이나 벌어 오라'며 막말까지 내뱉으며 아버님을 모욕하고 있었습니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Korean man, Vertical 9:16 format, portrait orientation, a scene of strong confrontation, the son-in-law (narration character) is stepping in front of the father-in-law, fiercely arguing with the brother-in-law, determined and protective posture, intense eye contact, dark cinematic mood, mobile-optimized, NO TEXT",
+      "narration": "저는 더 이상 참지 않았습니다. 당장 달려가서 '지금 뭐하는 짓이냐'며 크게 소리쳤습니다. 이제 이 막장 가족극의 심판은 제가 직접 시작하겠습니다. 기대하십시오."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "title": "중국집에서 시어머니가 짜장면 그릇을 며느리에게 던졌습니다. 며느리에게 무슨 사연이 있었을까요?",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": ["시댁갈등", "가족드라마", "정의구현"],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "e0e081fa-5fa7-460b-b005-7c51c55f4c9e"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, jjajangmyeon bowl flying through air in Chinese restaurant, extreme close-up of horrified daughter-in-law's face, centered subject, vibrant saturated colors, high contrast dramatic lighting, intense eye contact, mobile-optimized, NO TEXT",
+      "narration": "중국집에서 시어머니가 짜장면 그릇을 며느리 얼굴에 던졌습니다. 모두가 경악했지만, 알고 보니 며느리는 이걸 당해도 싸다는 반응이었습니다."
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, elderly Korean mother-in-law crying alone at hospital bedside, relatable situation, warm cinematic lighting, deep sorrow atmosphere, empathy-inducing composition, mobile-optimized, NO TEXT",
+      "narration": "시어머니는 3개월 전 남편이 쓰러진 날, 며느리에게 연락했지만 전화를 받지 않았습니다. 결국 홀로 병원에 가서 남편의 마지막을 지켰습니다."
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, daughter-in-law at luxury spa with friends laughing, smartphone showing missed calls on table, unexpected twist, bright focused lighting, shocking contrast composition, NO TEXT",
+      "narration": "그날 며느리는 친구들과 호텔 스파에 있었습니다. 시아버지 위독 전화를 보고도 귀찮다며 무시했던 겁니다. 장례식에도 늦게 와서 화장만 고쳤습니다."
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, mother-in-law with determined fierce expression holding divorce papers, warm dramatic lighting, memorable impactful visual, justice served energy, addictive lingering mood, NO TEXT",
+      "narration": "시어머니는 그날 이후 아들에게 이혼을 종용했고, 결국 며느리는 빈손으로 쫓겨났습니다. 인과응보는 반드시 찾아옵니다. 절대 잊지 마세요."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

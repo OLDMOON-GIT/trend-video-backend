@@ -1,15 +1,10 @@
 import asyncio
 import sys
 import os
-from playwright.async_api import async_playwright
-from .agents import ChatGPTAgent, ClaudeAgent, GeminiAgent, GrokAgent
-from .aggregator import ResponseAggregator
-from colorama import Fore, Style, init
-import argparse
 
-# Fix Windows console encoding - use environment variables instead of wrapping streams
+# Fix Windows console encoding BEFORE any imports that might use it
 if sys.platform == 'win32':
-    # Set UTF-8 encoding via environment variables (safer than wrapping streams)
+    # Set UTF-8 encoding via environment variables
     os.environ['PYTHONIOENCODING'] = 'utf-8'
     os.environ['PYTHONUTF8'] = '1'
 
@@ -19,8 +14,36 @@ if sys.platform == 'win32':
     except:
         pass
 
-# Initialize colorama
-init(autoreset=True)
+from playwright.async_api import async_playwright
+from .agents import ChatGPTAgent, ClaudeAgent, GeminiAgent, GrokAgent
+from .aggregator import ResponseAggregator
+from colorama import Fore, Style, init
+import argparse
+
+# Initialize colorama with strip=False to preserve ANSI codes and UTF-8
+# On Windows, colorama wraps stdout which can cause encoding issues
+init(autoreset=True, strip=False, convert=False)
+
+# Override print to handle encoding errors on Windows
+import builtins
+_original_print = builtins.print
+
+def safe_print(*args, **kwargs):
+    """Safely print, handling encoding errors by removing problematic characters"""
+    try:
+        _original_print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Convert args to safe ASCII
+        safe_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                safe_args.append(arg.encode('ascii', 'ignore').decode('ascii'))
+            else:
+                safe_args.append(str(arg).encode('ascii', 'ignore').decode('ascii'))
+        _original_print(*safe_args, **kwargs)
+
+if sys.platform == 'win32':
+    builtins.print = safe_print
 
 
 async def wait_for_response(agent, aggregator: ResponseAggregator):
