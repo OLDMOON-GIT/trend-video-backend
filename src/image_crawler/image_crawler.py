@@ -932,48 +932,63 @@ def upload_image_to_whisk(driver, image_path):
         if attempt < 9:
             time.sleep(1)
 
-    # file input을 못 찾으면 직접 JavaScript로 찾고 트리거
+    # file input을 못 찾으면 재시도 (피사체 영역 다시 클릭)
     if not file_input:
-        print("⚠️ file input을 찾지 못함, JavaScript로 직접 처리", flush=True)
+        print("⚠️ file input을 찾지 못함, 피사체 영역 재클릭 시도", flush=True)
 
-        # 파일 경로를 JavaScript로 전달하여 직접 처리
-        upload_result = driver.execute_script("""
-            const filePath = arguments[0];
+        # 피사체 영역을 ActionChains로 물리적 클릭
+        reclicked = driver.execute_script("""
+            const allDivs = Array.from(document.querySelectorAll('div'));
+            const dashedDivs = allDivs.filter(elem => {
+                const style = window.getComputedStyle(elem);
+                const rect = elem.getBoundingClientRect();
+                return (style.borderStyle === 'dashed' || style.borderStyle.includes('dashed')) &&
+                       rect.left < 250 && rect.top > 80 && rect.top < 600;
+            }).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
 
-            // 1. 기존 file input 찾기
-            let fileInput = document.querySelector('input[type="file"]');
+            if (dashedDivs.length > 0) {
+                const firstBox = dashedDivs[0];
+                const rect = firstBox.getBoundingClientRect();
 
-            // 2. 없으면 생성
-            if (!fileInput) {
-                fileInput = document.createElement('input');
-                fileInput.type = 'file';
-                fileInput.accept = 'image/*';
-                fileInput.style.position = 'fixed';
-                fileInput.style.top = '0';
-                fileInput.style.left = '0';
-                fileInput.style.opacity = '0.01';  // 완전히 투명하면 안 됨
-                fileInput.style.width = '10px';
-                fileInput.style.height = '10px';
-                fileInput.style.zIndex = '99999';
-                document.body.appendChild(fileInput);
+                // 모든 자식 요소 찾아서 클릭 가능한 것들 클릭
+                const allDescendants = firstBox.querySelectorAll('*');
+                let clickableCount = 0;
+
+                for (const elem of allDescendants) {
+                    if (elem.tagName === 'BUTTON' || elem.tagName === 'A' || elem.onclick || elem.getAttribute('role') === 'button') {
+                        elem.click();
+                        clickableCount++;
+                    }
+                }
+
+                // 자식에 클릭 가능한 게 없으면 박스 자체 클릭
+                if (clickableCount === 0) {
+                    firstBox.click();
+                }
+
+                return {clicked: true, clickableCount: clickableCount, rect: {top: rect.top, left: rect.left}};
             }
+            return {clicked: false};
+        """)
 
-            return {
-                found: !!fileInput,
-                visible: fileInput.offsetParent !== null,
-                id: fileInput.id || 'no-id'
-            };
-        """, abs_path)
-
-        print(f"   JavaScript 결과: {upload_result}", flush=True)
+        print(f"   재클릭 결과: {reclicked}", flush=True)
+        time.sleep(3)
 
         # 다시 file input 찾기
-        try:
-            file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
-            print("✅ JavaScript로 file input 생성/발견", flush=True)
-        except Exception as e:
-            print(f"❌ file input을 찾을 수 없음: {e}", flush=True)
-            raise Exception("file input을 찾거나 생성할 수 없습니다")
+        for attempt in range(10):
+            try:
+                file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
+                if file_inputs:
+                    file_input = file_inputs[-1]
+                    print(f"✅ 재클릭 후 file input 발견: {len(file_inputs)}개", flush=True)
+                    break
+            except:
+                pass
+            time.sleep(1)
+
+    if not file_input:
+        print("❌ file input을 찾을 수 없음 - Whisk가 file input을 생성하지 않음", flush=True)
+        raise Exception("Whisk file input 찾기 실패")
 
     # 파일 할당
     print(f"📤 파일 할당 중: {abs_path}", flush=True)
