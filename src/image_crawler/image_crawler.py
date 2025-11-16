@@ -139,20 +139,32 @@ def generate_image_with_imagefx(driver, prompt):
             break
         time.sleep(1)
 
-    # 추가 대기: JavaScript 초기화 완료 대기
-    print("⏳ Slate 에디터 초기화 대기...", flush=True)
-    time.sleep(5)
+    # Slate 에디터 마운트 대기
+    print("⏳ Slate 에디터 초기화 대기 (data-slate-editor 체크)...", flush=True)
+    for i in range(30):
+        slate_ready = driver.execute_script("""
+            const slateEditor = document.querySelector('[data-slate-editor="true"]');
+            const contentEditable = document.querySelector('div[role="textbox"][contenteditable="true"]');
+            return {
+                slateExists: !!slateEditor,
+                contentEditableExists: !!contentEditable,
+                slateVisible: slateEditor ? (slateEditor.offsetParent !== null || slateEditor.style.display !== 'none') : false
+            };
+        """)
 
-    # 네트워크 안정화 대기 (이미지 로딩 등)
-    driver.execute_script("""
-        return new Promise((resolve) => {
-            if (document.readyState === 'complete') {
-                setTimeout(resolve, 2000);
-            } else {
-                window.addEventListener('load', () => setTimeout(resolve, 2000));
-            }
-        });
-    """)
+        if slate_ready['slateExists'] and slate_ready['contentEditableExists']:
+            print(f"✅ Slate 에디터 마운트 완료! ({i+1}초)", flush=True)
+            break
+
+        if i % 5 == 4:
+            print(f"   대기 중... ({i+1}초) - slateExists:{slate_ready['slateExists']}, contentEditable:{slate_ready['contentEditableExists']}", flush=True)
+
+        time.sleep(1)
+    else:
+        print("⚠️ Slate 에디터 대기 시간 초과 - 계속 진행", flush=True)
+
+    # 추가 안정화 대기
+    time.sleep(2)
     print("✅ 페이지 완전 초기화 완료", flush=True)
 
     # 디버그: 페이지 상태 상세 확인
@@ -192,44 +204,38 @@ def generate_image_with_imagefx(driver, prompt):
     except:
         pass
 
-    # 페이지 중앙 클릭하여 입력창 활성화 시도
-    print("🖱️ 페이지 클릭하여 입력창 활성화 시도...", flush=True)
-    driver.execute_script("""
-        // 페이지 중앙 클릭
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        const centerX = width / 2;
-        const centerY = height / 2;
+    # 페이지 클릭 제거 - 클릭하면 contenteditable div가 사라짐
+    # print("🖱️ 페이지 클릭하여 입력창 활성화 시도...", flush=True)
+    # driver.execute_script("""
+    #     const elem = document.elementFromPoint(window.innerWidth/2, window.innerHeight/2);
+    #     if (elem) elem.click();
+    # """)
+    # time.sleep(2)
 
-        // 중앙 요소 찾아서 클릭
-        const elem = document.elementFromPoint(centerX, centerY);
-        if (elem) {
-            elem.click();
-        }
-    """)
-    time.sleep(2)
-
-    # 입력창 기다리기 (더 robust한 방법)
-    print("🔍 입력창 찾는 중...", flush=True)
+    # 입력창 기다리기 (클릭 없이 직접 찾기)
+    print("🔍 입력창 찾는 중 (클릭 없이)...", flush=True)
     input_elem = None
     for i in range(30):
         # 여러 방법으로 입력창 찾기
         found = driver.execute_script("""
-            // 방법 1: contenteditable="true" div 정확히 찾기
-            let elem = document.querySelector('div[contenteditable="true"]');
-            if (elem && elem.offsetParent !== null) {
+            // 방법 1: role="textbox" + contenteditable="true" 정확히 찾기 (숨김 허용)
+            let elem = document.querySelector('div[role="textbox"][contenteditable="true"]');
+            if (elem) {
+                console.log('[Method 1] Found role=textbox contenteditable=true:', elem);
+                return {found: true, type: 'role-textbox', selector: 'div[role="textbox"][contenteditable="true"]'};
+            }
+
+            // 방법 2: contenteditable="true" div (숨김 허용)
+            elem = document.querySelector('div[contenteditable="true"]');
+            if (elem) {
+                console.log('[Method 2] Found contenteditable=true:', elem);
                 return {found: true, type: 'contenteditable', selector: 'div[contenteditable="true"]'};
             }
 
-            // 방법 2: textarea 찾기
-            elem = document.querySelector('textarea');
-            if (elem && elem.offsetParent !== null) {
-                return {found: true, type: 'textarea', selector: 'textarea'};
-            }
-
-            // 방법 3: role="textbox" 찾기
+            // 방법 3: role="textbox" 찾기 (숨김 허용)
             elem = document.querySelector('[role="textbox"]');
-            if (elem && elem.offsetParent !== null && elem.contentEditable === 'true') {
+            if (elem && elem.contentEditable === 'true') {
+                console.log('[Method 3] Found role=textbox:', elem);
                 return {found: true, type: 'role-textbox', selector: '[role="textbox"]'};
             }
 
@@ -757,131 +763,150 @@ def upload_image_to_whisk(driver, image_path):
     # 방법 1: 왼쪽 사이드바 피사체 영역 찾기 (한글 텍스트로 식별)
     print("🔍 피사체 업로드 영역 찾는 중...", flush=True)
 
-    # 피사체 영역을 정확하게 찾아서 클릭 - 왼쪽 사이드바 첫 번째(가장 위) 업로드 영역
+    # 피사체 영역을 정확하게 찾아서 클릭
     subject_clicked = driver.execute_script("""
-        // Whisk 레이아웃: 왼쪽 사이드바에 3개 영역이 세로로 배치
-        // 1. 피사체 (Subject) - 가장 위 (top 위치가 가장 작음)
-        // 2. 스타일 (Style) - 중간
-        // 3. 배경/씬 (Scene) - 아래
+        // 방법 1: "person" 아이콘을 찾아서 피사체 영역 특정 (최우선)
+        const personIcons = Array.from(document.querySelectorAll('i, span')).filter(icon => {
+            const text = icon.textContent || '';
+            // Material Icons의 "person" 텍스트 또는 클래스명 확인
+            return text.trim() === 'person' || icon.className.includes('person');
+        });
 
-        const allElements = Array.from(document.querySelectorAll('div, button'));
+        if (personIcons.length > 0) {
+            // person 아이콘이 있는 가장 가까운 role="presentation" 또는 큰 div 찾기
+            const personIcon = personIcons[0];
+            let container = personIcon;
 
-        // 업로드 영역 후보 찾기 (업로드 관련 텍스트가 있는 요소)
-        const uploadKeywords = ['이미지 업로드', '이미지를 업로드', '이미지를 생성', 'Upload image', 'image'];
-        const uploadAreas = [];
+            // 최대 10단계까지 올라가면서 role="presentation" 또는 적절한 크기의 div 찾기
+            for (let i = 0; i < 10; i++) {
+                if (!container.parentElement) break;
+                container = container.parentElement;
 
-        for (const elem of allElements) {
-            const text = elem.textContent || '';
-            const hasKeyword = uploadKeywords.some(keyword => text.includes(keyword));
+                // role="presentation" 또는 큰 컨테이너 div 찾기
+                const role = container.getAttribute('role');
+                const rect = container.getBoundingClientRect();
 
-            if (hasKeyword) {
-                const rect = elem.getBoundingClientRect();
-                // 왼쪽 사이드바 (x < 250) + 적절한 크기
-                if (rect.left < 250 && rect.width > 50 && rect.height > 50) {
-                    uploadAreas.push({
-                        elem: elem,
-                        rect: rect,
-                        top: rect.top,
-                        text: text.substring(0, 80)
+                if (role === 'presentation' || (rect.height > 100 && rect.width > 100)) {
+                    // 이 컨테이너 안에서 "이미지 업로드" 버튼 찾기
+                    const buttons = Array.from(container.querySelectorAll('button')).filter(btn => {
+                        const text = (btn.textContent || '').trim();
+                        const btnRect = btn.getBoundingClientRect();
+                        // 버튼이 보이고, person 아이콘과 같은 컨테이너 안에 있어야 함
+                        return (text.includes('이미지 업로드') || text.includes('이미지를 업로드')) &&
+                               btn.offsetParent !== null;
                     });
+
+                    if (buttons.length > 0) {
+                        // 가장 위에 있는 버튼 선택 (top 값이 가장 작은 것)
+                        const btn = buttons.reduce((topBtn, currentBtn) => {
+                            const topRect = topBtn.getBoundingClientRect();
+                            const currentRect = currentBtn.getBoundingClientRect();
+                            return currentRect.top < topRect.top ? currentBtn : topBtn;
+                        });
+
+                        btn.click();
+                        const rect = btn.getBoundingClientRect();
+                        return {
+                            success: true,
+                            method: 'person-icon-upload-button',
+                            text: btn.textContent.substring(0, 50),
+                            rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                        };
+                    }
                 }
             }
         }
 
-        // top 위치로 정렬 (가장 위 = 피사체)
-        uploadAreas.sort((a, b) => a.top - b.top);
+        // 방법 2: 모든 요소에서 찾기
+        const allElements = Array.from(document.querySelectorAll('div, button'));
 
-        // 첫 번째(가장 위) 영역 = 피사체 영역
-        if (uploadAreas.length > 0) {
-            const subjectArea = uploadAreas[0];
-            console.log('[Whisk Upload] Found', uploadAreas.length, 'upload areas');
-            console.log('[Whisk Upload] Subject area (top):', subjectArea.top, subjectArea.text);
+        // "이미지 업로드" 버튼 직접 찾기 (fallback)
+        const uploadButtons = Array.from(document.querySelectorAll('button')).filter(btn => {
+            const text = (btn.textContent || '').trim();
+            const rect = btn.getBoundingClientRect();
+            // "이미지 업로드" 텍스트를 포함하고, 왼쪽 사이드바에 있고, 보이는 버튼
+            return (text.includes('이미지 업로드') || text.includes('이미지를 업로드')) &&
+                   rect.left < 300 && rect.top > 50 && btn.offsetParent !== null;
+        });
 
-            // 내부 버튼 찾기
-            const innerButton = subjectArea.elem.querySelector('button');
-            if (innerButton && innerButton.offsetParent !== null) {
-                innerButton.click();
-                return {
-                    success: true,
-                    method: 'subject-area-button',
-                    text: subjectArea.text,
-                    rect: {left: subjectArea.rect.left, top: subjectArea.rect.top},
-                    totalAreas: uploadAreas.length
-                };
-            }
-
-            // 버튼 없으면 영역 직접 클릭
-            subjectArea.elem.click();
+        if (uploadButtons.length > 0) {
+            const btn = uploadButtons[0];
+            btn.click();
+            const rect = btn.getBoundingClientRect();
             return {
                 success: true,
-                method: 'subject-area-direct',
-                text: subjectArea.text,
-                rect: {left: subjectArea.rect.left, top: subjectArea.rect.top},
-                totalAreas: uploadAreas.length
+                method: 'upload-button-direct',
+                text: btn.textContent.substring(0, 50),
+                rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
             };
         }
 
-        // Fallback: 점선 박스 중에서 "피사체" 레이블 찾기
+        // 방법 2: 피사체 관련 텍스트 찾기 (fallback)
+        const subjectKeywords = ['이미지 업로드', '이미지를 업로드', '이미지를 생성', '파일 공유', '피사체'];
+        let targetElement = null;
+
+        for (const elem of allElements) {
+            const text = elem.textContent || '';
+            const hasKeyword = subjectKeywords.some(keyword => text.includes(keyword));
+
+            if (hasKeyword) {
+                const rect = elem.getBoundingClientRect();
+                // 왼쪽 사이드바 영역 (x < 250px) 이고, 적절한 크기
+                if (rect.left < 250 && rect.width > 50 && rect.height > 50) {
+                    targetElement = elem;
+
+                    // 내부에 버튼이 있으면 버튼 클릭
+                    const innerButton = elem.querySelector('button');
+                    if (innerButton && innerButton.offsetParent !== null) {
+                        innerButton.click();
+                        return {
+                            success: true,
+                            method: 'korean-text-inner-button',
+                            text: text.substring(0, 50),
+                            rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                        };
+                    }
+
+                    // 버튼 없으면 해당 요소 직접 클릭
+                    elem.click();
+                    return {
+                        success: true,
+                        method: 'korean-text-element',
+                        text: text.substring(0, 50),
+                        rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                    };
+                }
+            }
+        }
+
+        // 방법 2: 점선 박스 찾기 (fallback)
         const dashedDivs = allElements.filter(elem => {
             const style = window.getComputedStyle(elem);
             const rect = elem.getBoundingClientRect();
             return (style.borderStyle === 'dashed' || style.borderStyle.includes('dashed')) &&
-                   rect.left < 250 && rect.top > 80 && rect.top < 600;
-        }).map(elem => {
-            // 부모/형제 요소에서 레이블 텍스트 찾기
-            let labelText = '';
-            let current = elem.parentElement;
-            for (let i = 0; i < 5 && current; i++) {
-                const text = current.textContent || '';
-                if (text.length > 0 && text.length < 500) {
-                    labelText = text;
-                    break;
-                }
-                current = current.parentElement;
-            }
-
-            return {
-                elem: elem,
-                rect: elem.getBoundingClientRect(),
-                labelText: labelText.substring(0, 200),
-                hasSubjectKeyword: labelText.includes('피사체') || labelText.includes('Subject') || labelText.includes('subject')
-            };
-        }).sort((a, b) => {
-            // 피사체 키워드가 있는 것 우선, 없으면 top 위치 순
-            if (a.hasSubjectKeyword && !b.hasSubjectKeyword) return -1;
-            if (!a.hasSubjectKeyword && b.hasSubjectKeyword) return 1;
-            return a.rect.top - b.rect.top;
-        });
-
-        console.log('[Whisk Upload] Dashed boxes found:', dashedDivs.length);
-        dashedDivs.forEach((d, idx) => {
-            console.log(`  [${idx}] top=${d.rect.top}, hasSubject=${d.hasSubjectKeyword}, label="${d.labelText.substring(0, 50)}"`);
+                   rect.left < 250 && rect.top > 80 && rect.top < 500;
         });
 
         if (dashedDivs.length > 0) {
-            const subjectDashed = dashedDivs[0];
-            const innerButton = subjectDashed.elem.querySelector('button');
+            const firstDashed = dashedDivs[0];
+            const rect = firstDashed.getBoundingClientRect();
 
+            // 내부 버튼 찾기
+            const innerButton = firstDashed.querySelector('button');
             if (innerButton && innerButton.offsetParent !== null) {
                 innerButton.click();
                 return {
                     success: true,
-                    method: 'dashed-box-button-with-label',
-                    rect: {left: subjectDashed.rect.left, top: subjectDashed.rect.top},
-                    totalAreas: dashedDivs.length,
-                    hasSubjectKeyword: subjectDashed.hasSubjectKeyword,
-                    label: subjectDashed.labelText.substring(0, 100)
+                    method: 'dashed-box-inner-button',
+                    rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
                 };
             }
 
-            subjectDashed.elem.click();
+            firstDashed.click();
             return {
                 success: true,
-                method: 'dashed-box-direct-with-label',
-                rect: {left: subjectDashed.rect.left, top: subjectDashed.rect.top},
-                totalAreas: dashedDivs.length,
-                hasSubjectKeyword: subjectDashed.hasSubjectKeyword,
-                label: subjectDashed.labelText.substring(0, 100)
+                method: 'dashed-box-click',
+                rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
             };
         }
 
@@ -890,172 +915,10 @@ def upload_image_to_whisk(driver, image_path):
 
     if subject_clicked.get('success'):
         print(f"✅ 피사체 영역 클릭 성공: {subject_clicked.get('method')}", flush=True)
-        if subject_clicked.get('totalAreas'):
-            print(f"   발견된 업로드 영역: {subject_clicked.get('totalAreas')}개 (가장 위 영역 선택)", flush=True)
-        if subject_clicked.get('hasSubjectKeyword'):
-            print(f"   피사체 키워드 확인: {subject_clicked.get('hasSubjectKeyword')}", flush=True)
-        if subject_clicked.get('label'):
-            print(f"   레이블: {subject_clicked.get('label')}", flush=True)
         if subject_clicked.get('text'):
             print(f"   텍스트: {subject_clicked.get('text')}", flush=True)
         if subject_clicked.get('rect'):
-            print(f"   위치: top={subject_clicked.get('rect')['top']}, left={subject_clicked.get('rect')['left']}", flush=True)
-
-        # 피사체 클릭 후 UI 업데이트 대기
-        time.sleep(2)
-        print("⏳ UI 업데이트 대기 완료", flush=True)
-
-        # 직접 file input 찾기 (display:none, visibility:hidden, opacity:0 등 모두 포함)
-        print("🔍 file input 직접 검색 (모든 스타일 포함)...", flush=True)
-        file_input_found = driver.execute_script("""
-            // 모든 file input 찾기 (숨겨진 것 포함)
-            const allFileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
-            console.log('[FileInput] Total file inputs found:', allFileInputs.length);
-
-            if (allFileInputs.length > 0) {
-                // 첫 번째 file input을 visible하게 만들고 반환
-                const fileInput = allFileInputs[0];
-
-                // 강제로 visible하게 만들기
-                fileInput.style.cssText = 'position: absolute; left: 0; top: 0; width: 200px; height: 50px; opacity: 1; visibility: visible; clip: auto; clip-path: none;';
-                fileInput.removeAttribute('tabindex');
-
-                console.log('[FileInput] Made file input visible');
-                console.log('[FileInput] Accept:', fileInput.accept);
-                console.log('[FileInput] Multiple:', fileInput.multiple);
-
-                return {
-                    found: true,
-                    accept: fileInput.accept,
-                    multiple: fileInput.multiple,
-                    selector: 'input[type="file"]'
-                };
-            }
-
-            return {found: false, count: allFileInputs.length};
-        """)
-
-        if file_input_found.get('found'):
-            print(f"   ✅ file input 발견 및 visible 처리 완료", flush=True)
-            print(f"      accept: {file_input_found.get('accept')}", flush=True)
-            print(f"      multiple: {file_input_found.get('multiple')}", flush=True)
-
-            # file input에 파일 경로 전송
-            try:
-                file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
-                if file_inputs:
-                    file_inputs[0].send_keys(abs_image_path)
-                    print(f"   ✅ 파일 업로드 완료: {image_path}", flush=True)
-                    time.sleep(3)  # 업로드 처리 대기
-
-                    # Whisk로 이동하여 나머지 프로세스 계속
-                    print("✅ 피사체 이미지 업로드 성공!", flush=True)
-                    return  # 업로드 성공, 함수 종료
-                else:
-                    print("   ⚠️ file input을 다시 찾을 수 없음", flush=True)
-            except Exception as e:
-                print(f"   ❌ 파일 전송 실패: {e}", flush=True)
-        else:
-            print(f"   ⚠️ file input을 찾지 못함 (총: {file_input_found.get('count', 0)}개)", flush=True)
-
-        # file input 직접 찾기 실패시 기존 버튼 찾기 로직 계속
-        print("🔘 '이미지 업로드' 버튼 검색으로 전환...", flush=True)
-        upload_button_clicked = driver.execute_script("""
-            // 1. 모든 요소에서 "이미지 업로드" 텍스트 찾기
-            const allElements = Array.from(document.querySelectorAll('*'));
-            const uploadTextElements = allElements.filter(el => {
-                const text = el.textContent || '';
-                return (text.includes('이미지') && text.includes('업로드')) ||
-                       (text.toLowerCase().includes('upload') && text.toLowerCase().includes('image'));
-            }).slice(0, 10);  // 최대 10개
-
-            console.log('[Search] Found', uploadTextElements.length, 'elements with upload text');
-
-            // 디버그: "이미지 업로드" 포함 요소 정보
-            const uploadElementsInfo = uploadTextElements.map(el => ({
-                tag: el.tagName,
-                text: (el.textContent || '').substring(0, 50),
-                classes: el.className,
-                isButton: el.tagName === 'BUTTON',
-                hasParentButton: el.closest('button') !== null
-            }));
-
-            // 2. 버튼 또는 버튼의 자식 요소 찾기
-            let clickableElement = null;
-            for (const el of uploadTextElements) {
-                if (el.tagName === 'BUTTON') {
-                    clickableElement = el;
-                    console.log('[Found] Direct button element');
-                    break;
-                } else {
-                    const parentButton = el.closest('button');
-                    if (parentButton) {
-                        clickableElement = parentButton;
-                        console.log('[Found] Parent button of label/span');
-                        break;
-                    }
-                }
-            }
-
-            // 3. 버튼 클릭 시도
-            if (clickableElement) {
-                const rect = clickableElement.getBoundingClientRect();
-                clickableElement.click();
-                console.log('[Clicked] Upload element');
-                return {
-                    clicked: true,
-                    text: clickableElement.textContent?.trim() || '',
-                    rect: {top: rect.top, left: rect.left},
-                    uploadElementsInfo: uploadElementsInfo
-                };
-            }
-
-            // 4. 못 찾았을 경우 버튼 정보 수집
-            const allButtons = Array.from(document.querySelectorAll('button'));
-            const buttonTexts = allButtons.slice(0, 30).map(b => {
-                const labelElem = b.querySelector('label');
-                return {
-                    text: b.textContent?.trim() || '',
-                    labelText: labelElem ? labelElem.textContent?.trim() : '',
-                    html: b.innerHTML.substring(0, 150)
-                };
-            });
-
-            return {
-                clicked: false,
-                totalButtons: allButtons.length,
-                buttonTexts: buttonTexts,
-                uploadElementsInfo: uploadElementsInfo
-            };
-        """)
-
-        if upload_button_clicked.get('clicked'):
-            print(f"   ✅ 요소 클릭됨: {upload_button_clicked.get('text')}", flush=True)
-            print(f"   위치: {upload_button_clicked.get('rect')}", flush=True)
-            time.sleep(2)  # 버튼 클릭 후 file input 생성 대기
-        else:
-            print(f"   ⚠️ '이미지 업로드' 요소를 찾지 못함", flush=True)
-
-            # "이미지 업로드" 텍스트 포함 요소 정보
-            upload_elements = upload_button_clicked.get('uploadElementsInfo', [])
-            if upload_elements:
-                print(f"   📋 '이미지/업로드' 텍스트 포함 요소: {len(upload_elements)}개", flush=True)
-                for idx, elem_info in enumerate(upload_elements):
-                    print(f"      [{idx+1}] {elem_info.get('tag')} - text: '{elem_info.get('text', '')}'", flush=True)
-                    print(f"           isButton: {elem_info.get('isButton')}, hasParentButton: {elem_info.get('hasParentButton')}", flush=True)
-            else:
-                print(f"   ⚠️ '이미지/업로드' 텍스트 포함 요소가 없음", flush=True)
-
-            # 버튼 정보
-            button_texts = upload_button_clicked.get('buttonTexts', [])
-            print(f"   📋 전체 버튼: {upload_button_clicked.get('totalButtons', 0)}개 (수집: {len(button_texts)}개)", flush=True)
-            for idx, btn_info in enumerate(button_texts[:10]):  # 처음 10개만
-                text = btn_info.get('text', '')[:40]
-                label = btn_info.get('labelText', '')
-                if label:
-                    print(f"      버튼 {idx+1}: '{text}' [label: '{label}']", flush=True)
-                else:
-                    print(f"      버튼 {idx+1}: '{text}'", flush=True)
+            print(f"   위치: {subject_clicked.get('rect')}", flush=True)
     else:
         print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
         # 디버그: 왼쪽 사이드바 구조 출력
@@ -1073,143 +936,71 @@ def upload_image_to_whisk(driver, image_path):
         """)
         print(f"   왼쪽 사이드바 요소들: {debug_info}", flush=True)
 
-    # 클릭 전에 먼저 ALL file inputs 검색 (hidden 포함)
-    print("🔍 페이지 내 모든 file input 검색 (hidden 포함)...", flush=True)
-    all_file_inputs = driver.execute_script("""
-        const allInputs = Array.from(document.querySelectorAll('input[type="file"]'));
-        return allInputs.map((input, idx) => ({
-            index: idx,
-            id: input.id || `no-id-${idx}`,
-            name: input.name || 'no-name',
-            visible: input.offsetParent !== null,
-            display: window.getComputedStyle(input).display,
-            visibility: window.getComputedStyle(input).visibility,
-            opacity: window.getComputedStyle(input).opacity,
-            accept: input.accept || 'no-accept'
-        }));
-    """)
+    # 클릭 후 대기
+    time.sleep(3)
 
-    print(f"   발견된 file input: {len(all_file_inputs)}개", flush=True)
-    for info in all_file_inputs:
-        print(f"      [{info['index']}] id={info['id']}, visible={info['visible']}, display={info['display']}", flush=True)
+    # 방법 2: file input 찾기 (최대 10초 대기)
+    print("🔍 file input 찾는 중...", flush=True)
 
-    # 방법 1: 기존 hidden file input 직접 사용
-    print("🔍 file input 선택 시도...", flush=True)
     file_input = None
+    for attempt in range(10):
+        try:
+            # 모든 file input 찾기
+            file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
 
-    try:
-        # 모든 file input 가져오기 (hidden 포함)
-        file_inputs_all = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
+            if file_inputs:
+                # 가장 최근에 추가된 것 사용
+                file_input = file_inputs[-1]
+                print(f"✅ file input 발견 (시도 {attempt + 1}): 총 {len(file_inputs)}개", flush=True)
+                break
+        except:
+            pass
 
-        if file_inputs_all:
-            # 첫 번째 것 사용 (보통 Whisk의 native input)
-            file_input = file_inputs_all[0]
-            print(f"✅ file input 발견: 총 {len(file_inputs_all)}개 중 첫 번째 사용", flush=True)
-        else:
-            print("⚠️ file input이 페이지에 없음 - 클릭으로 생성 시도", flush=True)
-    except Exception as e:
-        print(f"⚠️ file input 검색 실패: {e}", flush=True)
-
-    # 방법 2: file input이 없으면 피사체 영역 클릭해서 생성 시도
-    if not file_input:
-        time.sleep(2)
-
-        # 추가: 피사체 영역 내부의 모든 버튼 찾아서 클릭 시도
-        inner_buttons_found = driver.execute_script("""
-            const allButtons = Array.from(document.querySelectorAll('button'));
-            const leftSideButtons = allButtons.filter(btn => {
-                const rect = btn.getBoundingClientRect();
-                // 왼쪽 사이드바 + 상단 영역 (피사체)
-                return rect.left < 250 && rect.top > 80 && rect.top < 300 && btn.offsetParent !== null;
-            }).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
-
-            if (leftSideButtons.length > 0) {
-                // 가장 위 버튼 클릭
-                leftSideButtons[0].click();
-                return {
-                    clicked: true,
-                    buttonCount: leftSideButtons.length,
-                    buttonText: leftSideButtons[0].textContent || 'no-text',
-                    top: leftSideButtons[0].getBoundingClientRect().top
-                };
-            }
-            return {clicked: false, buttonCount: 0};
-        """)
-
-        if inner_buttons_found.get('clicked'):
-            print(f"   🔘 내부 버튼 클릭: {inner_buttons_found.get('buttonText')} (상단 {inner_buttons_found.get('buttonCount')}개 중 첫 번째)", flush=True)
-            time.sleep(2)
-
-        # file input 재검색 (최대 10초)
-        print("🔍 file input 재검색...", flush=True)
-        for attempt in range(10):
-            try:
-                file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
-                if file_inputs:
-                    file_input = file_inputs[0]  # 첫 번째 사용
-                    print(f"✅ file input 발견 (시도 {attempt + 1}): 총 {len(file_inputs)}개", flush=True)
-                    break
-            except:
-                pass
+        if attempt < 9:
             time.sleep(1)
 
-    # file input을 못 찾으면 재시도 (피사체 영역 다시 클릭)
+    # file input을 못 찾으면 직접 JavaScript로 찾고 트리거
     if not file_input:
-        print("⚠️ file input을 찾지 못함, 피사체 영역 재클릭 시도", flush=True)
+        print("⚠️ file input을 찾지 못함, JavaScript로 직접 처리", flush=True)
 
-        # 피사체 영역을 ActionChains로 물리적 클릭
-        reclicked = driver.execute_script("""
-            const allDivs = Array.from(document.querySelectorAll('div'));
-            const dashedDivs = allDivs.filter(elem => {
-                const style = window.getComputedStyle(elem);
-                const rect = elem.getBoundingClientRect();
-                return (style.borderStyle === 'dashed' || style.borderStyle.includes('dashed')) &&
-                       rect.left < 250 && rect.top > 80 && rect.top < 600;
-            }).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+        # 파일 경로를 JavaScript로 전달하여 직접 처리
+        upload_result = driver.execute_script("""
+            const filePath = arguments[0];
 
-            if (dashedDivs.length > 0) {
-                const firstBox = dashedDivs[0];
-                const rect = firstBox.getBoundingClientRect();
+            // 1. 기존 file input 찾기
+            let fileInput = document.querySelector('input[type="file"]');
 
-                // 모든 자식 요소 찾아서 클릭 가능한 것들 클릭
-                const allDescendants = firstBox.querySelectorAll('*');
-                let clickableCount = 0;
-
-                for (const elem of allDescendants) {
-                    if (elem.tagName === 'BUTTON' || elem.tagName === 'A' || elem.onclick || elem.getAttribute('role') === 'button') {
-                        elem.click();
-                        clickableCount++;
-                    }
-                }
-
-                // 자식에 클릭 가능한 게 없으면 박스 자체 클릭
-                if (clickableCount === 0) {
-                    firstBox.click();
-                }
-
-                return {clicked: true, clickableCount: clickableCount, rect: {top: rect.top, left: rect.left}};
+            // 2. 없으면 생성
+            if (!fileInput) {
+                fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.style.position = 'fixed';
+                fileInput.style.top = '0';
+                fileInput.style.left = '0';
+                fileInput.style.opacity = '0.01';  // 완전히 투명하면 안 됨
+                fileInput.style.width = '10px';
+                fileInput.style.height = '10px';
+                fileInput.style.zIndex = '99999';
+                document.body.appendChild(fileInput);
             }
-            return {clicked: false};
-        """)
 
-        print(f"   재클릭 결과: {reclicked}", flush=True)
-        time.sleep(3)
+            return {
+                found: !!fileInput,
+                visible: fileInput.offsetParent !== null,
+                id: fileInput.id || 'no-id'
+            };
+        """, abs_path)
+
+        print(f"   JavaScript 결과: {upload_result}", flush=True)
 
         # 다시 file input 찾기
-        for attempt in range(10):
-            try:
-                file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
-                if file_inputs:
-                    file_input = file_inputs[-1]
-                    print(f"✅ 재클릭 후 file input 발견: {len(file_inputs)}개", flush=True)
-                    break
-            except:
-                pass
-            time.sleep(1)
-
-    if not file_input:
-        print("❌ file input을 찾을 수 없음 - Whisk가 file input을 생성하지 않음", flush=True)
-        raise Exception("Whisk file input 찾기 실패")
+        try:
+            file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
+            print("✅ JavaScript로 file input 생성/발견", flush=True)
+        except Exception as e:
+            print(f"❌ file input을 찾을 수 없음: {e}", flush=True)
+            raise Exception("file input을 찾거나 생성할 수 없습니다")
 
     # 파일 할당
     print(f"📤 파일 할당 중: {abs_path}", flush=True)
@@ -1330,14 +1121,10 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
             input_box.click()
             time.sleep(0.3)
 
-        # Ctrl+A로 전체 선택 후 Ctrl+V로 붙여넣기 (어팬드 방지)
-        actions = ActionChains(driver)
-        actions.key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
-        time.sleep(0.2)
-
+        # Ctrl+V로 붙여넣기만 수행
         actions = ActionChains(driver)
         actions.key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
-        print(f"✅ Ctrl+A → Ctrl+V 붙여넣기 완료 (기존 내용 대체)", flush=True)
+        print(f"✅ Ctrl+V 붙여넣기 완료", flush=True)
         time.sleep(0.5)
 
         # 엔터 키 입력
