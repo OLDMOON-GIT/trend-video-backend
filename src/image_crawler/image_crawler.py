@@ -125,7 +125,9 @@ def generate_image_with_imagefx(driver, prompt):
     print("\n" + "="*80, flush=True)
     print("1️⃣ ImageFX - 첫 이미지 생성", flush=True)
     print("="*80, flush=True)
-    print(f"프롬프트: {prompt[:50]}...", flush=True)
+    print(f"📝 프롬프트 길이: {len(prompt)}자", flush=True)
+    print(f"📝 프롬프트 내용: {prompt}", flush=True)
+    print("="*80, flush=True)
 
     driver.get('https://labs.google/fx/tools/image-fx')
     print("⏳ ImageFX 페이지 로딩...", flush=True)
@@ -138,16 +140,70 @@ def generate_image_with_imagefx(driver, prompt):
         time.sleep(1)
     time.sleep(5)
 
+    # 디버그: 페이지 상태 상세 확인
+    page_info = driver.execute_script("""
+        const editables = Array.from(document.querySelectorAll('[contenteditable]'));
+        return {
+            url: window.location.href,
+            title: document.title,
+            bodyText: document.body.innerText.substring(0, 200),
+            hasContentEditableTrue: !!document.querySelector('[contenteditable="true"]'),
+            hasTextarea: !!document.querySelector('textarea'),
+            editablesCount: editables.length,
+            editables: editables.map(e => ({
+                tag: e.tagName,
+                attr: e.getAttribute('contenteditable'),
+                visible: e.offsetParent !== null,
+                classes: e.className
+            }))
+        };
+    """)
+    print(f"📋 ImageFX 상세 정보:", flush=True)
+    print(f"   URL: {page_info['url']}", flush=True)
+    print(f"   제목: {page_info['title']}", flush=True)
+    print(f"   contenteditable='true': {page_info['hasContentEditableTrue']}", flush=True)
+    print(f"   편집 가능 요소 수: {page_info['editablesCount']}", flush=True)
+    if page_info['editablesCount'] > 0:
+        print(f"   편집 가능 요소들:", flush=True)
+        for idx, elem in enumerate(page_info['editables'][:3]):
+            print(f"      [{idx+1}] {elem}", flush=True)
+
+    # 스크린샷 저장
+    try:
+        import tempfile
+        screenshot_path = os.path.join(tempfile.gettempdir(), 'imagefx_debug.png')
+        driver.save_screenshot(screenshot_path)
+        print(f"📸 스크린샷: {screenshot_path}", flush=True)
+    except:
+        pass
+
+    # 페이지 중앙 클릭하여 입력창 활성화 시도
+    print("🖱️ 페이지 클릭하여 입력창 활성화 시도...", flush=True)
+    driver.execute_script("""
+        // 페이지 중앙 클릭
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        // 중앙 요소 찾아서 클릭
+        const elem = document.elementFromPoint(centerX, centerY);
+        if (elem) {
+            elem.click();
+        }
+    """)
+    time.sleep(2)
+
     # 입력창 기다리기 (더 robust한 방법)
     print("🔍 입력창 찾는 중...", flush=True)
     input_elem = None
     for i in range(30):
         # 여러 방법으로 입력창 찾기
         found = driver.execute_script("""
-            // 방법 1: contenteditable div 찾기
-            let elem = document.querySelector('[contenteditable="true"]');
+            // 방법 1: contenteditable="true" div 정확히 찾기
+            let elem = document.querySelector('div[contenteditable="true"]');
             if (elem && elem.offsetParent !== null) {
-                return {found: true, type: 'contenteditable', selector: '[contenteditable="true"]'};
+                return {found: true, type: 'contenteditable', selector: 'div[contenteditable="true"]'};
             }
 
             // 방법 2: textarea 찾기
@@ -156,12 +212,29 @@ def generate_image_with_imagefx(driver, prompt):
                 return {found: true, type: 'textarea', selector: 'textarea'};
             }
 
-            // 방법 3: 기존 클래스명들
-            const selectors = ['.fZKmcZ', '.sc-1004f4bc-4', '[role="textbox"]', '[aria-label*="prompt"]', '[placeholder*="Describe"]'];
-            for (const sel of selectors) {
-                elem = document.querySelector(sel);
-                if (elem && elem.offsetParent !== null) {
-                    return {found: true, type: 'selector', selector: sel};
+            // 방법 3: role="textbox" 찾기
+            elem = document.querySelector('[role="textbox"]');
+            if (elem && elem.offsetParent !== null && elem.contentEditable === 'true') {
+                return {found: true, type: 'role-textbox', selector: '[role="textbox"]'};
+            }
+
+            // 방법 4: data-placeholder가 있는 div 찾기
+            elem = document.querySelector('div[data-placeholder]');
+            if (elem && elem.offsetParent !== null) {
+                return {found: true, type: 'data-placeholder', selector: 'div[data-placeholder]'};
+            }
+
+            // 방법 5: 클릭 가능한 큰 input-like 요소 찾기
+            const divs = Array.from(document.querySelectorAll('div'));
+            for (const d of divs) {
+                if (d.offsetWidth > 300 && d.offsetHeight > 40 && d.offsetHeight < 200) {
+                    // 입력창처럼 보이는 큰 div
+                    const text = d.innerText || d.textContent || '';
+                    if (text.length > 10 && text.length < 500) {
+                        // 클릭해서 활성화
+                        d.click();
+                        return {found: true, type: 'clickable-div', selector: null, needsActivation: true};
+                    }
                 }
             }
 
@@ -171,6 +244,22 @@ def generate_image_with_imagefx(driver, prompt):
         if found.get('found'):
             print(f"✅ 입력창 발견: {found.get('type')} - {found.get('selector')} ({i+1}초)", flush=True)
             input_elem = found
+
+            # needsActivation인 경우 잠시 대기 후 다시 확인
+            if found.get('needsActivation'):
+                print("⏳ 입력창 활성화 대기 중...", flush=True)
+                time.sleep(2)
+                # 다시 contenteditable 찾기
+                recheck = driver.execute_script("""
+                    let elem = document.querySelector('div[contenteditable="true"]');
+                    if (elem && elem.offsetParent !== null) {
+                        return {found: true, type: 'contenteditable', selector: 'div[contenteditable="true"]'};
+                    }
+                    return {found: false};
+                """)
+                if recheck.get('found'):
+                    input_elem = recheck
+                    print(f"✅ 활성화된 입력창 발견: {recheck.get('selector')}", flush=True)
             break
 
         if i % 5 == 0 and i > 0:
@@ -190,111 +279,219 @@ def generate_image_with_imagefx(driver, prompt):
     if not input_elem:
         raise Exception("입력창을 찾을 수 없습니다")
 
-    # 텍스트 입력 (WebElement.send_keys 방식)
+    # 텍스트 입력 (Selenium send_keys 직접 사용)
     print(f"⌨️ 프롬프트 입력 중...", flush=True)
-    print(f"   내용: {prompt[:100]}{'...' if len(prompt) > 100 else ''}", flush=True)
+    print(f"   내용: {prompt[:50]}...", flush=True)
 
+    input_success = False
     try:
-        # WebElement 찾기
-        from selenium.webdriver.support.ui import WebDriverWait
-        from selenium.webdriver.support import expected_conditions as EC
+        selector = input_elem.get('selector')
+        if not selector:
+            raise Exception("selector가 없습니다")
 
-        print(f"🔍 입력창 WebElement 찾는 중: {input_elem.get('selector')}", flush=True)
-        wait = WebDriverWait(driver, 10)
-        element = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, input_elem.get('selector'))))
+        # 입력창 정보 확인
+        elem_info = driver.execute_script("""
+            const selector = arguments[0];
+            const elem = document.querySelector(selector);
+            if (elem) {
+                return {
+                    tagName: elem.tagName,
+                    contentEditable: elem.contentEditable,
+                    type: elem.type,
+                    value: elem.value,
+                    textContent: (elem.textContent || '').substring(0, 100),
+                    innerHTML: (elem.innerHTML || '').substring(0, 100)
+                };
+            }
+            return null;
+        """, selector)
+        print(f"📋 입력창 정보: {elem_info}", flush=True)
 
-        # 스크롤
-        driver.execute_script("arguments[0].scrollIntoView({behavior: 'instant', block: 'center'});", element)
-        time.sleep(0.5)
+        # JavaScript로 입력창 클릭, 기존 내용 삭제, 새 내용 입력
+        result = driver.execute_script("""
+            const selector = arguments[0];
+            const newText = arguments[1];
+            const elem = document.querySelector(selector);
+            if (elem) {
+                elem.scrollIntoView({behavior: 'instant', block: 'center'});
+                elem.click();
+                elem.focus();
 
-        # 클릭
-        element.click()
-        print("✅ 입력창 클릭", flush=True)
-        time.sleep(0.5)
+                // 기존 내용 전체 선택 및 삭제
+                if (elem.contentEditable === 'true') {
+                    elem.innerHTML = '';
+                    elem.textContent = newText;
+                } else if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
+                    elem.value = newText;
+                } else {
+                    elem.textContent = newText;
+                }
 
-        # 기존 내용 삭제
-        element.clear()
-        time.sleep(0.3)
+                // 이벤트 발생
+                elem.dispatchEvent(new Event('input', { bubbles: true }));
+                elem.dispatchEvent(new Event('change', { bubbles: true }));
 
-        # 프롬프트 입력
-        element.send_keys(prompt)
-        print("✅ 프롬프트 입력 완료", flush=True)
+                return true;
+            }
+            return false;
+        """, selector, prompt)
+
+        if result:
+            print("✅ JavaScript로 입력 완료", flush=True)
+            input_success = True
+        else:
+            print("⚠️ JavaScript 입력 실패, ActionChains 시도...", flush=True)
+            # 대체 방법: ActionChains
+            actions = ActionChains(driver)
+            actions.send_keys(Keys.CONTROL, 'a')  # 입력창 내 텍스트만 선택
+            actions.send_keys(Keys.DELETE)
+            actions.send_keys(prompt)
+            actions.perform()
+            print("✅ ActionChains로 입력 완료", flush=True)
+            input_success = True
+
         time.sleep(1)
 
         # 입력 확인
         verify = driver.execute_script("""
-            const elem = arguments[0];
-            const content = elem.textContent || elem.value || elem.innerText || '';
-            return {hasContent: content.length > 0, length: content.length, preview: content.substring(0, 50)};
-        """, element)
+            const selector = arguments[0];
+            const elem = document.querySelector(selector);
+            if (elem) {
+                const content = elem.textContent || elem.innerText || elem.value || '';
+                return {
+                    length: content.length,
+                    preview: content.substring(0, 50)
+                };
+            }
+            return {length: 0, preview: ''};
+        """, input_elem.get('selector'))
 
-        if verify.get('hasContent'):
+        if verify.get('length') > 0:
             print(f"✅ 입력 확인: {verify.get('length')}자 - {verify.get('preview')}...", flush=True)
         else:
-            raise Exception("❌ 입력 확인 실패 - 내용이 비어있음")
+            print("⚠️ 입력 확인 실패 - 내용이 비어있지만 계속 진행", flush=True)
+
+        # 입력창 옆 생성 버튼 찾아서 클릭
+        print("🔍 생성 버튼 찾는 중...", flush=True)
+        generate_clicked = driver.execute_script("""
+            // 방법 1: 입력창 근처의 버튼 찾기
+            const inputDiv = document.querySelector('div[contenteditable="true"]');
+            if (inputDiv) {
+                // 부모나 형제 요소에서 버튼 찾기
+                let parent = inputDiv.parentElement;
+                for (let i = 0; i < 5; i++) {
+                    if (!parent) break;
+                    const buttons = parent.querySelectorAll('button');
+                    for (const btn of buttons) {
+                        if (btn.offsetParent !== null && btn.offsetHeight > 20 && btn.offsetHeight < 100) {
+                            console.log('Found button near input:', btn);
+                            btn.click();
+                            return {success: true, method: 'near-input'};
+                        }
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+
+            // 방법 2: 텍스트로 버튼 찾기
+            const buttonTexts = ['Generate', 'Create', '생성', 'make', 'Go', '만들기'];
+            for (const text of buttonTexts) {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                for (const btn of buttons) {
+                    const btnText = (btn.innerText || btn.textContent || '').toLowerCase();
+                    if (btnText.includes(text.toLowerCase())) {
+                        if (btn.offsetParent !== null) {
+                            console.log('Found button by text:', btn);
+                            btn.click();
+                            return {success: true, method: 'by-text-' + text};
+                        }
+                    }
+                }
+            }
+
+            // 방법 3: submit 타입 버튼 찾기
+            const submitBtns = document.querySelectorAll('button[type="submit"]');
+            for (const btn of submitBtns) {
+                if (btn.offsetParent !== null) {
+                    console.log('Found submit button:', btn);
+                    btn.click();
+                    return {success: true, method: 'submit-button'};
+                }
+            }
+
+            return {success: false};
+        """)
+
+        if generate_clicked and generate_clicked.get('success'):
+            print(f"✅ 생성 버튼 클릭 완료 ({generate_clicked.get('method')})", flush=True)
+        else:
+            print("⚠️ 생성 버튼 못 찾음 - Enter 시도", flush=True)
+            # Enter 입력
+            actions = ActionChains(driver)
+            actions.send_keys(Keys.RETURN)
+            actions.perform()
+            print("✅ Enter 입력", flush=True)
+
+        time.sleep(2)
 
     except Exception as e:
         print(f"❌ 입력 실패: {e}", flush=True)
         raise Exception(f"프롬프트 입력 실패: {e}")
 
-    # Enter 키 전송
-    print("⏎ Enter 입력 중...", flush=True)
-    enter_success = False
-
-    # 방법 1: WebElement에 직접 Enter 전송
-    try:
-        element.send_keys(Keys.RETURN)
-        print("✅ Enter 전송 완료 (WebElement)", flush=True)
-        enter_success = True
-    except Exception as e:
-        print(f"⚠️ WebElement Enter 실패: {e}", flush=True)
-
-    # 방법 2: Generate 버튼 클릭
-    if not enter_success:
-        try:
-            generate_btn = driver.execute_script("""
-                const btns = Array.from(document.querySelectorAll('button'));
-                const generateBtn = btns.find(btn =>
-                    btn.textContent.toLowerCase().includes('generate') ||
-                    btn.textContent.toLowerCase().includes('생성') ||
-                    btn.getAttribute('aria-label')?.toLowerCase().includes('generate')
-                );
-                if (generateBtn) {
-                    generateBtn.click();
-                    return true;
-                }
-                return false;
-            """)
-            if generate_btn:
-                print("✅ Generate 버튼 클릭", flush=True)
-                enter_success = True
-        except Exception as e:
-            print(f"⚠️ Generate 버튼 클릭 실패: {e}", flush=True)
-
-    if not enter_success:
-        raise Exception("❌ Enter 전송 실패 - 이미지 생성을 시작할 수 없습니다")
-
-    time.sleep(2)
+    time.sleep(3)
 
     # 이미지 생성 대기
-    print("⏳ 이미지 생성 대기 중... (최대 60초)", flush=True)
+    print("⏳ 이미지 생성 대기 중... (최대 120초)", flush=True)
     image_generated = False
-    for i in range(60):
-        has_image = driver.execute_script("""
+    for i in range(120):
+        result = driver.execute_script("""
             const imgs = Array.from(document.querySelectorAll('img'));
-            const largeImgs = imgs.filter(img => img.offsetWidth > 300 && img.offsetHeight > 300);
-            return largeImgs.length > 0;
+            const allImgs = imgs.map(img => ({
+                src: (img.src || '').substring(0, 50),
+                width: img.offsetWidth,
+                height: img.offsetHeight
+            }));
+            const largeImgs = imgs.filter(img => img.offsetWidth > 200 && img.offsetHeight > 200);
+            const text = document.body.innerText;
+            return {
+                hasLargeImage: largeImgs.length > 0,
+                largeCount: largeImgs.length,
+                totalCount: imgs.length,
+                generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading'),
+                sampleImages: allImgs.slice(0, 3)
+            };
         """)
-        if has_image:
-            print(f"✅ 이미지 생성 완료! ({i+1}초)", flush=True)
+
+        if result['hasLargeImage']:
+            print(f"✅ 이미지 생성 완료! ({i+1}초) - 큰 이미지 {result['largeCount']}개 발견", flush=True)
             image_generated = True
             break
-        if i % 10 == 0 and i > 0:
-            print(f"   대기 중... ({i}초)", flush=True)
+
+        if i % 15 == 0 and i > 0:
+            print(f"   대기 중... ({i}초) - 큰 이미지: {result['largeCount']}개, 전체: {result['totalCount']}개, 생성 중: {result['generating']}", flush=True)
+            if i == 15:
+                print(f"   샘플 이미지: {result['sampleImages']}", flush=True)
+                # 중간 스크린샷
+                try:
+                    import tempfile
+                    mid_screenshot = os.path.join(tempfile.gettempdir(), f'imagefx_gen_{i}s.png')
+                    driver.save_screenshot(mid_screenshot)
+                    print(f"   📸 중간 스크린샷: {mid_screenshot}", flush=True)
+                except:
+                    pass
+
         time.sleep(1)
 
     if not image_generated:
-        raise Exception("❌ 이미지 생성 실패 - 60초 내에 이미지가 생성되지 않았습니다")
+        # 최종 스크린샷
+        try:
+            import tempfile
+            final_screenshot = os.path.join(tempfile.gettempdir(), 'imagefx_gen_failed.png')
+            driver.save_screenshot(final_screenshot)
+            print(f"📸 실패 스크린샷: {final_screenshot}", flush=True)
+        except:
+            pass
+        raise Exception("❌ 이미지 생성 실패 - 120초 내에 이미지가 생성되지 않았습니다")
 
     time.sleep(3)
 
@@ -542,13 +739,7 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
             input_box.click()
             time.sleep(0.3)
 
-        # Ctrl+A로 전체 선택
-        actions = ActionChains(driver)
-        actions.key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
-        print(f"✅ Ctrl+A 전체 선택 완료", flush=True)
-        time.sleep(0.3)
-
-        # Ctrl+V로 붙여넣기
+        # Ctrl+V로 붙여넣기만 수행
         actions = ActionChains(driver)
         actions.key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
         print(f"✅ Ctrl+V 붙여넣기 완료", flush=True)
@@ -558,6 +749,50 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
         actions = ActionChains(driver)
         actions.send_keys(Keys.RETURN).perform()
         print("⏎ 엔터 입력 완료", flush=True)
+        time.sleep(1)
+
+        # 생성 버튼 찾아서 클릭 (여러 가능한 텍스트/selector 시도)
+        generate_button_found = False
+        button_texts = ['Generate', 'Create', '생성', 'Remix', 'Go']
+        button_selectors = [
+            'button[type="submit"]',
+            'button[aria-label*="generate"]',
+            'button[aria-label*="create"]',
+            'button:has-text("Generate")',
+            '.generate-button',
+            '[data-test-id="generate-button"]'
+        ]
+
+        # 텍스트로 버튼 찾기
+        for text in button_texts:
+            try:
+                buttons = driver.find_elements(By.XPATH, f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{text.lower()}')]")
+                for btn in buttons:
+                    if btn.is_displayed() and btn.is_enabled():
+                        btn.click()
+                        print(f"✅ '{text}' 버튼 클릭 완료", flush=True)
+                        generate_button_found = True
+                        break
+                if generate_button_found:
+                    break
+            except:
+                continue
+
+        # selector로 버튼 찾기 (텍스트로 못 찾았을 경우)
+        if not generate_button_found:
+            for selector in button_selectors:
+                try:
+                    btn = driver.find_element(By.CSS_SELECTOR, selector)
+                    if btn.is_displayed() and btn.is_enabled():
+                        btn.click()
+                        print(f"✅ 생성 버튼 클릭 완료 ({selector})", flush=True)
+                        generate_button_found = True
+                        break
+                except:
+                    continue
+
+        if not generate_button_found:
+            print("⚠️ 생성 버튼을 찾지 못함 - 엔터로 처리됨", flush=True)
 
         return True
 
@@ -594,9 +829,25 @@ def main(scenes_json_file, use_imagefx=False):
 
         # ImageFX 사용 시 첫 이미지 생성 및 업로드
         if use_imagefx:
-            first_prompt = scenes[0].get('image_prompt') or scenes[0].get('sora_prompt') or ''
+            # 첫 번째 씬 정보 확인
+            first_scene = scenes[0]
+            print(f"\n📋 첫 번째 씬 데이터:", flush=True)
+            print(f"   scene_number: {first_scene.get('scene_number')}", flush=True)
+            print(f"   scene_id: {first_scene.get('scene_id')}", flush=True)
+            print(f"   has image_prompt: {bool(first_scene.get('image_prompt'))}", flush=True)
+            print(f"   has sora_prompt: {bool(first_scene.get('sora_prompt'))}", flush=True)
+
+            first_prompt = first_scene.get('image_prompt') or first_scene.get('sora_prompt') or ''
+
             if not first_prompt:
+                print(f"❌ 첫 번째 씬에 프롬프트가 없습니다", flush=True)
+                print(f"   씬 데이터: {first_scene}", flush=True)
                 raise Exception("첫 번째 씬에 프롬프트가 없습니다")
+
+            # 어떤 필드에서 읽었는지 로그
+            prompt_source = 'image_prompt' if first_scene.get('image_prompt') else 'sora_prompt'
+            print(f"✅ 프롬프트 읽기 성공 (출처: {prompt_source})", flush=True)
+            print(f"   내용: {first_prompt[:100]}{'...' if len(first_prompt) > 100 else ''}\n", flush=True)
 
             # ImageFX로 첫 이미지 생성
             image_path = generate_image_with_imagefx(driver, first_prompt)
@@ -621,11 +872,20 @@ def main(scenes_json_file, use_imagefx=False):
         for i in range(len(scenes)):
             scene = scenes[i]
             scene_number = scene.get('scene_number') or scene.get('scene_id') or f"scene_{str(i).zfill(2)}"
+
+            # 프롬프트 읽기 (디버그 로그 포함)
+            has_image_prompt = bool(scene.get('image_prompt'))
+            has_sora_prompt = bool(scene.get('sora_prompt'))
             prompt = scene.get('image_prompt') or scene.get('sora_prompt') or ''
 
             if not prompt:
-                print(f"⏭️ {scene_number} - 프롬프트 없음, 건너뜀", flush=True)
+                print(f"⏭️ {scene_number} - 프롬프트 없음 (image_prompt: {has_image_prompt}, sora_prompt: {has_sora_prompt})", flush=True)
                 continue
+
+            # 프롬프트 출처 로그
+            prompt_source = 'image_prompt' if scene.get('image_prompt') else 'sora_prompt'
+            print(f"📝 {scene_number} - 프롬프트 출처: {prompt_source}", flush=True)
+            print(f"   내용: {prompt[:80]}{'...' if len(prompt) > 80 else ''}", flush=True)
 
             # 타이밍 제어
             if i >= 3:  # scene_03부터
@@ -655,7 +915,141 @@ def main(scenes_json_file, use_imagefx=False):
                 continue
 
         print(f"\n{'='*80}", flush=True)
-        print("✅ 모든 씬 처리 완료!", flush=True)
+        print("✅ 모든 프롬프트 입력 완료!", flush=True)
+        print(f"{'='*80}", flush=True)
+
+        # === 이미지 생성 대기 ===
+        print("\n" + "="*80, flush=True)
+        print("🕐 이미지 생성 대기", flush=True)
+        print("="*80, flush=True)
+
+        print("⏳ 이미지 생성 중... (최대 120초)", flush=True)
+
+        # 디버그: 초기 페이지 상태 확인
+        page_info = driver.execute_script("""
+            return {
+                url: window.location.href,
+                title: document.title,
+                bodyText: document.body.innerText.substring(0, 200)
+            };
+        """)
+        print(f"📋 페이지 정보:", flush=True)
+        print(f"   URL: {page_info['url']}", flush=True)
+        print(f"   제목: {page_info['title']}", flush=True)
+        print(f"   본문 일부: {page_info['bodyText'][:100]}...", flush=True)
+
+        # 스크린샷 저장
+        try:
+            screenshot_path = os.path.join(os.path.dirname(os.path.abspath(scenes_json_file)), 'whisk_debug.png')
+            driver.save_screenshot(screenshot_path)
+            print(f"📸 스크린샷 저장: {screenshot_path}", flush=True)
+        except Exception as e:
+            print(f"⚠️ 스크린샷 저장 실패: {e}", flush=True)
+
+        for i in range(120):
+            result = driver.execute_script("""
+                const text = document.body.innerText;
+                const imgs = Array.from(document.querySelectorAll('img'));
+                const largeImgs = imgs.filter(img => img.offsetWidth > 100 && img.offsetHeight > 100);
+                const allImgs = imgs.map(img => ({
+                    src: img.src.substring(0, 50),
+                    width: img.offsetWidth,
+                    height: img.offsetHeight
+                }));
+                return {
+                    generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading'),
+                    imageCount: largeImgs.length,
+                    allImagesCount: imgs.length,
+                    sampleImages: allImgs.slice(0, 3)
+                };
+            """)
+
+            if not result['generating'] and result['imageCount'] > 0:
+                print(f"✅ 생성 완료! ({i+1}초) - 이미지 {result['imageCount']}개 발견", flush=True)
+                break
+
+            if i % 10 == 0 and i > 0:
+                print(f"   대기 중... ({i}초) - 큰 이미지: {result['imageCount']}개, 전체: {result['allImagesCount']}개", flush=True)
+                if i == 10 and result['allImagesCount'] > 0:
+                    print(f"   샘플 이미지: {result['sampleImages']}", flush=True)
+            time.sleep(1)
+
+        time.sleep(5)
+
+        # === 이미지 다운로드 ===
+        print("\n" + "="*80, flush=True)
+        print("📥 이미지 다운로드", flush=True)
+        print("="*80, flush=True)
+
+        # scenes_json_file 경로에서 폴더 찾기
+        json_dir = os.path.dirname(os.path.abspath(scenes_json_file))
+        output_folder = os.path.join(json_dir, 'images')
+        os.makedirs(output_folder, exist_ok=True)
+        print(f"📁 저장 폴더: {output_folder}", flush=True)
+
+        # 페이지의 모든 이미지 찾기 (더 넓은 범위로)
+        images = driver.execute_script("""
+            const imgs = Array.from(document.querySelectorAll('img'));
+            const filtered = imgs.filter(img => {
+                // 크기가 충분히 큰 이미지만
+                if (img.offsetWidth < 100 || img.offsetHeight < 100) return false;
+
+                // base64나 blob URL 제외
+                const src = img.src || '';
+                if (src.startsWith('data:') || src.startsWith('blob:')) return false;
+
+                // HTTP/HTTPS URL만
+                if (!src.startsWith('http')) return false;
+
+                return true;
+            });
+
+            return filtered.map(img => ({
+                src: img.src,
+                width: img.offsetWidth,
+                height: img.offsetHeight,
+                alt: img.alt || ''
+            }));
+        """)
+
+        print(f"🔍 발견된 이미지: {len(images)}개", flush=True)
+
+        # 디버그: 이미지 정보 출력
+        for idx, img in enumerate(images[:5]):  # 최대 5개만 출력
+            print(f"   [{idx+1}] {img['width']}x{img['height']} - {img['src'][:80]}...", flush=True)
+
+        import requests
+        downloaded = []
+        for i, img_data in enumerate(images[:len(scenes)]):
+            img_src = img_data['src']
+            if not img_src.startswith('http'):
+                continue
+
+            scene = scenes[i]
+            scene_number = scene.get('scene_number') or scene.get('scene_id') or f"scene_{str(i).zfill(2)}"
+            ext = '.jpg'
+            if 'png' in img_src.lower():
+                ext = '.png'
+            elif 'webp' in img_src.lower():
+                ext = '.webp'
+
+            output_path = os.path.join(output_folder, f"{scene_number}{ext}")
+
+            try:
+                response = requests.get(img_src, timeout=30)
+                if response.status_code == 200:
+                    with open(output_path, 'wb') as f:
+                        f.write(response.content)
+                    downloaded.append(output_path)
+                    print(f"   ✅ {scene_number}{ext}", flush=True)
+            except Exception as e:
+                print(f"   ❌ {scene_number}: {e}", flush=True)
+
+        print(f"\n✅ 다운로드 완료: {len(downloaded)}/{len(scenes)}", flush=True)
+        print(f"📁 저장 위치: {output_folder}", flush=True)
+
+        print(f"\n{'='*80}", flush=True)
+        print("🎉 전체 워크플로우 완료!", flush=True)
         print(f"{'='*80}", flush=True)
 
         return 0
