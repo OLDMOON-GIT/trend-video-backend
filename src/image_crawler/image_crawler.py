@@ -757,77 +757,101 @@ def upload_image_to_whisk(driver, image_path):
     # 방법 1: 왼쪽 사이드바 피사체 영역 찾기 (한글 텍스트로 식별)
     print("🔍 피사체 업로드 영역 찾는 중...", flush=True)
 
-    # 피사체 영역을 정확하게 찾아서 클릭
+    # 피사체 영역을 정확하게 찾아서 클릭 - 왼쪽 사이드바 첫 번째(가장 위) 업로드 영역
     subject_clicked = driver.execute_script("""
-        // 방법 1: "이미지를 생성합니다" 또는 "이미지를 업로드" 텍스트 포함하는 영역 찾기
+        // Whisk 레이아웃: 왼쪽 사이드바에 3개 영역이 세로로 배치
+        // 1. 피사체 (Subject) - 가장 위 (top 위치가 가장 작음)
+        // 2. 스타일 (Style) - 중간
+        // 3. 배경/씬 (Scene) - 아래
+
         const allElements = Array.from(document.querySelectorAll('div, button'));
 
-        // 피사체 관련 텍스트 찾기
-        const subjectKeywords = ['이미지를 업로드', '이미지를 생성', '파일 공유', '피사체'];
-        let targetElement = null;
+        // 업로드 영역 후보 찾기 (업로드 관련 텍스트가 있는 요소)
+        const uploadKeywords = ['이미지를 업로드', '이미지를 생성', '파일 공유'];
+        const uploadAreas = [];
 
         for (const elem of allElements) {
             const text = elem.textContent || '';
-            const hasKeyword = subjectKeywords.some(keyword => text.includes(keyword));
+            const hasKeyword = uploadKeywords.some(keyword => text.includes(keyword));
 
             if (hasKeyword) {
                 const rect = elem.getBoundingClientRect();
-                // 왼쪽 사이드바 영역 (x < 250px) 이고, 적절한 크기
+                // 왼쪽 사이드바 (x < 250) + 적절한 크기
                 if (rect.left < 250 && rect.width > 50 && rect.height > 50) {
-                    targetElement = elem;
-
-                    // 내부에 버튼이 있으면 버튼 클릭
-                    const innerButton = elem.querySelector('button');
-                    if (innerButton && innerButton.offsetParent !== null) {
-                        innerButton.click();
-                        return {
-                            success: true,
-                            method: 'korean-text-inner-button',
-                            text: text.substring(0, 50),
-                            rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
-                        };
-                    }
-
-                    // 버튼 없으면 해당 요소 직접 클릭
-                    elem.click();
-                    return {
-                        success: true,
-                        method: 'korean-text-element',
-                        text: text.substring(0, 50),
-                        rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
-                    };
+                    uploadAreas.push({
+                        elem: elem,
+                        rect: rect,
+                        top: rect.top,
+                        text: text.substring(0, 80)
+                    });
                 }
             }
         }
 
-        // 방법 2: 점선 박스 찾기 (fallback)
-        const dashedDivs = allElements.filter(elem => {
-            const style = window.getComputedStyle(elem);
-            const rect = elem.getBoundingClientRect();
-            return (style.borderStyle === 'dashed' || style.borderStyle.includes('dashed')) &&
-                   rect.left < 250 && rect.top > 80 && rect.top < 500;
-        });
+        // top 위치로 정렬 (가장 위 = 피사체)
+        uploadAreas.sort((a, b) => a.top - b.top);
 
-        if (dashedDivs.length > 0) {
-            const firstDashed = dashedDivs[0];
-            const rect = firstDashed.getBoundingClientRect();
+        // 첫 번째(가장 위) 영역 = 피사체 영역
+        if (uploadAreas.length > 0) {
+            const subjectArea = uploadAreas[0];
+            console.log('[Whisk Upload] Found', uploadAreas.length, 'upload areas');
+            console.log('[Whisk Upload] Subject area (top):', subjectArea.top, subjectArea.text);
 
             // 내부 버튼 찾기
-            const innerButton = firstDashed.querySelector('button');
+            const innerButton = subjectArea.elem.querySelector('button');
             if (innerButton && innerButton.offsetParent !== null) {
                 innerButton.click();
                 return {
                     success: true,
-                    method: 'dashed-box-inner-button',
-                    rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                    method: 'subject-area-button',
+                    text: subjectArea.text,
+                    rect: {left: subjectArea.rect.left, top: subjectArea.rect.top},
+                    totalAreas: uploadAreas.length
                 };
             }
 
-            firstDashed.click();
+            // 버튼 없으면 영역 직접 클릭
+            subjectArea.elem.click();
             return {
                 success: true,
-                method: 'dashed-box-click',
-                rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                method: 'subject-area-direct',
+                text: subjectArea.text,
+                rect: {left: subjectArea.rect.left, top: subjectArea.rect.top},
+                totalAreas: uploadAreas.length
+            };
+        }
+
+        // Fallback: 점선 박스 중 가장 위에 있는 것
+        const dashedDivs = allElements.filter(elem => {
+            const style = window.getComputedStyle(elem);
+            const rect = elem.getBoundingClientRect();
+            return (style.borderStyle === 'dashed' || style.borderStyle.includes('dashed')) &&
+                   rect.left < 250 && rect.top > 80 && rect.top < 600;
+        }).map(elem => ({
+            elem: elem,
+            rect: elem.getBoundingClientRect()
+        })).sort((a, b) => a.rect.top - b.rect.top);
+
+        if (dashedDivs.length > 0) {
+            const firstDashed = dashedDivs[0];
+            const innerButton = firstDashed.elem.querySelector('button');
+
+            if (innerButton && innerButton.offsetParent !== null) {
+                innerButton.click();
+                return {
+                    success: true,
+                    method: 'dashed-box-button',
+                    rect: {left: firstDashed.rect.left, top: firstDashed.rect.top},
+                    totalAreas: dashedDivs.length
+                };
+            }
+
+            firstDashed.elem.click();
+            return {
+                success: true,
+                method: 'dashed-box-direct',
+                rect: {left: firstDashed.rect.left, top: firstDashed.rect.top},
+                totalAreas: dashedDivs.length
             };
         }
 
@@ -836,10 +860,12 @@ def upload_image_to_whisk(driver, image_path):
 
     if subject_clicked.get('success'):
         print(f"✅ 피사체 영역 클릭 성공: {subject_clicked.get('method')}", flush=True)
+        if subject_clicked.get('totalAreas'):
+            print(f"   발견된 업로드 영역: {subject_clicked.get('totalAreas')}개 (가장 위 영역 선택)", flush=True)
         if subject_clicked.get('text'):
             print(f"   텍스트: {subject_clicked.get('text')}", flush=True)
         if subject_clicked.get('rect'):
-            print(f"   위치: {subject_clicked.get('rect')}", flush=True)
+            print(f"   위치: top={subject_clicked.get('rect')['top']}, left={subject_clicked.get('rect')['left']}", flush=True)
     else:
         print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
         # 디버그: 왼쪽 사이드바 구조 출력
