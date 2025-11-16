@@ -904,28 +904,34 @@ def upload_image_to_whisk(driver, image_path):
         # 추가: "이미지 업로드" 버튼 명시적으로 클릭
         print("🔘 '이미지 업로드' 버튼 클릭 시도...", flush=True)
         upload_button_clicked = driver.execute_script("""
-            // "이미지 업로드" 레이블이 있는 버튼 찾기
+            // "이미지 업로드" 레이블이 있는 버튼 찾기 (페이지 전체)
             const allButtons = Array.from(document.querySelectorAll('button'));
+            console.log('[Whisk] Total buttons:', allButtons.length);
+
+            // 모든 버튼의 텍스트 로깅
+            const buttonTexts = allButtons.slice(0, 20).map(b => b.textContent?.trim().substring(0, 50));
+            console.log('[Whisk] Button texts:', buttonTexts);
+
             const uploadButton = allButtons.find(btn => {
-                const text = btn.textContent || '';
-                const rect = btn.getBoundingClientRect();
-                return (text.includes('이미지 업로드') || text.includes('Upload image')) &&
-                       rect.left < 300 && rect.top > 50 && rect.top < 400;
+                const text = (btn.textContent || '').toLowerCase();
+                return text.includes('이미지') && text.includes('업로드');
             });
 
             if (uploadButton) {
+                const rect = uploadButton.getBoundingClientRect();
                 uploadButton.click();
                 console.log('[Whisk] Clicked upload button:', uploadButton.textContent);
-                return {clicked: true, text: uploadButton.textContent};
+                return {clicked: true, text: uploadButton.textContent, rect: {top: rect.top, left: rect.left}};
             }
-            return {clicked: false};
+            return {clicked: false, totalButtons: allButtons.length};
         """)
 
         if upload_button_clicked.get('clicked'):
             print(f"   ✅ 버튼 클릭됨: {upload_button_clicked.get('text')}", flush=True)
-            time.sleep(1)
+            print(f"   위치: {upload_button_clicked.get('rect')}", flush=True)
+            time.sleep(2)  # 버튼 클릭 후 file input 생성 대기
         else:
-            print(f"   ⚠️ '이미지 업로드' 버튼을 찾지 못함", flush=True)
+            print(f"   ⚠️ '이미지 업로드' 버튼을 찾지 못함 (총 버튼: {upload_button_clicked.get('totalButtons', 0)}개)", flush=True)
     else:
         print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
         # 디버그: 왼쪽 사이드바 구조 출력
