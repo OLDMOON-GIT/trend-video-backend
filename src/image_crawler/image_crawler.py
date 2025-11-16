@@ -718,61 +718,62 @@ def upload_image_to_whisk(driver, image_path):
     abs_path = os.path.abspath(image_path)
     print(f"🔍 파일 업로드 시도: {os.path.basename(abs_path)}", flush=True)
 
-    # 방법 1: 왼쪽 첫 번째 피사체 영역 찾아서 클릭
+    # 방법 1: 왼쪽 사이드바 첫 번째 점선 박스(피사체 영역) 클릭
     print("🔍 피사체 영역 찾는 중...", flush=True)
     subject_clicked = driver.execute_script("""
-        // 모든 요소 검색
-        const allElements = Array.from(document.querySelectorAll('*'));
-        const buttons = Array.from(document.querySelectorAll('button'));
+        // 방법 1: 왼쪽 사이드바의 점선 박스들 찾기
+        const allDivs = Array.from(document.querySelectorAll('div'));
 
-        // 방법 1: "피사체" 텍스트가 있는 요소 찾기 (한글)
-        let subjectElement = allElements.find(el => {
-            const text = el.textContent || '';
-            return text.includes('피사체') && el.offsetParent !== null;
+        // 점선 테두리가 있는 div 찾기 (border-style: dashed)
+        const dashedDivs = allDivs.filter(div => {
+            const style = window.getComputedStyle(div);
+            return style.borderStyle === 'dashed' ||
+                   style.borderStyle.includes('dashed') ||
+                   div.style.border?.includes('dashed');
         });
 
-        if (subjectElement) {
-            // 피사체 요소 내부의 클릭 가능한 요소 찾기
-            const clickable = subjectElement.querySelector('button') ||
-                             subjectElement.querySelector('[role="button"]') ||
-                             subjectElement;
-            clickable.click();
-            return {success: true, method: 'korean-text-피사체'};
+        console.log('Dashed divs found:', dashedDivs.length);
+
+        if (dashedDivs.length > 0) {
+            // 첫 번째 점선 박스 클릭
+            const firstDashed = dashedDivs[0];
+            firstDashed.click();
+            return {success: true, method: 'first-dashed-div', count: dashedDivs.length};
         }
 
-        // 방법 2: person 아이콘이 있는 버튼 찾기
+        // 방법 2: data 속성으로 찾기
+        const dataElements = Array.from(document.querySelectorAll('[data-idx="0"]'));
+        if (dataElements.length > 0) {
+            dataElements[0].click();
+            return {success: true, method: 'data-idx-0'};
+        }
+
+        // 방법 3: 왼쪽 사이드바의 버튼들
+        const buttons = Array.from(document.querySelectorAll('button'));
+
+        // person 아이콘
         let subjectBtn = buttons.find(btn => {
             const text = btn.textContent || '';
             const html = btn.innerHTML || '';
             return text.includes('person') ||
-                   text.includes('account') ||
-                   html.includes('person') ||
-                   html.includes('M12 12c2.21');  // person icon SVG path
+                   text.includes('account_circle') ||
+                   html.includes('person');
         });
 
         if (subjectBtn) {
             subjectBtn.click();
-            return {success: true, method: 'person-icon'};
+            return {success: true, method: 'person-button'};
         }
 
-        // 방법 3: 첫 번째 점선 테두리 박스 찾기
-        const dashedBoxes = Array.from(document.querySelectorAll('[style*="dashed"], [class*="dashed"]'));
-        if (dashedBoxes.length > 0) {
-            const firstBox = dashedBoxes[0];
-            const clickable = firstBox.querySelector('button') || firstBox;
-            clickable.click();
-            return {success: true, method: 'dashed-box'};
-        }
-
-        // 방법 4: add_photo_alternate가 있는 첫 번째 버튼
+        // 방법 4: add_photo_alternate 아이콘
         subjectBtn = buttons.find(btn => {
             const text = btn.textContent || '';
-            return text.includes('add_photo_alternate') || text.includes('add_a_photo');
+            return text.includes('add_photo_alternate');
         });
 
         if (subjectBtn) {
             subjectBtn.click();
-            return {success: true, method: 'add-photo-icon'};
+            return {success: true, method: 'add-photo-button'};
         }
 
         return {success: false};
@@ -787,48 +788,63 @@ def upload_image_to_whisk(driver, image_path):
     # 방법 2: 페이지의 file input 찾아서 파일 할당
     print("🔍 file input 찾는 중...", flush=True)
 
-    # 먼저 기존 file input 확인
-    file_input_found = driver.execute_script("""
-        const inputs = document.querySelectorAll('input[type="file"]');
-        return inputs.length;
-    """)
+    # 클릭 후 file input이 나타날 때까지 대기
+    file_input = None
+    for attempt in range(5):
+        file_input_found = driver.execute_script("""
+            const inputs = document.querySelectorAll('input[type="file"]');
+            return {
+                count: inputs.length,
+                visible: Array.from(inputs).filter(i => i.offsetParent !== null).length
+            };
+        """)
 
-    print(f"   발견된 file input: {file_input_found}개", flush=True)
+        print(f"   시도 {attempt + 1}: file input {file_input_found['count']}개 (보이는 것: {file_input_found['visible']}개)", flush=True)
 
-    # file input이 있으면 그것 사용, 없으면 생성
-    if file_input_found > 0:
-        # 첫 번째 file input 사용
-        file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
-        print("✅ 기존 file input 발견", flush=True)
-    else:
-        # 숨겨진 file input 생성
+        if file_input_found['count'] > 0:
+            try:
+                file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
+                print("✅ file input 발견", flush=True)
+                break
+            except:
+                pass
+
+        if attempt < 4:
+            time.sleep(1)
+
+    # file input을 못 찾으면 생성
+    if not file_input:
+        print("⚠️ file input을 찾지 못함, 새로 생성", flush=True)
         driver.execute_script("""
             const input = document.createElement('input');
             input.type = 'file';
             input.id = 'auto-upload-input';
             input.accept = 'image/*';
-            input.style.position = 'absolute';
-            input.style.left = '-9999px';
+            input.style.position = 'fixed';
+            input.style.top = '0';
+            input.style.left = '0';
+            input.style.opacity = '0';
+            input.style.width = '1px';
+            input.style.height = '1px';
             document.body.appendChild(input);
         """)
+        time.sleep(0.5)
         file_input = driver.find_element(By.ID, 'auto-upload-input')
         print("✅ file input 생성 완료", flush=True)
 
-    time.sleep(1)
-
     # 파일 할당
-    print(f"📤 파일 할당 중...", flush=True)
+    print(f"📤 파일 할당 중: {abs_path}", flush=True)
     file_input.send_keys(abs_path)
-    time.sleep(2)
+    time.sleep(1)
     print("✅ 파일 할당 완료", flush=True)
 
     # change 이벤트 발생
     driver.execute_script("""
-        const input = document.querySelector('input[type="file"]');
-        if (input) {
+        const inputs = document.querySelectorAll('input[type="file"]');
+        inputs.forEach(input => {
             input.dispatchEvent(new Event('change', { bubbles: true }));
             input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
+        });
     """)
 
     print("✅ change 이벤트 발생 완료", flush=True)
