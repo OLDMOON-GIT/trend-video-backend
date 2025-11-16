@@ -901,13 +901,60 @@ def upload_image_to_whisk(driver, image_path):
         if subject_clicked.get('rect'):
             print(f"   위치: top={subject_clicked.get('rect')['top']}, left={subject_clicked.get('rect')['left']}", flush=True)
 
-        # 추가: "이미지 업로드" 버튼 명시적으로 클릭
-        print("🔘 '이미지 업로드' 버튼 클릭 시도...", flush=True)
+        # 추가: "이미지 업로드" 요소 찾기 (모든 요소 대상)
+        print("🔘 '이미지 업로드' 요소 찾기...", flush=True)
         upload_button_clicked = driver.execute_script("""
-            // "이미지 업로드" 레이블이 있는 버튼 찾기 (페이지 전체)
-            const allButtons = Array.from(document.querySelectorAll('button'));
+            // 1. 모든 요소에서 "이미지 업로드" 텍스트 찾기
+            const allElements = Array.from(document.querySelectorAll('*'));
+            const uploadTextElements = allElements.filter(el => {
+                const text = el.textContent || '';
+                return (text.includes('이미지') && text.includes('업로드')) ||
+                       (text.toLowerCase().includes('upload') && text.toLowerCase().includes('image'));
+            }).slice(0, 10);  // 최대 10개
 
-            // 디버그: 모든 버튼의 상세 정보 수집
+            console.log('[Search] Found', uploadTextElements.length, 'elements with upload text');
+
+            // 디버그: "이미지 업로드" 포함 요소 정보
+            const uploadElementsInfo = uploadTextElements.map(el => ({
+                tag: el.tagName,
+                text: (el.textContent || '').substring(0, 50),
+                classes: el.className,
+                isButton: el.tagName === 'BUTTON',
+                hasParentButton: el.closest('button') !== null
+            }));
+
+            // 2. 버튼 또는 버튼의 자식 요소 찾기
+            let clickableElement = null;
+            for (const el of uploadTextElements) {
+                if (el.tagName === 'BUTTON') {
+                    clickableElement = el;
+                    console.log('[Found] Direct button element');
+                    break;
+                } else {
+                    const parentButton = el.closest('button');
+                    if (parentButton) {
+                        clickableElement = parentButton;
+                        console.log('[Found] Parent button of label/span');
+                        break;
+                    }
+                }
+            }
+
+            // 3. 버튼 클릭 시도
+            if (clickableElement) {
+                const rect = clickableElement.getBoundingClientRect();
+                clickableElement.click();
+                console.log('[Clicked] Upload element');
+                return {
+                    clicked: true,
+                    text: clickableElement.textContent?.trim() || '',
+                    rect: {top: rect.top, left: rect.left},
+                    uploadElementsInfo: uploadElementsInfo
+                };
+            }
+
+            // 4. 못 찾았을 경우 버튼 정보 수집
+            const allButtons = Array.from(document.querySelectorAll('button'));
             const buttonTexts = allButtons.slice(0, 30).map(b => {
                 const labelElem = b.querySelector('label');
                 return {
@@ -917,62 +964,41 @@ def upload_image_to_whisk(driver, image_path):
                 };
             });
 
-            // 버튼 찾기: label 요소의 텍스트 우선 확인
-            const uploadButton = allButtons.find(btn => {
-                // 1. label 요소가 있는지 확인
-                const labelElem = btn.querySelector('label');
-                if (labelElem) {
-                    const labelText = labelElem.textContent || '';
-                    if (labelText.includes('이미지') && labelText.includes('업로드')) {
-                        console.log('[Found] Button with label:', labelText);
-                        return true;
-                    }
-                    if (labelText.toLowerCase().includes('upload') && labelText.toLowerCase().includes('image')) {
-                        console.log('[Found] Button with label:', labelText);
-                        return true;
-                    }
-                }
-
-                // 2. textContent 확인
-                const text = btn.textContent || '';
-                if ((text.includes('이미지') && text.includes('업로드')) ||
-                    (text.toLowerCase().includes('upload') && text.toLowerCase().includes('image'))) {
-                    console.log('[Found] Button with text:', text);
-                    return true;
-                }
-
-                return false;
-            });
-
-            if (uploadButton) {
-                const rect = uploadButton.getBoundingClientRect();
-                uploadButton.click();
-                console.log('[Clicked] Upload button');
-                return {
-                    clicked: true,
-                    text: uploadButton.textContent?.trim() || '',
-                    rect: {top: rect.top, left: rect.left},
-                    buttonTexts: buttonTexts
-                };
-            }
-            return {clicked: false, totalButtons: allButtons.length, buttonTexts: buttonTexts};
+            return {
+                clicked: false,
+                totalButtons: allButtons.length,
+                buttonTexts: buttonTexts,
+                uploadElementsInfo: uploadElementsInfo
+            };
         """)
 
         if upload_button_clicked.get('clicked'):
-            print(f"   ✅ 버튼 클릭됨: {upload_button_clicked.get('text')}", flush=True)
+            print(f"   ✅ 요소 클릭됨: {upload_button_clicked.get('text')}", flush=True)
             print(f"   위치: {upload_button_clicked.get('rect')}", flush=True)
             time.sleep(2)  # 버튼 클릭 후 file input 생성 대기
         else:
-            print(f"   ⚠️ '이미지 업로드' 버튼을 찾지 못함 (총 버튼: {upload_button_clicked.get('totalButtons', 0)}개)", flush=True)
-            # 처음 10개 버튼 텍스트 출력 (label 포함)
-            button_texts = upload_button_clicked.get('buttonTexts', [])[:10]
-            for idx, btn_info in enumerate(button_texts):
+            print(f"   ⚠️ '이미지 업로드' 요소를 찾지 못함", flush=True)
+
+            # "이미지 업로드" 텍스트 포함 요소 정보
+            upload_elements = upload_button_clicked.get('uploadElementsInfo', [])
+            if upload_elements:
+                print(f"   📋 '이미지/업로드' 텍스트 포함 요소: {len(upload_elements)}개", flush=True)
+                for idx, elem_info in enumerate(upload_elements):
+                    print(f"      [{idx+1}] {elem_info.get('tag')} - text: '{elem_info.get('text', '')}'", flush=True)
+                    print(f"           isButton: {elem_info.get('isButton')}, hasParentButton: {elem_info.get('hasParentButton')}", flush=True)
+            else:
+                print(f"   ⚠️ '이미지/업로드' 텍스트 포함 요소가 없음", flush=True)
+
+            # 버튼 정보
+            button_texts = upload_button_clicked.get('buttonTexts', [])
+            print(f"   📋 전체 버튼: {upload_button_clicked.get('totalButtons', 0)}개 (수집: {len(button_texts)}개)", flush=True)
+            for idx, btn_info in enumerate(button_texts[:10]):  # 처음 10개만
                 text = btn_info.get('text', '')[:40]
                 label = btn_info.get('labelText', '')
                 if label:
-                    print(f"      버튼 {idx+1}: {text} [label: {label}]", flush=True)
+                    print(f"      버튼 {idx+1}: '{text}' [label: '{label}']", flush=True)
                 else:
-                    print(f"      버튼 {idx+1}: {text}", flush=True)
+                    print(f"      버튼 {idx+1}: '{text}'", flush=True)
     else:
         print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
         # 디버그: 왼쪽 사이드바 구조 출력
