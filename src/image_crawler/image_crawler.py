@@ -252,17 +252,37 @@ def generate_image_with_imagefx(driver, prompt, format_type='shortform'):
             if found.get('needsActivation'):
                 print("⏳ 입력창 활성화 대기 중...", flush=True)
                 time.sleep(2)
-                # 다시 contenteditable 찾기
+                # 다시 여러 방법으로 찾기
                 recheck = driver.execute_script("""
+                    // contenteditable="true" div
                     let elem = document.querySelector('div[contenteditable="true"]');
                     if (elem && elem.offsetParent !== null) {
                         return {found: true, type: 'contenteditable', selector: 'div[contenteditable="true"]'};
                     }
+
+                    // role="textbox"
+                    elem = document.querySelector('[role="textbox"]');
+                    if (elem && elem.offsetParent !== null && elem.contentEditable === 'true') {
+                        return {found: true, type: 'role-textbox', selector: '[role="textbox"]'};
+                    }
+
+                    // data-slate-editor="true"
+                    elem = document.querySelector('[data-slate-editor="true"]');
+                    if (elem && elem.offsetParent !== null) {
+                        return {found: true, type: 'slate-editor', selector: '[data-slate-editor="true"]'};
+                    }
+
                     return {found: false};
                 """)
                 if recheck.get('found'):
                     input_elem = recheck
                     print(f"✅ 활성화된 입력창 발견: {recheck.get('selector')}", flush=True)
+                    break
+                else:
+                    print("   ⚠️ 활성화 후 입력창을 찾지 못함, 계속 검색...", flush=True)
+                    # selector가 없으면 계속 검색
+                    input_elem = None
+                    continue
             break
 
         if i % 5 == 0 and i > 0:
@@ -567,11 +587,30 @@ def generate_image_with_imagefx(driver, prompt, format_type='shortform'):
             }));
             const largeImgs = imgs.filter(img => img.offsetWidth > 200 && img.offsetHeight > 200);
             const text = document.body.innerText;
+
+            // 오류 메시지 감지
+            const errorMessages = [
+                '여기에 표시할 정보가 없습니다',
+                'No information to display',
+                'Something went wrong',
+                'Try again',
+                'Sign in',
+                '로그인',
+                'quota',
+                'limit exceeded',
+                'not available',
+                'Error'
+            ];
+            const hasError = errorMessages.some(msg => text.includes(msg));
+            const errorText = hasError ? text.substring(0, 200) : '';
+
             return {
                 hasLargeImage: largeImgs.length > 0,
                 largeCount: largeImgs.length,
                 totalCount: imgs.length,
                 generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading'),
+                hasError: hasError,
+                errorText: errorText,
                 sampleImages: allImgs.slice(0, 3)
             };
         """)
@@ -580,6 +619,20 @@ def generate_image_with_imagefx(driver, prompt, format_type='shortform'):
             print(f"✅ 이미지 생성 완료! ({i+1}초) - 큰 이미지 {result['largeCount']}개 발견", flush=True)
             image_generated = True
             break
+
+        # 오류 감지 - 15초 이상 대기 후 오류 메시지가 있으면 즉시 실패
+        if i > 15 and result.get('hasError'):
+            print(f"❌ ImageFX 오류 감지!", flush=True)
+            print(f"   오류 내용: {result.get('errorText')}", flush=True)
+            # 스크린샷
+            try:
+                import tempfile
+                error_screenshot = os.path.join(tempfile.gettempdir(), 'imagefx_error.png')
+                driver.save_screenshot(error_screenshot)
+                print(f"📸 오류 스크린샷: {error_screenshot}", flush=True)
+            except:
+                pass
+            raise Exception(f"❌ ImageFX 오류: {result.get('errorText')[:100]}")
 
         if i % 15 == 0 and i > 0:
             print(f"   대기 중... ({i}초) - 큰 이미지: {result['largeCount']}개, 전체: {result['totalCount']}개, 생성 중: {result['generating']}", flush=True)
