@@ -807,48 +807,91 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
         print("⏎ 엔터 입력 완료", flush=True)
         time.sleep(1)
 
-        # 생성 버튼 찾아서 클릭 (여러 가능한 텍스트/selector 시도)
-        generate_button_found = False
-        button_texts = ['Generate', 'Create', '생성', 'Remix', 'Go']
-        button_selectors = [
-            'button[type="submit"]',
-            'button[aria-label*="generate"]',
-            'button[aria-label*="create"]',
-            'button:has-text("Generate")',
-            '.generate-button',
-            '[data-test-id="generate-button"]'
-        ]
+        # 생성 버튼 찾아서 클릭 (JavaScript로 다양한 방법 시도)
+        print("🔍 생성 버튼 찾는 중...", flush=True)
+        generate_button_found = driver.execute_script("""
+            // 방법 1: 화살표 아이콘 버튼 찾기 (→, arrow_forward)
+            let buttons = Array.from(document.querySelectorAll('button'));
 
-        # 텍스트로 버튼 찾기
-        for text in button_texts:
-            try:
-                buttons = driver.find_elements(By.XPATH, f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{text.lower()}')]")
-                for btn in buttons:
-                    if btn.is_displayed() and btn.is_enabled():
-                        btn.click()
-                        print(f"✅ '{text}' 버튼 클릭 완료", flush=True)
-                        generate_button_found = True
-                        break
-                if generate_button_found:
-                    break
-            except:
-                continue
+            // 1-1. arrow_forward 텍스트가 있는 버튼
+            let arrowBtn = buttons.find(btn => {
+                const text = btn.textContent || '';
+                return text.includes('arrow_forward') ||
+                       text.includes('→') ||
+                       text.includes('chevron_right') ||
+                       text.includes('east');
+            });
 
-        # selector로 버튼 찾기 (텍스트로 못 찾았을 경우)
-        if not generate_button_found:
-            for selector in button_selectors:
-                try:
-                    btn = driver.find_element(By.CSS_SELECTOR, selector)
-                    if btn.is_displayed() and btn.is_enabled():
-                        btn.click()
-                        print(f"✅ 생성 버튼 클릭 완료 ({selector})", flush=True)
-                        generate_button_found = True
-                        break
-                except:
-                    continue
+            if (arrowBtn && arrowBtn.offsetParent !== null) {
+                arrowBtn.click();
+                return {success: true, method: 'arrow-icon'};
+            }
 
-        if not generate_button_found:
-            print("⚠️ 생성 버튼을 찾지 못함 - 엔터로 처리됨", flush=True)
+            // 1-2. SVG 화살표 아이콘이 있는 버튼
+            arrowBtn = buttons.find(btn => {
+                const svg = btn.querySelector('svg');
+                if (!svg) return false;
+                const path = svg.querySelector('path');
+                if (!path) return false;
+                const d = path.getAttribute('d') || '';
+                // 화살표 SVG path 패턴 (M12 4l-1.41 1.41L16.17 11H4v2h12.17...)
+                return d.includes('M12') || d.includes('M10') || d.includes('arrow');
+            });
+
+            if (arrowBtn && arrowBtn.offsetParent !== null) {
+                arrowBtn.click();
+                return {success: true, method: 'arrow-svg'};
+            }
+
+            // 방법 2: Remix, Generate 등의 텍스트 버튼
+            const textButtons = ['Remix', 'Generate', 'Create', '생성', 'Go', 'remix'];
+            for (const text of textButtons) {
+                const btn = buttons.find(b => {
+                    const btnText = b.textContent.toLowerCase();
+                    return btnText.includes(text.toLowerCase());
+                });
+                if (btn && btn.offsetParent !== null) {
+                    btn.click();
+                    return {success: true, method: 'text-' + text};
+                }
+            }
+
+            // 방법 3: submit 타입 버튼
+            const submitBtn = buttons.find(btn => btn.type === 'submit' && btn.offsetParent !== null);
+            if (submitBtn) {
+                submitBtn.click();
+                return {success: true, method: 'submit'};
+            }
+
+            // 방법 4: 가장 오른쪽에 있는 큰 버튼 (보통 생성 버튼이 오른쪽에 위치)
+            const visibleButtons = buttons.filter(btn => {
+                if (btn.offsetParent === null) return false;
+                if (btn.offsetWidth < 30 || btn.offsetHeight < 30) return false;
+                return true;
+            });
+
+            if (visibleButtons.length > 0) {
+                // x 좌표가 가장 큰 (오른쪽) 버튼 찾기
+                visibleButtons.sort((a, b) => {
+                    const rectA = a.getBoundingClientRect();
+                    const rectB = b.getBoundingClientRect();
+                    return rectB.right - rectA.right;
+                });
+
+                const rightmostBtn = visibleButtons[0];
+                rightmostBtn.click();
+                return {success: true, method: 'rightmost-button'};
+            }
+
+            return {success: false};
+        """)
+
+        if generate_button_found.get('success'):
+            print(f"✅ 생성 버튼 클릭 완료 ({generate_button_found.get('method')})", flush=True)
+            time.sleep(2)
+        else:
+            print("⚠️ 생성 버튼을 찾지 못했습니다", flush=True)
+
 
         return True
 
@@ -1002,35 +1045,67 @@ def main(scenes_json_file, use_imagefx=False):
         except Exception as e:
             print(f"⚠️ 스크린샷 저장 실패: {e}", flush=True)
 
+        # 최소 10초는 기다리기 (Whisk 이미지 생성 시간)
+        min_wait = 10
         for i in range(120):
             result = driver.execute_script("""
                 const text = document.body.innerText;
                 const imgs = Array.from(document.querySelectorAll('img'));
-                const largeImgs = imgs.filter(img => img.offsetWidth > 100 && img.offsetHeight > 100);
+
+                // 실제 생성된 이미지만 감지 (200x200 이상, blob나 http URL)
+                const largeImgs = imgs.filter(img => {
+                    if (img.offsetWidth < 200 || img.offsetHeight < 200) return false;
+                    const src = img.src || '';
+                    // data: URL 제외 (아이콘 등)
+                    if (src.startsWith('data:')) return false;
+                    // blob, http, https만 허용
+                    if (!src.startsWith('http') && !src.startsWith('blob:')) return false;
+                    return true;
+                });
+
                 const allImgs = imgs.map(img => ({
                     src: img.src.substring(0, 50),
                     width: img.offsetWidth,
                     height: img.offsetHeight
                 }));
+
                 return {
-                    generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading'),
+                    generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading') || text.includes('Remix'),
                     imageCount: largeImgs.length,
                     allImagesCount: imgs.length,
-                    sampleImages: allImgs.slice(0, 3)
+                    sampleImages: allImgs.slice(0, 5),
+                    largeImageDetails: largeImgs.map(img => ({
+                        src: img.src.substring(0, 50),
+                        width: img.offsetWidth,
+                        height: img.offsetHeight
+                    }))
                 };
             """)
 
-            if not result['generating'] and result['imageCount'] > 0:
-                print(f"✅ 생성 완료! ({i+1}초) - 이미지 {result['imageCount']}개 발견", flush=True)
+            # 최소 대기 시간 체크
+            if i < min_wait:
+                if i % 5 == 0:
+                    print(f"   초기 대기 중... ({i}초)", flush=True)
+                time.sleep(1)
+                continue
+
+            # 생성 완료 조건: 생성 중 아니고 + 씬 개수만큼 이미지가 있음
+            expected_count = len(scenes)
+            if not result['generating'] and result['imageCount'] >= expected_count:
+                print(f"✅ 생성 완료! ({i+1}초) - 이미지 {result['imageCount']}개 발견 (예상: {expected_count}개)", flush=True)
+                if result['largeImageDetails']:
+                    for idx, img in enumerate(result['largeImageDetails'][:3]):
+                        print(f"   [{idx+1}] {img['width']}x{img['height']} - {img['src']}...", flush=True)
                 break
 
-            if i % 10 == 0 and i > 0:
-                print(f"   대기 중... ({i}초) - 큰 이미지: {result['imageCount']}개, 전체: {result['allImagesCount']}개", flush=True)
-                if i == 10 and result['allImagesCount'] > 0:
-                    print(f"   샘플 이미지: {result['sampleImages']}", flush=True)
+            if i % 10 == 0 and i >= min_wait:
+                print(f"   대기 중... ({i}초) - 큰 이미지: {result['imageCount']}/{expected_count}개, 전체: {result['allImagesCount']}개", flush=True)
+                if result['largeImageDetails']:
+                    print(f"   큰 이미지: {result['largeImageDetails']}", flush=True)
             time.sleep(1)
 
-        time.sleep(5)
+        # 대기 시간 후에도 이미지 확인
+        time.sleep(3)
 
         # === 이미지 다운로드 ===
         print("\n" + "="*80, flush=True)
@@ -1072,9 +1147,25 @@ def main(scenes_json_file, use_imagefx=False):
 
         print(f"🔍 발견된 이미지: {len(images)}개", flush=True)
 
+        # 이미지가 없으면 디버그 정보 출력
+        if len(images) == 0:
+            print("⚠️ 이미지를 찾을 수 없습니다. 모든 이미지 확인 중...", flush=True)
+            all_imgs_debug = driver.execute_script("""
+                const imgs = Array.from(document.querySelectorAll('img'));
+                return imgs.map(img => ({
+                    src: img.src.substring(0, 80),
+                    width: img.offsetWidth,
+                    height: img.offsetHeight,
+                    visible: img.offsetParent !== null
+                }));
+            """)
+            for idx, img in enumerate(all_imgs_debug[:10]):
+                print(f"   [디버그 {idx+1}] {img['width']}x{img['height']} visible:{img['visible']} - {img['src']}", flush=True)
+
         # 디버그: 이미지 정보 출력
         for idx, img in enumerate(images[:5]):  # 최대 5개만 출력
-            print(f"   [{idx+1}] {img['width']}x{img['height']} - {img['src'][:80]}...", flush=True)
+            blob_str = " (blob)" if img.get('isBlob') else ""
+            print(f"   [{idx+1}] {img['width']}x{img['height']}{blob_str} - {img['src'][:80]}...", flush=True)
 
         import requests
         import base64
