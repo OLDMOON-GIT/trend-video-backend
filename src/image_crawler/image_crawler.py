@@ -795,67 +795,91 @@ def upload_image_to_whisk(driver, image_path):
 
     if subject_clicked.get('success'):
         print(f"✅ 피사체 영역 클릭: {subject_clicked.get('method')}", flush=True)
-        time.sleep(3)  # 클릭 후 file input이 나타날 시간 확보
     else:
-        print("⚠️ 피사체 영역을 찾지 못함, 직접 file input 검색", flush=True)
+        print("⚠️ 피사체 영역을 찾지 못함", flush=True)
 
-    # 방법 2: 페이지의 file input 찾아서 파일 할당
+    # 클릭 후 충분한 대기 시간
+    time.sleep(2)
+
+    # 방법 2: file input 찾기 (최대 10초 대기)
     print("🔍 file input 찾는 중...", flush=True)
 
-    # 클릭 후 file input이 나타날 때까지 대기
     file_input = None
-    for attempt in range(5):
-        file_input_found = driver.execute_script("""
-            const inputs = document.querySelectorAll('input[type="file"]');
-            return {
-                count: inputs.length,
-                visible: Array.from(inputs).filter(i => i.offsetParent !== null).length
-            };
-        """)
+    for attempt in range(10):
+        try:
+            # 모든 file input 찾기
+            file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
 
-        print(f"   시도 {attempt + 1}: file input {file_input_found['count']}개 (보이는 것: {file_input_found['visible']}개)", flush=True)
-
-        if file_input_found['count'] > 0:
-            try:
-                file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
-                print("✅ file input 발견", flush=True)
+            if file_inputs:
+                # 가장 최근에 추가된 것 사용
+                file_input = file_inputs[-1]
+                print(f"✅ file input 발견 (시도 {attempt + 1}): 총 {len(file_inputs)}개", flush=True)
                 break
-            except:
-                pass
+        except:
+            pass
 
-        if attempt < 4:
+        if attempt < 9:
             time.sleep(1)
 
-    # file input을 못 찾으면 생성
+    # file input을 못 찾으면 직접 JavaScript로 찾고 트리거
     if not file_input:
-        print("⚠️ file input을 찾지 못함, 새로 생성", flush=True)
-        driver.execute_script("""
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.id = 'auto-upload-input';
-            input.accept = 'image/*';
-            input.style.position = 'fixed';
-            input.style.top = '0';
-            input.style.left = '0';
-            input.style.opacity = '0';
-            input.style.width = '1px';
-            input.style.height = '1px';
-            document.body.appendChild(input);
-        """)
-        time.sleep(0.5)
-        file_input = driver.find_element(By.ID, 'auto-upload-input')
-        print("✅ file input 생성 완료", flush=True)
+        print("⚠️ file input을 찾지 못함, JavaScript로 직접 처리", flush=True)
+
+        # 파일 경로를 JavaScript로 전달하여 직접 처리
+        upload_result = driver.execute_script("""
+            const filePath = arguments[0];
+
+            // 1. 기존 file input 찾기
+            let fileInput = document.querySelector('input[type="file"]');
+
+            // 2. 없으면 생성
+            if (!fileInput) {
+                fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.style.position = 'fixed';
+                fileInput.style.top = '0';
+                fileInput.style.left = '0';
+                fileInput.style.opacity = '0.01';  // 완전히 투명하면 안 됨
+                fileInput.style.width = '10px';
+                fileInput.style.height = '10px';
+                fileInput.style.zIndex = '99999';
+                document.body.appendChild(fileInput);
+            }
+
+            return {
+                found: !!fileInput,
+                visible: fileInput.offsetParent !== null,
+                id: fileInput.id || 'no-id'
+            };
+        """, abs_path)
+
+        print(f"   JavaScript 결과: {upload_result}", flush=True)
+
+        # 다시 file input 찾기
+        try:
+            file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
+            print("✅ JavaScript로 file input 생성/발견", flush=True)
+        except Exception as e:
+            print(f"❌ file input을 찾을 수 없음: {e}", flush=True)
+            raise Exception("file input을 찾거나 생성할 수 없습니다")
 
     # 파일 할당
     print(f"📤 파일 할당 중: {abs_path}", flush=True)
-    file_input.send_keys(abs_path)
-    time.sleep(1)
-    print("✅ 파일 할당 완료", flush=True)
+    try:
+        file_input.send_keys(abs_path)
+        time.sleep(2)
+        print("✅ 파일 할당 완료", flush=True)
+    except Exception as e:
+        print(f"❌ 파일 할당 실패: {e}", flush=True)
+        raise
 
-    # change 이벤트 발생
+    # change 이벤트 발생 및 확인
     driver.execute_script("""
         const inputs = document.querySelectorAll('input[type="file"]');
-        inputs.forEach(input => {
+        console.log('File inputs found:', inputs.length);
+        inputs.forEach((input, idx) => {
+            console.log(`Input ${idx}:`, input.files?.length || 0, 'files');
             input.dispatchEvent(new Event('change', { bubbles: true }));
             input.dispatchEvent(new Event('input', { bubbles: true }));
         });
