@@ -1017,7 +1017,17 @@ def main(scenes_json_file, use_imagefx=False):
     # JSON 파일 읽기
     try:
         with open(scenes_json_file, 'r', encoding='utf-8') as f:
-            scenes = json.load(f)
+            data = json.load(f)
+
+        # scenes가 배열이면 그대로, 객체면 scenes 키에서 추출
+        if isinstance(data, list):
+            scenes = data
+        elif isinstance(data, dict) and 'scenes' in data:
+            scenes = data['scenes']
+        else:
+            print(f"❌ JSON 형식 오류: scenes 배열을 찾을 수 없습니다", flush=True)
+            print(f"   JSON 키들: {list(data.keys()) if isinstance(data, dict) else 'list'}", flush=True)
+            return 1
     except Exception as e:
         print(f"❌ JSON 파일 읽기 실패: {e}", flush=True)
         return 1
