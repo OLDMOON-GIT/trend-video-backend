@@ -906,24 +906,34 @@ def upload_image_to_whisk(driver, image_path):
         upload_button_clicked = driver.execute_script("""
             // "이미지 업로드" 레이블이 있는 버튼 찾기 (페이지 전체)
             const allButtons = Array.from(document.querySelectorAll('button'));
-            console.log('[Whisk] Total buttons:', allButtons.length);
 
-            // 모든 버튼의 텍스트 로깅
-            const buttonTexts = allButtons.slice(0, 20).map(b => b.textContent?.trim().substring(0, 50));
-            console.log('[Whisk] Button texts:', buttonTexts);
+            // 모든 버튼의 텍스트 수집
+            const buttonTexts = allButtons.slice(0, 20).map(b => ({
+                text: b.textContent?.trim() || '',
+                html: b.innerHTML.substring(0, 100)
+            }));
 
             const uploadButton = allButtons.find(btn => {
                 const text = (btn.textContent || '').toLowerCase();
-                return text.includes('이미지') && text.includes('업로드');
+                const html = (btn.innerHTML || '').toLowerCase();
+                // 다양한 키워드로 검색
+                return (text.includes('이미지') && text.includes('업로드')) ||
+                       (text.includes('upload') && text.includes('image')) ||
+                       html.includes('이미지 업로드') ||
+                       html.includes('upload image');
             });
 
             if (uploadButton) {
                 const rect = uploadButton.getBoundingClientRect();
                 uploadButton.click();
-                console.log('[Whisk] Clicked upload button:', uploadButton.textContent);
-                return {clicked: true, text: uploadButton.textContent, rect: {top: rect.top, left: rect.left}};
+                return {
+                    clicked: true,
+                    text: uploadButton.textContent,
+                    rect: {top: rect.top, left: rect.left},
+                    buttonTexts: buttonTexts
+                };
             }
-            return {clicked: false, totalButtons: allButtons.length};
+            return {clicked: false, totalButtons: allButtons.length, buttonTexts: buttonTexts};
         """)
 
         if upload_button_clicked.get('clicked'):
@@ -932,6 +942,10 @@ def upload_image_to_whisk(driver, image_path):
             time.sleep(2)  # 버튼 클릭 후 file input 생성 대기
         else:
             print(f"   ⚠️ '이미지 업로드' 버튼을 찾지 못함 (총 버튼: {upload_button_clicked.get('totalButtons', 0)}개)", flush=True)
+            # 처음 5개 버튼 텍스트 출력
+            button_texts = upload_button_clicked.get('buttonTexts', [])[:5]
+            for idx, btn_info in enumerate(button_texts):
+                print(f"      버튼 {idx+1}: {btn_info.get('text', '')[:40]}", flush=True)
     else:
         print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
         # 디버그: 왼쪽 사이드바 구조 출력
