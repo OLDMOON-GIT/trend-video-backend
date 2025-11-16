@@ -312,27 +312,41 @@ def generate_image_with_imagefx(driver, prompt):
             const selector = arguments[0];
             const newText = arguments[1];
             const elem = document.querySelector(selector);
-            if (elem) {
-                elem.scrollIntoView({behavior: 'instant', block: 'center'});
-                elem.click();
-                elem.focus();
+            if (!elem) return false;
 
-                // 기존 내용 전체 선택 및 삭제
-                if (elem.contentEditable === 'true') {
-                    elem.innerHTML = '';
-                    elem.textContent = newText;
-                } else if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
-                    elem.value = newText;
-                } else {
-                    elem.textContent = newText;
-                }
+            elem.scrollIntoView({behavior: 'instant', block: 'center'});
+            elem.click();
+            elem.focus();
+
+            // 기존 내용 전체 선택 및 삭제
+            if (elem.contentEditable === 'true') {
+                // 방법 1: Selection API로 전체 선택 후 삭제
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(elem);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                // 전체 삭제
+                document.execCommand('delete', false, null);
+
+                // 새 텍스트 입력
+                document.execCommand('insertText', false, newText);
 
                 // 이벤트 발생
                 elem.dispatchEvent(new Event('input', { bubbles: true }));
                 elem.dispatchEvent(new Event('change', { bubbles: true }));
+                elem.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                elem.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
 
                 return true;
+            } else if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
+                elem.value = newText;
+                elem.dispatchEvent(new Event('input', { bubbles: true }));
+                elem.dispatchEvent(new Event('change', { bubbles: true }));
+                return true;
             }
+
             return false;
         """, selector, prompt)
 
