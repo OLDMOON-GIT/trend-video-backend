@@ -905,8 +905,61 @@ def upload_image_to_whisk(driver, image_path):
         time.sleep(2)
         print("⏳ UI 업데이트 대기 완료", flush=True)
 
-        # 추가: "이미지 업로드" 요소 찾기 (모든 요소 대상)
-        print("🔘 '이미지 업로드' 요소 찾기...", flush=True)
+        # 직접 file input 찾기 (display:none, visibility:hidden, opacity:0 등 모두 포함)
+        print("🔍 file input 직접 검색 (모든 스타일 포함)...", flush=True)
+        file_input_found = driver.execute_script("""
+            // 모든 file input 찾기 (숨겨진 것 포함)
+            const allFileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
+            console.log('[FileInput] Total file inputs found:', allFileInputs.length);
+
+            if (allFileInputs.length > 0) {
+                // 첫 번째 file input을 visible하게 만들고 반환
+                const fileInput = allFileInputs[0];
+
+                // 강제로 visible하게 만들기
+                fileInput.style.cssText = 'position: absolute; left: 0; top: 0; width: 200px; height: 50px; opacity: 1; visibility: visible; clip: auto; clip-path: none;';
+                fileInput.removeAttribute('tabindex');
+
+                console.log('[FileInput] Made file input visible');
+                console.log('[FileInput] Accept:', fileInput.accept);
+                console.log('[FileInput] Multiple:', fileInput.multiple);
+
+                return {
+                    found: true,
+                    accept: fileInput.accept,
+                    multiple: fileInput.multiple,
+                    selector: 'input[type="file"]'
+                };
+            }
+
+            return {found: false, count: allFileInputs.length};
+        """)
+
+        if file_input_found.get('found'):
+            print(f"   ✅ file input 발견 및 visible 처리 완료", flush=True)
+            print(f"      accept: {file_input_found.get('accept')}", flush=True)
+            print(f"      multiple: {file_input_found.get('multiple')}", flush=True)
+
+            # file input에 파일 경로 전송
+            try:
+                file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
+                if file_inputs:
+                    file_inputs[0].send_keys(abs_image_path)
+                    print(f"   ✅ 파일 업로드 완료: {image_path}", flush=True)
+                    time.sleep(3)  # 업로드 처리 대기
+
+                    # Whisk로 이동하여 나머지 프로세스 계속
+                    print("✅ 피사체 이미지 업로드 성공!", flush=True)
+                    return  # 업로드 성공, 함수 종료
+                else:
+                    print("   ⚠️ file input을 다시 찾을 수 없음", flush=True)
+            except Exception as e:
+                print(f"   ❌ 파일 전송 실패: {e}", flush=True)
+        else:
+            print(f"   ⚠️ file input을 찾지 못함 (총: {file_input_found.get('count', 0)}개)", flush=True)
+
+        # file input 직접 찾기 실패시 기존 버튼 찾기 로직 계속
+        print("🔘 '이미지 업로드' 버튼 검색으로 전환...", flush=True)
         upload_button_clicked = driver.execute_script("""
             // 1. 모든 요소에서 "이미지 업로드" 텍스트 찾기
             const allElements = Array.from(document.querySelectorAll('*'));
