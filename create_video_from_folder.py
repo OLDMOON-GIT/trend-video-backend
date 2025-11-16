@@ -1306,16 +1306,15 @@ Return ONLY the refined prompt without any explanation or additional text."""
         cleaned = re.sub(r'\[.*?interrupted.*?\]', '', cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(r'\[.*?error.*?\]', '', cleaned, flags=re.IGNORECASE)
 
-        # Remove markdown formatting
+        # Remove markdown formatting symbols (한글 "별표"는 유지됨)
         cleaned = cleaned.replace('```', '')  # 코드블록
-        cleaned = re.sub(r'\*\*([^*]+)\*\*', r'\1', cleaned)  # **볼드**
-        cleaned = re.sub(r'__([^_]+)__', r'\1', cleaned)  # __볼드__
-        cleaned = re.sub(r'\*([^*]+)\*', r'\1', cleaned)  # *이탤릭*
-        cleaned = re.sub(r'_([^_]+)_', r'\1', cleaned)  # _이탤릭_
-        cleaned = re.sub(r'`([^`]+)`', r'\1', cleaned)  # `코드`
+        cleaned = cleaned.replace('**', '')  # 볼드 기호
+        cleaned = cleaned.replace('__', '')  # 볼드 기호
+        cleaned = cleaned.replace('*', '')  # 이탤릭 기호
+        cleaned = cleaned.replace('`', '')  # 코드 기호
         cleaned = re.sub(r'^#+\s+', '', cleaned, flags=re.MULTILINE)  # # 헤딩
         cleaned = re.sub(r'^>\s+', '', cleaned, flags=re.MULTILINE)  # > 인용
-        cleaned = re.sub(r'^\s*[-*]\s+', '', cleaned, flags=re.MULTILINE)  # - 리스트
+        cleaned = re.sub(r'^\s*[-]\s+', '', cleaned, flags=re.MULTILINE)  # - 리스트 (별표는 위에서 제거됨)
         cleaned = re.sub(r'^\s*\d+\.\s+', '', cleaned, flags=re.MULTILINE)  # 1. 리스트
 
         # Fix quotes
