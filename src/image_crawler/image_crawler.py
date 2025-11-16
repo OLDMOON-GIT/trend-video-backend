@@ -138,7 +138,19 @@ def generate_image_with_imagefx(driver, prompt):
             print(f"✅ 로드 완료 ({i+1}초)", flush=True)
             break
         time.sleep(1)
-    time.sleep(5)
+    time.sleep(3)
+
+    # 페이지 새로고침으로 예시 프롬프트 제거
+    print("🔄 페이지 새로고침 (예시 프롬프트 제거)", flush=True)
+    driver.refresh()
+    time.sleep(3)
+
+    # 새로고침 후 로드 대기
+    for i in range(10):
+        if driver.execute_script("return document.readyState") == "complete":
+            break
+        time.sleep(1)
+    time.sleep(2)
 
     # 디버그: 페이지 상태 상세 확인
     page_info = driver.execute_script("""
@@ -319,28 +331,41 @@ def generate_image_with_imagefx(driver, prompt):
 
                 // 기존 내용 전체 선택 및 삭제
                 if (elem.contentEditable === 'true') {
-                    // Slate 에디터 완전 초기화
+                    // 1단계: 모든 자식 노드 제거
+                    while (elem.firstChild) {
+                        elem.removeChild(elem.firstChild);
+                    }
+
+                    // 2단계: innerHTML과 textContent 초기화
                     elem.innerHTML = '';
                     elem.textContent = '';
+                    elem.innerText = '';
 
-                    // Selection API로 전체 선택 후 삭제
+                    // 3단계: Selection API로 전체 선택 후 삭제
                     const selection = window.getSelection();
+                    selection.removeAllRanges();
                     const range = document.createRange();
                     range.selectNodeContents(elem);
-                    selection.removeAllRanges();
                     selection.addRange(range);
                     document.execCommand('delete', false, null);
 
-                    // 확실하게 비우기
+                    // 4단계: 다시 한번 완전히 비우기
+                    while (elem.firstChild) {
+                        elem.removeChild(elem.firstChild);
+                    }
                     elem.innerHTML = '';
                     elem.textContent = '';
 
-                    // 새 텍스트 입력 (execCommand 사용)
+                    // 5단계: 포커스 다시 설정
+                    elem.focus();
+
+                    // 6단계: 새 텍스트 입력 (execCommand 사용)
                     document.execCommand('insertText', false, newText);
 
-                    // 만약 비어있으면 직접 설정
-                    if (!elem.textContent || elem.textContent.length === 0) {
-                        elem.textContent = newText;
+                    // 7단계: 만약 여전히 비어있으면 직접 텍스트 노드 생성
+                    if (!elem.textContent || elem.textContent.trim().length === 0) {
+                        const textNode = document.createTextNode(newText);
+                        elem.appendChild(textNode);
                     }
                 } else if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
                     elem.value = '';
