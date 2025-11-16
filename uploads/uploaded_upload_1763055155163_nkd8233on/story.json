@@ -1,0 +1,66 @@
+{
+  "title": "소일거리로 주차장관리하신다던 장인어른 용돈드리러 갔다가 뺨 맞는 걸 본 순간...",
+  "version": "shortform-2.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 몰입 → 반전 → 중독성 여운",
+    "key_themes": [
+      "가족 배신",
+      "숨겨진 진실"
+    ],
+    "total_word_count": 200,
+    "estimated_duration_seconds": 30,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "7d15fc21-7d55-45ab-8757-a3aa27fe86e3"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 1초 안에 잡기",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of elderly Korean man's face with hand raised to slap, intense angry expression, harsh dramatic lighting from side, high contrast, centered subject, vibrant saturated colors, mobile-optimized, NO TEXT",
+      "narration": "소일거리로 주차장 관리한다던 장인어른... 알고보니 충격적인 비밀이 숨겨져 있었습니다",
+      "scene_number": 1
+    },
+    {
+      "scene_id": "scene_01_immersion",
+      "scene_name": "몰입 - 감정 이입",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, young Korean son-in-law holding envelope of money with respectful expression, parking lot background blurred, warm cinematic lighting, empathy-inducing composition, genuine concern in eyes, mobile-optimized, NO TEXT",
+      "narration": "매달 용돈 드리러 갔는데... 주차장에서 장인어른이 누군가의 뺨을 때리는 장면을 목격했습니다",
+      "scene_number": 2
+    },
+    {
+      "scene_id": "scene_02_wtf",
+      "scene_name": "반전 - WTF 순간",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, revelation moment, middle-aged Korean man in expensive suit being slapped by elderly man in parking lot, luxury car visible in background, bright focused lighting, shocking twist composition, clear facial expressions of both characters, NO TEXT",
+      "narration": "뺨 맞은 사람은... 바로 제 회사 사장님이었습니다. 알고보니 장인어른은 그 건물 주인이었습니다",
+      "scene_number": 3
+    },
+    {
+      "scene_id": "scene_03_addictive",
+      "scene_name": "중독성 마무리 - 여운",
+      "duration_seconds": 9,
+      "word_count": 50,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, shocked young Korean man's face with eyes wide open, hand covering mouth in disbelief, warm inspiring lighting, memorable impactful visual, addictive lingering mood, mobile-optimized, NO TEXT",
+      "narration": "소일거리가 아니었습니다... 월세만 수억씩 받으시는 건물주셨습니다. 제가 몰랐던 장인어른의 진짜 모습이었습니다",
+      "scene_number": 4
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 4,
+    "hook_effectiveness": "strong",
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "no_subscription_request": true,
+    "tone_appropriate": true
+  }
+}

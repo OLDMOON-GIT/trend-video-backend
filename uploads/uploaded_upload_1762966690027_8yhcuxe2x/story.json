@@ -1,0 +1,53 @@
+{
+  "version": "sora2-2.0-shortform-aligned",
+  "title": "시어머니가 본 충격적인 가족의 비밀",
+  "metadata": {
+    "genre": "가족 드라마",
+    "emotional_arc": "의심 → 갈등 → 진실 → 화해",
+    "duration_seconds": 180,
+    "converted_from": "longform-to-sora2",
+    "converted_at": "2025-11-12T08:50:58.546Z"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "sora_prompt": "Ultra-dramatic Korean family scene, intense closeup of elderly woman's shocked face, winter morning light cutting through window, asymmetric composition, cinematic tension, desaturated grey tones with crimson accent, freeze frame moment of pure emotional revelation",
+      "image_prompt": "Vertical 9:16 format, elderly woman 60s extreme closeup, horror in eyes, winter morning light, harsh shadows",
+      "narration": "며느리의 입덧, 아들의 차가운 눈빛, 시어머니의 충격적인 목격. 가족의 비밀이 폭발 직전이다.",
+      "duration_seconds": 5,
+      "scene_number": 1
+    },
+    {
+      "scene_id": "scene_01_main",
+      "sora_prompt": "Tense Korean family interior, afternoon sunlight dividing living room, mother-in-law watching son forcefully pulling pregnant daughter-in-law, cinematic composition with dramatic shadows, desaturated color palette with vibrant emotional highlights",
+      "image_prompt": "Vertical 9:16 format, Korean apartment living room, son grabbing pregnant wife's arm, mother-in-law watching in background, harsh winter light",
+      "narration": "6개월 임신한 며느리를 아들이 거칠게 끌고 나간다. 시어머니의 눈빛에 의심과 공포가 교차한다. 무슨 일이 벌어지고 있는 것일까.",
+      "duration_seconds": 17.5,
+      "scene_number": 2
+    },
+    {
+      "scene_id": "scene_02_flashback",
+      "sora_prompt": "Warm nostalgic Korean family scene, soft spring lighting, daughter-in-law holding traditional bojagi with crane embroidery, tender moment of family acceptance, cinematic depth of field",
+      "image_prompt": "Vertical 9:16 format, bojagi with crane embroidery, soft spring light, mother-in-law and daughter-in-law's hands touching fabric",
+      "narration": "3년 전, 따뜻했던 가족의 순간. 자수 든 보자기로 시작된 며느리와 시어머니의 관계. 그 시절은 너무나 평화로웠다.",
+      "duration_seconds": 17.5,
+      "scene_number": 3
+    },
+    {
+      "scene_id": "scene_03_truth",
+      "sora_prompt": "Korean Intense hospital consultation room, emotional confrontation between husband and pregnant wife, cinematic lighting revealing hidden tensions, split emotional landscape",
+      "image_prompt": "Vertical 9:16 format, hospital room, pregnant woman crying, husband looking devastated, harsh fluorescent light",
+      "narration": "병원에서 폭발하는 진실. 의심과 오해로 갈라진 부부, 그 아픔의 중심에 시어머니가 있다. 누구의 잘못일까.",
+      "duration_seconds": 17.5,
+      "scene_number": 4
+    },
+    {
+      "scene_id": "scene_04_resolution",
+      "sora_prompt": "Korean Cathartic family reconciliation scene, morning sunlight breaking through hospital window, tender embrace between husband and pregnant wife, emotional healing moment",
+      "image_prompt": "Vertical 9:16 format, husband and wife embracing, tears, soft morning light, hospital corridor",
+      "narration": "진실이 밝혀진 순간. 오해였던 바람 의혹, 아들의 용서, 며느리의 눈물. 가족의 회복이 시작된다.",
+      "duration_seconds": 17.5,
+      "scene_number": 5
+    }
+  ]
+}

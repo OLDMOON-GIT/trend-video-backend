@@ -1,0 +1,21 @@
+{
+  "title": "은행원 예비며느리, 은행에 손님으로 온 노숙자 차림 재벌회장이 자기 시아버지가 될 줄도 모르고… 노후사연 | 오디오북 | 반전사연 | 감동사연",
+  "version": "9.8",
+  "metadata": {
+    "genre": "시니어 사연드라마",
+    "target_audience": "50대 이상",
+    "emotional_arc": "충격 → 공감 → 카타르시스",
+    "key_themes": ["세대갈등", "계급", "편견", "진실", "성장"],
+    "symbolic_objects": ["명함", "거울", "찻잔"],
+    "total_word_count": 14350,
+    "estimated_tts_duration_seconds": 3800,
+    "recommended_shorts_edit": "60초 내 핵심 발췌"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_bomb",
+      "scene_name": "3초 폭탄 씬",
+      "duration_seconds": 3,
+      "word_count": 350,
+      "image_prompt": "Korean dramatic scene, young bank teller woman 20s horrified expression direct frontal eye contact looking directly at camera, positioned right frame, hand covering mouth shock gesture, facial close-up eyes facing forward, left space text, asymmetric composition, dramatic tension, sharp focus face hands, fluorescent banking lobby lighting strong contrast, desaturated grey blue + saturated red accents, freeze frame, NO TEXT",
+      "narration": "은행원 예비며느리가 노숙자 차림의 남자를 쫓아냈습니다. 보안요원까지 불렀습니다. 그 남자가 자기 시아버지가 될 재벌회장인 줄도 모르고. 약혼자는 현장을 다 봤습니다. 그의 아버지가 모욕당하는 순간을. 예비며느리는 웃으며 다른 고객을 응

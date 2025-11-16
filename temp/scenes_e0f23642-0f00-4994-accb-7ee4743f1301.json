@@ -1,0 +1,34 @@
+[
+  {
+    "scene_id": "scene_00_hook",
+    "scene_name": "훅 - 3초 상품 매력",
+    "duration_seconds": 3,
+    "word_count": 50,
+    "sora_prompt": "Vertical 9:16 format portrait cinematic product close shot with Korean hands in same room holding golden wrapped Ferrero Rocher product shimmering softly product texture emphasized same Korean person wearing casual beige sweater same location warm indoor lighting smooth rack focus premium detail rich color mood cinematic atmosphere",
+    "narration": "황금 포일이 반짝이는 페레로로쉐 한 입의 유혹 이 순간 마음을 사로잡는다 달콤함이 번진다 더해"
+  },
+  {
+    "scene_id": "scene_01_problem",
+    "scene_name": "문제/필요 - 9초 공감",
+    "duration_seconds": 9,
+    "word_count": 150,
+    "sora_prompt": "Vertical 9:16 format cinematic product context scene showing SAME KOREAN PERSON from previous scene in same room same beige sweater opening cupboard searching for small treat looking slightly tired East Asian features visible craving gentle sweetness product absent moment relatable lifestyle mood soft indoor lighting warm tones cinematic framing product focus maintained consistent character and location preserved",
+    "narration": "바쁜 하루 속 작은 휴식이 필요할 때 달콤함을 찾으려 해도 늘 부족하거나 금세 사라져 아쉬움을 느낀 순간이 있다 풍성하고 만족스러운 한 입을 편하게 즐기고 싶어도 늘 준비가 되어 있지 않아 망설이게 되는 일상적 고민이 마음을 무겁게 만든다"
+  },
+  {
+    "scene_id": "scene_02_solution",
+    "scene_name": "해결/기능 - 9초 설득",
+    "duration_seconds": 9,
+    "word_count": 150,
+    "sora_prompt": "Vertical 9:16 format cinematic product reveal SAME KOREAN PERSON continuing in same indoor room same beige sweater gently picking up Ferrero Rocher T3 pack golden spheres shining richly product texture emphasized hands turning pieces slowly East Asian features calm satisfied mood warm lighting highlighting chocolate layers cinematic softness premium product focus consistent location maintained",
+    "narration": "작고 고급스러운 황금 포장이 손끝에서 포근하게 전해지고 한 입 베어 물면 부드러운 초콜릿과 고소한 헤이즐넛이 어우러진 깊은 맛이 기분을 감싸며 포근한 휴식을 선사한다 여러 개로 구성된 세트는 필요할 때마다 부담 없이 즐길 수 있어 일상에 달콤한 여유를 더해준다"
+  },
+  {
+    "scene_id": "scene_03_cta",
+    "scene_name": "행동유도 - 9초 구매욕구",
+    "duration_seconds": 9,
+    "word_count": 150,
+    "sora_prompt": "Vertical 9:16 format cinematic emotional ending SAME KOREAN PERSON smiling softly in same room same beige sweater holding Ferrero Rocher pack gently East Asian facial features warm expression golden wrappers glowing under warm light product centered lifestyle harmony cinematic movement slow pull back showcasing comfort consistent environment maintained refined emotional close",
+    "narration": "부드럽게 퍼지는 달콤함이 하루의 긴장을 천천히 녹이며 기분 좋은 순간을 만들어 준다 더 풍성한 여유를 느끼고 싶다면 제품 페이지에서 자연스럽게 이어지는 이야기를 만날 수 있다 작은 휴식이 일상에 따스한 만족감을 더해 줄 수 있다"
+  }
+]

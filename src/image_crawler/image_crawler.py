@@ -376,55 +376,63 @@ def generate_image_with_imagefx(driver, prompt):
 
         time.sleep(1)
 
-        # 입력 확인 및 검증
-        verify = driver.execute_script("""
-            const selector = arguments[0];
-            const expectedText = arguments[1];
-            const elem = document.querySelector(selector);
-            if (elem) {
-                const content = elem.textContent || elem.innerText || elem.value || '';
-                const cleanContent = content.trim().replace(/\\s+/g, ' ');
-                const cleanExpected = expectedText.trim().replace(/\\s+/g, ' ');
+        # 입력 확인 및 검증 (최대 3회 재시도)
+        verification_success = False
+        for retry in range(3):
+            verify = driver.execute_script("""
+                const selector = arguments[0];
+                const expectedText = arguments[1];
+                const elem = document.querySelector(selector);
+                if (elem) {
+                    const content = elem.textContent || elem.innerText || elem.value || '';
+                    const cleanContent = content.trim().replace(/\\s+/g, ' ');
+                    const cleanExpected = expectedText.trim().replace(/\\s+/g, ' ');
 
-                return {
-                    length: content.length,
-                    preview: content.substring(0, 80),
-                    fullText: content,
-                    matches: cleanContent.includes(cleanExpected.substring(0, 30))
-                };
-            }
-            return {length: 0, preview: '', fullText: '', matches: false};
-        """, input_elem.get('selector'), prompt)
+                    return {
+                        length: content.length,
+                        preview: content.substring(0, 80),
+                        fullText: content,
+                        matches: cleanContent.includes(cleanExpected.substring(0, 30))
+                    };
+                }
+                return {length: 0, preview: '', fullText: '', matches: false};
+            """, input_elem.get('selector'), prompt)
 
-        if verify.get('matches'):
-            print(f"✅ 입력 검증 성공: {verify.get('length')}자 - {verify.get('preview')}...", flush=True)
-        else:
-            print(f"⚠️ 입력 검증 실패 - 예상과 다른 내용:", flush=True)
-            print(f"   기대: {prompt[:50]}...", flush=True)
-            print(f"   실제: {verify.get('preview')}...", flush=True)
+            if verify.get('matches'):
+                print(f"✅ 입력 검증 성공: {verify.get('length')}자 - {verify.get('preview')}...", flush=True)
+                verification_success = True
+                break
+            else:
+                print(f"⚠️ 입력 검증 실패 (시도 {retry + 1}/3) - 예상과 다른 내용:", flush=True)
+                print(f"   기대: {prompt[:50]}...", flush=True)
+                print(f"   실제: {verify.get('preview')}...", flush=True)
 
-            # ActionChains로 재시도
-            print(f"⚠️ ActionChains로 재입력 시도...", flush=True)
-            try:
-                elem = driver.find_element(By.CSS_SELECTOR, input_elem.get('selector'))
-                elem.click()
-                time.sleep(0.5)
+                if retry < 2:  # 마지막 시도가 아니면 재입력
+                    print(f"⚠️ ActionChains로 재입력 시도 {retry + 1}...", flush=True)
+                    try:
+                        elem = driver.find_element(By.CSS_SELECTOR, input_elem.get('selector'))
+                        elem.click()
+                        time.sleep(0.5)
 
-                # Ctrl+A로 전체 선택 후 삭제
-                actions = ActionChains(driver)
-                actions.key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
-                time.sleep(0.2)
-                actions = ActionChains(driver)
-                actions.send_keys(Keys.DELETE).perform()
-                time.sleep(0.2)
+                        # Ctrl+A로 전체 선택 후 삭제
+                        actions = ActionChains(driver)
+                        actions.key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
+                        time.sleep(0.3)
+                        actions = ActionChains(driver)
+                        actions.send_keys(Keys.DELETE).perform()
+                        time.sleep(0.3)
 
-                # 새 내용 입력
-                actions = ActionChains(driver)
-                actions.send_keys(prompt).perform()
-                print(f"✅ ActionChains로 재입력 완료", flush=True)
-                time.sleep(1)
-            except Exception as e:
-                print(f"⚠️ ActionChains 재시도 실패: {e}", flush=True)
+                        # 새 내용 입력
+                        actions = ActionChains(driver)
+                        actions.send_keys(prompt).perform()
+                        print(f"✅ ActionChains로 재입력 완료", flush=True)
+                        time.sleep(1.5)
+                    except Exception as e:
+                        print(f"⚠️ ActionChains 재시도 실패: {e}", flush=True)
+
+        # 검증 실패 시 예외 발생
+        if not verification_success:
+            raise Exception(f"❌ 프롬프트 입력 검증 실패 - 3회 시도 후에도 올바른 내용이 입력되지 않았습니다.\n기대: {prompt[:100]}\n실제: {verify.get('preview')}")
 
         # 입력창 옆 생성 버튼 찾아서 클릭
         print("🔍 생성 버튼 찾는 중...", flush=True)
@@ -688,44 +696,58 @@ def upload_image_to_whisk(driver, image_path):
     # 방법 1: 왼쪽 첫 번째 피사체 영역 찾아서 클릭
     print("🔍 피사체 영역 찾는 중...", flush=True)
     subject_clicked = driver.execute_script("""
-        // 왼쪽 사이드바의 버튼들 찾기
+        // 모든 요소 검색
+        const allElements = Array.from(document.querySelectorAll('*'));
         const buttons = Array.from(document.querySelectorAll('button'));
 
-        // 방법 1: person 아이콘이 있는 버튼 찾기
+        // 방법 1: "피사체" 텍스트가 있는 요소 찾기 (한글)
+        let subjectElement = allElements.find(el => {
+            const text = el.textContent || '';
+            return text.includes('피사체') && el.offsetParent !== null;
+        });
+
+        if (subjectElement) {
+            // 피사체 요소 내부의 클릭 가능한 요소 찾기
+            const clickable = subjectElement.querySelector('button') ||
+                             subjectElement.querySelector('[role="button"]') ||
+                             subjectElement;
+            clickable.click();
+            return {success: true, method: 'korean-text-피사체'};
+        }
+
+        // 방법 2: person 아이콘이 있는 버튼 찾기
         let subjectBtn = buttons.find(btn => {
             const text = btn.textContent || '';
             const html = btn.innerHTML || '';
-            // person, account_circle, face 등의 아이콘 텍스트
             return text.includes('person') ||
                    text.includes('account') ||
                    html.includes('person') ||
                    html.includes('M12 12c2.21');  // person icon SVG path
         });
 
-        // 방법 2: 첫 번째 점선 테두리 박스 찾기
-        if (!subjectBtn) {
-            const dashedBoxes = Array.from(document.querySelectorAll('[style*="dashed"], [class*="dashed"]'));
-            if (dashedBoxes.length > 0) {
-                const firstBox = dashedBoxes[0];
-                const clickable = firstBox.querySelector('button') || firstBox;
-                if (clickable) {
-                    clickable.click();
-                    return {success: true, method: 'dashed-box'};
-                }
-            }
+        if (subjectBtn) {
+            subjectBtn.click();
+            return {success: true, method: 'person-icon'};
         }
 
-        // 방법 3: add_photo_alternate가 있는 첫 번째 버튼
-        if (!subjectBtn) {
-            subjectBtn = buttons.find(btn => {
-                const text = btn.textContent || '';
-                return text.includes('add_photo_alternate');
-            });
+        // 방법 3: 첫 번째 점선 테두리 박스 찾기
+        const dashedBoxes = Array.from(document.querySelectorAll('[style*="dashed"], [class*="dashed"]'));
+        if (dashedBoxes.length > 0) {
+            const firstBox = dashedBoxes[0];
+            const clickable = firstBox.querySelector('button') || firstBox;
+            clickable.click();
+            return {success: true, method: 'dashed-box'};
         }
+
+        // 방법 4: add_photo_alternate가 있는 첫 번째 버튼
+        subjectBtn = buttons.find(btn => {
+            const text = btn.textContent || '';
+            return text.includes('add_photo_alternate') || text.includes('add_a_photo');
+        });
 
         if (subjectBtn) {
             subjectBtn.click();
-            return {success: true, method: 'button-click'};
+            return {success: true, method: 'add-photo-icon'};
         }
 
         return {success: false};
@@ -733,7 +755,7 @@ def upload_image_to_whisk(driver, image_path):
 
     if subject_clicked.get('success'):
         print(f"✅ 피사체 영역 클릭: {subject_clicked.get('method')}", flush=True)
-        time.sleep(2)
+        time.sleep(3)  # 클릭 후 file input이 나타날 시간 확보
     else:
         print("⚠️ 피사체 영역을 찾지 못함, 직접 file input 검색", flush=True)
 
@@ -787,26 +809,57 @@ def upload_image_to_whisk(driver, image_path):
     print("✅ change 이벤트 발생 완료", flush=True)
     time.sleep(3)
 
-    # 업로드 확인
-    uploaded = driver.execute_script("""
-        // 업로드된 이미지 확인
-        const imgs = Array.from(document.querySelectorAll('img'));
-        const uploadedImg = imgs.find(img => {
-            const src = img.src || '';
-            // blob URL이나 새로운 이미지가 있는지 확인
-            return src.startsWith('blob:') || src.includes('googleusercontent');
-        });
+    # 업로드 확인 (최대 10초 대기)
+    upload_success = False
+    for i in range(10):
+        uploaded = driver.execute_script("""
+            // 업로드된 이미지 확인
+            const imgs = Array.from(document.querySelectorAll('img'));
 
-        return {
-            hasImage: !!uploadedImg,
-            imageCount: imgs.length
-        };
-    """)
+            // 피사체 영역의 이미지 찾기
+            const subjectImg = imgs.find(img => {
+                const src = img.src || '';
+                // blob URL이나 새로운 이미지
+                if (!src.startsWith('blob:') && !src.includes('googleusercontent')) {
+                    return false;
+                }
 
-    if uploaded.get('hasImage'):
-        print(f"✅ 이미지 업로드 확인 완료!", flush=True)
-    else:
-        print(f"⚠️ 이미지 업로드 확인 필요 (총 이미지: {uploaded.get('imageCount')}개)", flush=True)
+                // 크기가 충분히 큰 이미지 (썸네일이 아닌)
+                if (img.offsetWidth < 50 || img.offsetHeight < 50) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            return {
+                hasImage: !!subjectImg,
+                imageCount: imgs.length,
+                imageSrc: subjectImg ? subjectImg.src.substring(0, 80) : '',
+                imageSize: subjectImg ? `${subjectImg.offsetWidth}x${subjectImg.offsetHeight}` : ''
+            };
+        """)
+
+        if uploaded.get('hasImage'):
+            print(f"✅ 이미지 업로드 확인 완료!", flush=True)
+            print(f"   이미지: {uploaded.get('imageSrc')}...", flush=True)
+            print(f"   크기: {uploaded.get('imageSize')}", flush=True)
+            upload_success = True
+            break
+        else:
+            if i == 0:
+                print(f"⏳ 업로드 확인 중... (총 이미지: {uploaded.get('imageCount')}개)", flush=True)
+            time.sleep(1)
+
+    if not upload_success:
+        print(f"⚠️ 업로드 확인 실패 - 피사체 영역에 이미지가 표시되지 않았습니다", flush=True)
+        # 디버그 스크린샷
+        try:
+            debug_path = abs_path.replace('.jpg', '_upload_debug.png').replace('.png', '_upload_debug.png')
+            driver.save_screenshot(debug_path)
+            print(f"📸 디버그 스크린샷: {debug_path}", flush=True)
+        except:
+            pass
 
     time.sleep(2)
 

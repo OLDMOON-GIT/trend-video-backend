@@ -1,6 +1,6 @@
 """
 쿠팡 상품명 → 중국어 키워드 번역
-GPT-4를 사용하여 한국 상품명을 중국 Douyin 검색에 최적화된 키워드로 변환
+GPT-4를 사용하여 한국 상품명을 중국어 검색 키워드로 변환
 """
 import asyncio
 from typing import List, Optional
@@ -30,11 +30,11 @@ class ProductTranslator:
         """
         print(f"🔤 상품명 번역 중: {product_name}", flush=True)
 
-        system_prompt = """당신은 한국 상품명을 중국 Douyin(抖音) 검색에 최적화된 중국어 키워드로 변환하는 전문가입니다.
+        system_prompt = """당신은 한국 상품명을 중국어 검색 키워드로 변환하는 전문가입니다.
 
 목표:
 - 한국 상품명을 보고 중국에서 동일하거나 유사한 제품을 찾을 수 있는 중국어 검색 키워드를 생성
-- Douyin에서 실제로 많이 검색되는 키워드 우선
+- 중국 플랫폼에서 실제로 많이 검색되는 키워드 우선
 - 브랜드명보다는 제품 카테고리/기능 중심
 
 예시:
@@ -56,7 +56,7 @@ class ProductTranslator:
         user_prompt = f"""상품명: {product_name}
 카테고리: {category or '미지정'}
 
-이 상품을 Douyin에서 찾기 위한 중국어 검색 키워드를 생성해주세요.
+이 상품을 중국 플랫폼에서 찾기 위한 중국어 검색 키워드를 생성해주세요.
 검색 성공률이 높은 순서로 3-5개 제시하세요."""
 
         try:
