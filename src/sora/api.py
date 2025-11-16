@@ -475,6 +475,7 @@ def generate_shortform():
         llm_provider = data.get("llm_provider") or config_data.get("llm_provider", "openai")
         image_provider = data.get("image_provider") or config_data.get("image_provider", "openai")
         output_name = data.get("output_name")
+        job_id = data.get("job_id")  # Next.js에서 전달한 job_id
 
         try:
             # Import AutoShortsEditor modules
@@ -498,10 +499,12 @@ def generate_shortform():
                 }
 
             logger.info(f"Starting short-form story generation: {base_prompt[:50]}...")
+            if job_id:
+                logger.info(f"Job ID: {job_id}")
 
             if story_type == "short":
                 # Short story (60 seconds)
-                creator = StoryVideoCreator(autoshorts_config)
+                creator = StoryVideoCreator(autoshorts_config, job_id=job_id)
                 output_path = creator.create_from_prompt(
                     prompt=base_prompt,
                     target_chars=target_chars,
@@ -509,7 +512,7 @@ def generate_shortform():
                 )
             else:
                 # Long form story
-                creator = LongFormStoryCreator(autoshorts_config)
+                creator = LongFormStoryCreator(autoshorts_config, job_id=job_id)
                 output_path = creator.create_from_title(
                     title=base_prompt,
                     seed=None,

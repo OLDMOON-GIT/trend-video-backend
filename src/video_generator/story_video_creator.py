@@ -15,9 +15,26 @@ from tqdm import tqdm
 class StoryVideoCreator:
     """Create videos from text prompts with AI narration and images."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], job_id: Optional[str] = None):
         self.config = config
-        self.logger = logging.getLogger("AutoShortsEditor.StoryVideoCreator")
+        self.job_id = job_id
+
+        # DB 로깅 설정 (job_id가 있으면)
+        if job_id:
+            try:
+                from src.utils import setup_db_logging
+                self.logger = setup_db_logging(
+                    job_id=job_id,
+                    logger_name="AutoShortsEditor.StoryVideoCreator"
+                )
+                self.logger.info(f"StoryVideoCreator initialized with job_id: {job_id}")
+            except Exception as e:
+                # DB 로깅 실패해도 기본 로거 사용
+                self.logger = logging.getLogger("AutoShortsEditor.StoryVideoCreator")
+                self.logger.warning(f"Failed to setup DB logging: {e}")
+        else:
+            self.logger = logging.getLogger("AutoShortsEditor.StoryVideoCreator")
+
         self.client = None
 
         # Initialize OpenAI client

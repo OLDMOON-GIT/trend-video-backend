@@ -3427,6 +3427,17 @@ def main():
 
     args = parser.parse_args()
 
+    # DB 로깅 설정 (JOB_ID가 있으면)
+    job_id = args.job_id or os.environ.get('JOB_ID')
+    if job_id:
+        try:
+            from src.utils import auto_setup_db_logging
+            global logger
+            logger = auto_setup_db_logging()
+            logger.info(f"DB 로깅 활성화됨 - Job ID: {job_id}")
+        except Exception as e:
+            logger.warning(f"DB 로깅 설정 실패: {e}")
+
     # 로그 폴더 생성
     os.makedirs("logs", exist_ok=True)
 

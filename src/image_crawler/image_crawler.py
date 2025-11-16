@@ -755,7 +755,29 @@ def upload_image_to_whisk(driver, image_path):
 
     driver.get('https://labs.google/fx/ko/tools/whisk/project')
     print("⏳ Whisk 페이지 로딩...", flush=True)
-    time.sleep(5)
+    time.sleep(3)
+
+    # Person 아이콘이 나타날 때까지 대기 (최대 30초)
+    print("⏳ Whisk 피사체 영역 로드 대기 중...", flush=True)
+    for i in range(30):
+        person_exists = driver.execute_script("""
+            const personIcons = Array.from(document.querySelectorAll('i, span')).filter(icon => {
+                const text = (icon.textContent || '').trim();
+                return text === 'person';
+            });
+            return personIcons.length > 0;
+        """)
+
+        if person_exists:
+            print(f"✅ 피사체 영역 로드 완료! ({i+1}초)", flush=True)
+            break
+
+        if i % 5 == 4:
+            print(f"   대기 중... ({i+1}초)", flush=True)
+
+        time.sleep(1)
+    else:
+        print("⚠️ Person 아이콘을 찾지 못함 - 대체 방법 시도", flush=True)
 
     abs_path = os.path.abspath(image_path)
     print(f"🔍 파일 업로드 시도: {os.path.basename(abs_path)}", flush=True)

@@ -18,9 +18,26 @@ import time
 class LongFormStoryCreator:
     """Create long-form story videos with multiple scenes and images."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], job_id: Optional[str] = None):
         self.config = config
-        self.logger = logging.getLogger("AutoShortsEditor.LongFormCreator")
+        self.job_id = job_id
+
+        # DB 로깅 설정 (job_id가 있으면)
+        if job_id:
+            try:
+                from src.utils import setup_db_logging
+                self.logger = setup_db_logging(
+                    job_id=job_id,
+                    logger_name="AutoShortsEditor.LongFormCreator"
+                )
+                self.logger.info(f"LongFormCreator initialized with job_id: {job_id}")
+            except Exception as e:
+                # DB 로깅 실패해도 기본 로거 사용
+                self.logger = logging.getLogger("AutoShortsEditor.LongFormCreator")
+                self.logger.warning(f"Failed to setup DB logging: {e}")
+        else:
+            self.logger = logging.getLogger("AutoShortsEditor.LongFormCreator")
+
         self.client = None
         self.hf_api_key = None
 
@@ -2619,6 +2636,10 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
 
                     print(f"      Transcribed {len(segments)} segments")
 
+                    # Save segments as ASS file for later use
+                    if segments:
+                        self._save_ass_file(audio_path, segments)
+
                     # Add subtitles using Transcriber
                     if segments:
                         from .transcriber import Transcriber
@@ -2736,6 +2757,10 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
                     ]
 
                     print(f"      Transcribed {len(segments)} segments")
+
+                    # Save segments as ASS file for later use
+                    if segments:
+                        self._save_ass_file(audio_path, segments)
 
                     # Add subtitles using Transcriber
                     if segments:
@@ -2954,6 +2979,50 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
             lines.append(' '.join(current_line))
 
         return lines if lines else [text]
+
+    def _save_ass_file(self, audio_path: Path, segments: list):
+        """Save Whisper transcription segments as ASS subtitle file."""
+        ass_path = audio_path.with_suffix('.ass')
+
+        def format_ass_timestamp(seconds: float) -> str:
+            """Convert seconds to ASS timestamp format (h:mm:ss.cc)"""
+            hours = int(seconds // 3600)
+            minutes = int((seconds % 3600) // 60)
+            secs = int(seconds % 60)
+            centisecs = int((seconds % 1) * 100)
+            return f"{hours}:{minutes:02d}:{secs:02d}.{centisecs:02d}"
+
+        try:
+            with open(ass_path, 'w', encoding='utf-8') as f:
+                # ASS header
+                f.write("[Script Info]\n")
+                f.write("ScriptType: v4.00+\n")
+                f.write("PlayResX: 1920\n")
+                f.write("PlayResY: 1080\n")
+                f.write("\n")
+
+                # Style definition
+                f.write("[V4+ Styles]\n")
+                f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
+                f.write("Style: Default,NanumGothic,96,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,2,2,10,10,20,1\n")
+                f.write("\n")
+
+                # Events (subtitles)
+                f.write("[Events]\n")
+                f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
+
+                for seg in segments:
+                    start_time = format_ass_timestamp(seg["start"])
+                    end_time = format_ass_timestamp(seg["end"])
+                    text = seg["text"]
+                    f.write(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text}\n")
+
+            print(f"      Saved ASS subtitle file: {ass_path.name}")
+            self.logger.info(f"ASS subtitle file created: {ass_path}")
+
+        except Exception as e:
+            self.logger.warning(f"Failed to save ASS file: {e}")
+            print(f"      [Warning] ASS file save failed: {e}")
 
     def _get_ffmpeg_path(self):
         """Get FFmpeg executable path from MoviePy/imageio-ffmpeg or system."""
