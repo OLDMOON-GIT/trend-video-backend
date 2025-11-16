@@ -884,13 +884,39 @@ def upload_image_to_whisk(driver, image_path):
         print(f"   왼쪽 사이드바 요소들: {debug_info}", flush=True)
 
     # 클릭 후 대기
-    time.sleep(3)
+    time.sleep(2)
 
-    # 방법 2: file input 찾기 (최대 10초 대기)
+    # 추가: 피사체 영역 내부의 모든 버튼 찾아서 클릭 시도
+    inner_buttons_found = driver.execute_script("""
+        const allButtons = Array.from(document.querySelectorAll('button'));
+        const leftSideButtons = allButtons.filter(btn => {
+            const rect = btn.getBoundingClientRect();
+            // 왼쪽 사이드바 + 상단 영역 (피사체)
+            return rect.left < 250 && rect.top > 80 && rect.top < 300 && btn.offsetParent !== null;
+        }).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+
+        if (leftSideButtons.length > 0) {
+            // 가장 위 버튼 클릭
+            leftSideButtons[0].click();
+            return {
+                clicked: true,
+                buttonCount: leftSideButtons.length,
+                buttonText: leftSideButtons[0].textContent || 'no-text',
+                top: leftSideButtons[0].getBoundingClientRect().top
+            };
+        }
+        return {clicked: false, buttonCount: 0};
+    """)
+
+    if inner_buttons_found.get('clicked'):
+        print(f"   🔘 내부 버튼 클릭: {inner_buttons_found.get('buttonText')} (상단 {inner_buttons_found.get('buttonCount')}개 중 첫 번째)", flush=True)
+        time.sleep(2)
+
+    # 방법 2: file input 찾기 (최대 15초 대기)
     print("🔍 file input 찾는 중...", flush=True)
 
     file_input = None
-    for attempt in range(10):
+    for attempt in range(15):
         try:
             # 모든 file input 찾기
             file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
