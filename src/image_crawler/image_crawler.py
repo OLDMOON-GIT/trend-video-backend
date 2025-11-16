@@ -319,9 +319,31 @@ def generate_image_with_imagefx(driver, prompt):
 
                 // 기존 내용 전체 선택 및 삭제
                 if (elem.contentEditable === 'true') {
+                    // Slate 에디터 완전 초기화
                     elem.innerHTML = '';
-                    elem.textContent = newText;
+                    elem.textContent = '';
+
+                    // Selection API로 전체 선택 후 삭제
+                    const selection = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(elem);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    document.execCommand('delete', false, null);
+
+                    // 확실하게 비우기
+                    elem.innerHTML = '';
+                    elem.textContent = '';
+
+                    // 새 텍스트 입력 (execCommand 사용)
+                    document.execCommand('insertText', false, newText);
+
+                    // 만약 비어있으면 직접 설정
+                    if (!elem.textContent || elem.textContent.length === 0) {
+                        elem.textContent = newText;
+                    }
                 } else if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
+                    elem.value = '';
                     elem.value = newText;
                 } else {
                     elem.textContent = newText;
@@ -330,6 +352,8 @@ def generate_image_with_imagefx(driver, prompt):
                 // 이벤트 발생
                 elem.dispatchEvent(new Event('input', { bubbles: true }));
                 elem.dispatchEvent(new Event('change', { bubbles: true }));
+                elem.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+                elem.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
 
                 return true;
             }
@@ -352,24 +376,55 @@ def generate_image_with_imagefx(driver, prompt):
 
         time.sleep(1)
 
-        # 입력 확인
+        # 입력 확인 및 검증
         verify = driver.execute_script("""
             const selector = arguments[0];
+            const expectedText = arguments[1];
             const elem = document.querySelector(selector);
             if (elem) {
                 const content = elem.textContent || elem.innerText || elem.value || '';
+                const cleanContent = content.trim().replace(/\\s+/g, ' ');
+                const cleanExpected = expectedText.trim().replace(/\\s+/g, ' ');
+
                 return {
                     length: content.length,
-                    preview: content.substring(0, 50)
+                    preview: content.substring(0, 80),
+                    fullText: content,
+                    matches: cleanContent.includes(cleanExpected.substring(0, 30))
                 };
             }
-            return {length: 0, preview: ''};
-        """, input_elem.get('selector'))
+            return {length: 0, preview: '', fullText: '', matches: false};
+        """, input_elem.get('selector'), prompt)
 
-        if verify.get('length') > 0:
-            print(f"✅ 입력 확인: {verify.get('length')}자 - {verify.get('preview')}...", flush=True)
+        if verify.get('matches'):
+            print(f"✅ 입력 검증 성공: {verify.get('length')}자 - {verify.get('preview')}...", flush=True)
         else:
-            print("⚠️ 입력 확인 실패 - 내용이 비어있지만 계속 진행", flush=True)
+            print(f"⚠️ 입력 검증 실패 - 예상과 다른 내용:", flush=True)
+            print(f"   기대: {prompt[:50]}...", flush=True)
+            print(f"   실제: {verify.get('preview')}...", flush=True)
+
+            # ActionChains로 재시도
+            print(f"⚠️ ActionChains로 재입력 시도...", flush=True)
+            try:
+                elem = driver.find_element(By.CSS_SELECTOR, input_elem.get('selector'))
+                elem.click()
+                time.sleep(0.5)
+
+                # Ctrl+A로 전체 선택 후 삭제
+                actions = ActionChains(driver)
+                actions.key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
+                time.sleep(0.2)
+                actions = ActionChains(driver)
+                actions.send_keys(Keys.DELETE).perform()
+                time.sleep(0.2)
+
+                # 새 내용 입력
+                actions = ActionChains(driver)
+                actions.send_keys(prompt).perform()
+                print(f"✅ ActionChains로 재입력 완료", flush=True)
+                time.sleep(1)
+            except Exception as e:
+                print(f"⚠️ ActionChains 재시도 실패: {e}", flush=True)
 
         # 입력창 옆 생성 버튼 찾아서 클릭
         print("🔍 생성 버튼 찾는 중...", flush=True)
@@ -618,9 +673,9 @@ def generate_image_with_imagefx(driver, prompt):
         raise Exception("❌ 다운로드된 이미지 파일을 찾을 수 없습니다 - Downloads 폴더에 새 파일이 없습니다")
 
 def upload_image_to_whisk(driver, image_path):
-    """Whisk에 이미지 업로드"""
+    """Whisk에 이미지 업로드 (피사체 영역)"""
     print("\n" + "="*80, flush=True)
-    print("2️⃣ Whisk - 인물 이미지 업로드", flush=True)
+    print("2️⃣ Whisk - 피사체 이미지 업로드", flush=True)
     print("="*80, flush=True)
 
     driver.get('https://labs.google/fx/ko/tools/whisk/project')
@@ -630,74 +685,130 @@ def upload_image_to_whisk(driver, image_path):
     abs_path = os.path.abspath(image_path)
     print(f"🔍 파일 업로드 시도: {os.path.basename(abs_path)}", flush=True)
 
-    # 숨겨진 file input 생성
-    driver.execute_script("""
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.id = 'auto-upload-input';
-        input.accept = 'image/*';
-        input.style.position = 'absolute';
-        input.style.left = '-9999px';
-        document.body.appendChild(input);
+    # 방법 1: 왼쪽 첫 번째 피사체 영역 찾아서 클릭
+    print("🔍 피사체 영역 찾는 중...", flush=True)
+    subject_clicked = driver.execute_script("""
+        // 왼쪽 사이드바의 버튼들 찾기
+        const buttons = Array.from(document.querySelectorAll('button'));
+
+        // 방법 1: person 아이콘이 있는 버튼 찾기
+        let subjectBtn = buttons.find(btn => {
+            const text = btn.textContent || '';
+            const html = btn.innerHTML || '';
+            // person, account_circle, face 등의 아이콘 텍스트
+            return text.includes('person') ||
+                   text.includes('account') ||
+                   html.includes('person') ||
+                   html.includes('M12 12c2.21');  // person icon SVG path
+        });
+
+        // 방법 2: 첫 번째 점선 테두리 박스 찾기
+        if (!subjectBtn) {
+            const dashedBoxes = Array.from(document.querySelectorAll('[style*="dashed"], [class*="dashed"]'));
+            if (dashedBoxes.length > 0) {
+                const firstBox = dashedBoxes[0];
+                const clickable = firstBox.querySelector('button') || firstBox;
+                if (clickable) {
+                    clickable.click();
+                    return {success: true, method: 'dashed-box'};
+                }
+            }
+        }
+
+        // 방법 3: add_photo_alternate가 있는 첫 번째 버튼
+        if (!subjectBtn) {
+            subjectBtn = buttons.find(btn => {
+                const text = btn.textContent || '';
+                return text.includes('add_photo_alternate');
+            });
+        }
+
+        if (subjectBtn) {
+            subjectBtn.click();
+            return {success: true, method: 'button-click'};
+        }
+
+        return {success: false};
     """)
 
-    print("✅ file input 생성 완료", flush=True)
+    if subject_clicked.get('success'):
+        print(f"✅ 피사체 영역 클릭: {subject_clicked.get('method')}", flush=True)
+        time.sleep(2)
+    else:
+        print("⚠️ 피사체 영역을 찾지 못함, 직접 file input 검색", flush=True)
+
+    # 방법 2: 페이지의 file input 찾아서 파일 할당
+    print("🔍 file input 찾는 중...", flush=True)
+
+    # 먼저 기존 file input 확인
+    file_input_found = driver.execute_script("""
+        const inputs = document.querySelectorAll('input[type="file"]');
+        return inputs.length;
+    """)
+
+    print(f"   발견된 file input: {file_input_found}개", flush=True)
+
+    # file input이 있으면 그것 사용, 없으면 생성
+    if file_input_found > 0:
+        # 첫 번째 file input 사용
+        file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
+        print("✅ 기존 file input 발견", flush=True)
+    else:
+        # 숨겨진 file input 생성
+        driver.execute_script("""
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.id = 'auto-upload-input';
+            input.accept = 'image/*';
+            input.style.position = 'absolute';
+            input.style.left = '-9999px';
+            document.body.appendChild(input);
+        """)
+        file_input = driver.find_element(By.ID, 'auto-upload-input')
+        print("✅ file input 생성 완료", flush=True)
+
     time.sleep(1)
 
     # 파일 할당
-    file_input = driver.find_element(By.ID, 'auto-upload-input')
     print(f"📤 파일 할당 중...", flush=True)
     file_input.send_keys(abs_path)
     time.sleep(2)
     print("✅ 파일 할당 완료", flush=True)
 
-    # 업로드 처리
-    upload_result = driver.execute_script("""
-        const input = document.getElementById('auto-upload-input');
-        if (!input || !input.files || input.files.length === 0) {
-            return {success: false, error: '파일이 할당되지 않음'};
+    # change 이벤트 발생
+    driver.execute_script("""
+        const input = document.querySelector('input[type="file"]');
+        if (input) {
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.dispatchEvent(new Event('input', { bubbles: true }));
         }
+    """)
 
-        const file = input.files[0];
+    print("✅ change 이벤트 발생 완료", flush=True)
+    time.sleep(3)
 
-        // change 이벤트 발생
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-
-        // add_photo_alternate 버튼 찾기
-        const findUploadButton = () => {
-            const all = document.querySelectorAll('*');
-            for (let elem of all) {
-                const text = elem.textContent || '';
-                if (elem.tagName === 'BUTTON' && text.includes('add_photo_alternate')) {
-                    return elem;
-                }
-            }
-            return null;
-        };
-
-        const btn = findUploadButton();
-        if (btn) {
-            const clickEvent = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true
-            });
-            btn.dispatchEvent(clickEvent);
-        }
+    # 업로드 확인
+    uploaded = driver.execute_script("""
+        // 업로드된 이미지 확인
+        const imgs = Array.from(document.querySelectorAll('img'));
+        const uploadedImg = imgs.find(img => {
+            const src = img.src || '';
+            // blob URL이나 새로운 이미지가 있는지 확인
+            return src.startsWith('blob:') || src.includes('googleusercontent');
+        });
 
         return {
-            success: true,
-            fileName: file.name,
-            fileSize: file.size
+            hasImage: !!uploadedImg,
+            imageCount: imgs.length
         };
     """)
 
-    if not upload_result.get('success'):
-        raise Exception(f"업로드 실패: {upload_result.get('error')}")
+    if uploaded.get('hasImage'):
+        print(f"✅ 이미지 업로드 확인 완료!", flush=True)
+    else:
+        print(f"⚠️ 이미지 업로드 확인 필요 (총 이미지: {uploaded.get('imageCount')}개)", flush=True)
 
-    print(f"✅ 파일 업로드 성공!", flush=True)
-    print(f"   파일명: {upload_result.get('fileName')}", flush=True)
-    print(f"   파일 크기: {upload_result.get('fileSize')} bytes", flush=True)
-    time.sleep(3)
+    time.sleep(2)
 
 def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=False):
     """Whisk 입력창에 프롬프트 입력 (클립보드 + Ctrl+V 방식)"""
