@@ -1068,10 +1068,14 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
             input_box.click()
             time.sleep(0.3)
 
-        # Ctrl+V로 붙여넣기만 수행
+        # Ctrl+A로 전체 선택 후 Ctrl+V로 붙여넣기 (어팬드 방지)
+        actions = ActionChains(driver)
+        actions.key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
+        time.sleep(0.2)
+
         actions = ActionChains(driver)
         actions.key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
-        print(f"✅ Ctrl+V 붙여넣기 완료", flush=True)
+        print(f"✅ Ctrl+A → Ctrl+V 붙여넣기 완료 (기존 내용 대체)", flush=True)
         time.sleep(0.5)
 
         # 엔터 키 입력
