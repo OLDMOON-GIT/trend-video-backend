@@ -323,27 +323,42 @@ def generate_image_with_imagefx(driver, prompt, format_type='shortform'):
 
             // 기존 내용 전체 선택 및 삭제
             if (elem.contentEditable === 'true') {
-                // 방법 1: Selection API로 전체 선택 후 삭제
+                // 방법 1: innerHTML 완전 초기화
+                elem.innerHTML = '';
+
+                // 방법 2: textContent 초기화
+                elem.textContent = '';
+
+                // 방법 3: Selection API로 전체 선택 후 삭제
                 const selection = window.getSelection();
                 const range = document.createRange();
                 range.selectNodeContents(elem);
                 selection.removeAllRanges();
                 selection.addRange(range);
-
-                // 전체 삭제
                 document.execCommand('delete', false, null);
 
-                // 새 텍스트 입력
+                // 확실하게 비웠는지 확인
+                elem.innerHTML = '';
+                elem.textContent = '';
+
+                // 새 텍스트 입력 (여러 방법 시도)
+                // 1. execCommand
                 document.execCommand('insertText', false, newText);
+
+                // 2. 만약 비어있으면 직접 설정
+                if (!elem.textContent || elem.textContent.length === 0) {
+                    elem.textContent = newText;
+                }
 
                 // 이벤트 발생
                 elem.dispatchEvent(new Event('input', { bubbles: true }));
                 elem.dispatchEvent(new Event('change', { bubbles: true }));
-                elem.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-                elem.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+                elem.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+                elem.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
 
                 return true;
             } else if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
+                elem.value = '';
                 elem.value = newText;
                 elem.dispatchEvent(new Event('input', { bubbles: true }));
                 elem.dispatchEvent(new Event('change', { bubbles: true }));
@@ -369,24 +384,74 @@ def generate_image_with_imagefx(driver, prompt, format_type='shortform'):
 
         time.sleep(1)
 
-        # 입력 확인
+        # 입력 확인 (실제 내용 검증)
         verify = driver.execute_script("""
             const selector = arguments[0];
+            const expectedText = arguments[1];
             const elem = document.querySelector(selector);
             if (elem) {
                 const content = elem.textContent || elem.innerText || elem.value || '';
+                const cleanContent = content.trim().replace(/\\s+/g, ' ');
+                const cleanExpected = expectedText.trim().replace(/\\s+/g, ' ');
+
                 return {
                     length: content.length,
-                    preview: content.substring(0, 50)
+                    preview: content.substring(0, 80),
+                    fullText: content,
+                    matches: cleanContent.includes(cleanExpected.substring(0, 30))
                 };
             }
-            return {length: 0, preview: ''};
-        """, input_elem.get('selector'))
+            return {length: 0, preview: '', fullText: '', matches: false};
+        """, input_elem.get('selector'), prompt)
 
-        if verify.get('length') > 0:
-            print(f"✅ 입력 확인: {verify.get('length')}자 - {verify.get('preview')}...", flush=True)
+        print(f"📋 입력 후 확인:", flush=True)
+        print(f"   길이: {verify.get('length')}자", flush=True)
+        print(f"   내용: {verify.get('preview')}...", flush=True)
+
+        if verify.get('matches'):
+            print(f"✅ 입력 검증 성공 - 올바른 내용 확인", flush=True)
         else:
-            print("⚠️ 입력 확인 실패 - 내용이 비어있지만 계속 진행", flush=True)
+            print(f"⚠️ 입력 검증 실패 - 예상과 다른 내용:", flush=True)
+            print(f"   기대: {prompt[:50]}...", flush=True)
+            print(f"   실제: {verify.get('fullText')[:100]}...", flush=True)
+            print(f"⚠️ ActionChains로 재시도...", flush=True)
+
+            # ActionChains로 재시도
+            try:
+                elem = driver.find_element(By.CSS_SELECTOR, input_elem.get('selector'))
+                elem.click()
+                time.sleep(0.5)
+
+                # Ctrl+A로 전체 선택 후 삭제
+                actions = ActionChains(driver)
+                actions.key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
+                time.sleep(0.2)
+                actions = ActionChains(driver)
+                actions.send_keys(Keys.DELETE).perform()
+                time.sleep(0.2)
+
+                # 새 내용 입력
+                actions = ActionChains(driver)
+                actions.send_keys(prompt).perform()
+                print(f"✅ ActionChains로 재입력 완료", flush=True)
+                time.sleep(1)
+
+                # 다시 확인
+                verify2 = driver.execute_script("""
+                    const selector = arguments[0];
+                    const elem = document.querySelector(selector);
+                    if (elem) {
+                        const content = elem.textContent || elem.innerText || elem.value || '';
+                        return {
+                            length: content.length,
+                            preview: content.substring(0, 80)
+                        };
+                    }
+                    return {length: 0, preview: ''};
+                """, input_elem.get('selector'))
+                print(f"📋 재입력 후: {verify2.get('length')}자 - {verify2.get('preview')}...", flush=True)
+            except Exception as e:
+                print(f"⚠️ ActionChains 재시도 실패: {e}", flush=True)
 
         # 입력창 옆 생성 버튼 찾아서 클릭
         print("🔍 생성 버튼 찾는 중...", flush=True)
