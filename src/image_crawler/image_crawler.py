@@ -132,25 +132,28 @@ def generate_image_with_imagefx(driver, prompt):
     driver.get('https://labs.google/fx/tools/image-fx')
     print("⏳ ImageFX 페이지 로딩...", flush=True)
 
-    # 페이지 로드 대기
+    # 페이지 완전 로드 대기 (네트워크 안정화 포함)
     for i in range(30):
         if driver.execute_script("return document.readyState") == "complete":
             print(f"✅ 로드 완료 ({i+1}초)", flush=True)
             break
         time.sleep(1)
-    time.sleep(3)
 
-    # 페이지 새로고침으로 예시 프롬프트 제거
-    print("🔄 페이지 새로고침 (예시 프롬프트 제거)", flush=True)
-    driver.refresh()
-    time.sleep(3)
+    # 추가 대기: JavaScript 초기화 완료 대기
+    print("⏳ Slate 에디터 초기화 대기...", flush=True)
+    time.sleep(5)
 
-    # 새로고침 후 로드 대기
-    for i in range(10):
-        if driver.execute_script("return document.readyState") == "complete":
-            break
-        time.sleep(1)
-    time.sleep(2)
+    # 네트워크 안정화 대기 (이미지 로딩 등)
+    driver.execute_script("""
+        return new Promise((resolve) => {
+            if (document.readyState === 'complete') {
+                setTimeout(resolve, 2000);
+            } else {
+                window.addEventListener('load', () => setTimeout(resolve, 2000));
+            }
+        });
+    """)
+    print("✅ 페이지 완전 초기화 완료", flush=True)
 
     # 디버그: 페이지 상태 상세 확인
     page_info = driver.execute_script("""
@@ -324,64 +327,84 @@ def generate_image_with_imagefx(driver, prompt):
             const selector = arguments[0];
             const newText = arguments[1];
             const elem = document.querySelector(selector);
-            if (elem) {
-                elem.scrollIntoView({behavior: 'instant', block: 'center'});
-                elem.click();
-                elem.focus();
+            if (!elem) return false;
 
-                // 기존 내용 전체 선택 및 삭제
-                if (elem.contentEditable === 'true') {
-                    // 1단계: 모든 자식 노드 제거
-                    while (elem.firstChild) {
-                        elem.removeChild(elem.firstChild);
-                    }
+            elem.scrollIntoView({behavior: 'instant', block: 'center'});
+            elem.click();
+            elem.focus();
 
-                    // 2단계: innerHTML과 textContent 초기화
-                    elem.innerHTML = '';
-                    elem.textContent = '';
-                    elem.innerText = '';
+            if (elem.contentEditable === 'true') {
+                // Slate 에디터 완전 초기화 (예시 텍스트 제거)
 
-                    // 3단계: Selection API로 전체 선택 후 삭제
-                    const selection = window.getSelection();
-                    selection.removeAllRanges();
-                    const range = document.createRange();
-                    range.selectNodeContents(elem);
-                    selection.addRange(range);
-                    document.execCommand('delete', false, null);
+                // 1단계: 기존 내용 읽기
+                const beforeText = (elem.textContent || '').trim();
+                console.log('[Clear] Before:', beforeText);
 
-                    // 4단계: 다시 한번 완전히 비우기
+                // 2단계: 모든 자식 완전 제거 (3번 반복)
+                for (let i = 0; i < 3; i++) {
                     while (elem.firstChild) {
                         elem.removeChild(elem.firstChild);
                     }
                     elem.innerHTML = '';
                     elem.textContent = '';
-
-                    // 5단계: 포커스 다시 설정
-                    elem.focus();
-
-                    // 6단계: 새 텍스트 입력 (execCommand 사용)
-                    document.execCommand('insertText', false, newText);
-
-                    // 7단계: 만약 여전히 비어있으면 직접 텍스트 노드 생성
-                    if (!elem.textContent || elem.textContent.trim().length === 0) {
-                        const textNode = document.createTextNode(newText);
-                        elem.appendChild(textNode);
-                    }
-                } else if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
-                    elem.value = '';
-                    elem.value = newText;
-                } else {
-                    elem.textContent = newText;
                 }
 
-                // 이벤트 발생
+                // 3단계: 포커스 및 Selection API 사용
+                elem.focus();
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+
+                // 4단계: 전체 선택 후 삭제 (execCommand)
+                const range = document.createRange();
+                range.selectNodeContents(elem);
+                selection.addRange(range);
+                document.execCommand('selectAll', false, null);
+                document.execCommand('delete', false, null);
+
+                // 5단계: 다시 한번 완전 초기화
+                while (elem.firstChild) {
+                    elem.removeChild(elem.firstChild);
+                }
+                elem.innerHTML = '';
+                elem.textContent = '';
+
+                // 6단계: 비었는지 확인
+                const afterClear = (elem.textContent || '').trim();
+                console.log('[Clear] After:', afterClear, 'isEmpty:', afterClear.length === 0);
+
+                // 7단계: 새 텍스트 입력 (execCommand insertText)
+                elem.focus();
+                selection.removeAllRanges();
+                document.execCommand('insertText', false, newText);
+
+                // 8단계: 입력 결과 확인
+                let result = (elem.textContent || '').trim();
+                console.log('[Insert] Result length:', result.length, 'expected:', newText.length);
+
+                // 9단계: 만약 비어있거나 잘못되었으면 textNode 직접 생성
+                if (result.length === 0 || !result.includes(newText.substring(0, 20))) {
+                    console.log('[Insert] execCommand failed, using textNode');
+                    while (elem.firstChild) {
+                        elem.removeChild(elem.firstChild);
+                    }
+                    const textNode = document.createTextNode(newText);
+                    elem.appendChild(textNode);
+                }
+
+                // 10단계: 이벤트 발생
                 elem.dispatchEvent(new Event('input', { bubbles: true }));
                 elem.dispatchEvent(new Event('change', { bubbles: true }));
-                elem.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-                elem.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+                elem.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
                 return true;
+            } else if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
+                elem.value = '';
+                elem.value = newText;
+                elem.dispatchEvent(new Event('input', { bubbles: true }));
+                elem.dispatchEvent(new Event('change', { bubbles: true }));
+                return true;
             }
+
             return false;
         """, selector, prompt)
 
@@ -410,27 +433,40 @@ def generate_image_with_imagefx(driver, prompt):
                 const elem = document.querySelector(selector);
                 if (elem) {
                     const content = elem.textContent || elem.innerText || elem.value || '';
-                    const cleanContent = content.trim().replace(/\\s+/g, ' ');
+                    const cleanContent = content.trim().replace(/\\s+/g, ' ').replace(/\\t/g, '').replace(/\\ufeff/g, '');
                     const cleanExpected = expectedText.trim().replace(/\\s+/g, ' ');
 
+                    // EXACT match check: content should start with expected text
+                    // Allow some flexibility for trailing whitespace/special chars
+                    const startsWithExpected = cleanContent.startsWith(cleanExpected.substring(0, 50));
+                    const lengthSimilar = Math.abs(cleanContent.length - cleanExpected.length) < 10;
+
                     return {
-                        length: content.length,
-                        preview: content.substring(0, 80),
+                        length: cleanContent.length,
+                        expectedLength: cleanExpected.length,
+                        preview: content.substring(0, 100),
                         fullText: content,
-                        matches: cleanContent.includes(cleanExpected.substring(0, 30))
+                        cleanContent: cleanContent,
+                        cleanExpected: cleanExpected.substring(0, 100),
+                        startsWithExpected: startsWithExpected,
+                        lengthSimilar: lengthSimilar,
+                        matches: startsWithExpected && lengthSimilar
                     };
                 }
                 return {length: 0, preview: '', fullText: '', matches: false};
             """, input_elem.get('selector'), prompt)
 
             if verify.get('matches'):
-                print(f"✅ 입력 검증 성공: {verify.get('length')}자 - {verify.get('preview')}...", flush=True)
+                print(f"✅ 입력 검증 성공: {verify.get('length')}자 (기대: {verify.get('expectedLength')}자)", flush=True)
+                print(f"   내용: {verify.get('preview')}...", flush=True)
                 verification_success = True
                 break
             else:
                 print(f"⚠️ 입력 검증 실패 (시도 {retry + 1}/3) - 예상과 다른 내용:", flush=True)
-                print(f"   기대: {prompt[:50]}...", flush=True)
+                print(f"   기대: {prompt[:80]}...", flush=True)
                 print(f"   실제: {verify.get('preview')}...", flush=True)
+                print(f"   길이: {verify.get('length')} (기대: {verify.get('expectedLength')})", flush=True)
+                print(f"   시작 일치: {verify.get('startsWithExpected')}, 길이 유사: {verify.get('lengthSimilar')}", flush=True)
 
                 if retry < 2:  # 마지막 시도가 아니면 재입력
                     print(f"⚠️ ActionChains로 재입력 시도 {retry + 1}...", flush=True)
@@ -718,97 +754,111 @@ def upload_image_to_whisk(driver, image_path):
     abs_path = os.path.abspath(image_path)
     print(f"🔍 파일 업로드 시도: {os.path.basename(abs_path)}", flush=True)
 
-    # 방법 1: 왼쪽 사이드바 첫 번째 점선 박스(피사체 영역) 분석 및 클릭
-    print("🔍 피사체 영역 찾는 중...", flush=True)
+    # 방법 1: 왼쪽 사이드바 피사체 영역 찾기 (한글 텍스트로 식별)
+    print("🔍 피사체 업로드 영역 찾는 중...", flush=True)
 
-    # 먼저 페이지 구조 디버깅
-    page_structure = driver.execute_script("""
-        const allDivs = Array.from(document.querySelectorAll('div'));
-        const dashedDivs = allDivs.filter(div => {
-            const style = window.getComputedStyle(div);
-            const rect = div.getBoundingClientRect();
-            return (style.borderStyle === 'dashed' ||
-                   style.borderStyle.includes('dashed')) &&
-                   rect.left < 200;
-        });
-
-        const fileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
-        const leftButtons = Array.from(document.querySelectorAll('button')).filter(btn => {
-            const rect = btn.getBoundingClientRect();
-            return rect.left < 200 && rect.top > 80 && rect.top < 400;
-        });
-
-        return {
-            dashedDivsCount: dashedDivs.length,
-            dashedDivsInfo: dashedDivs.slice(0, 3).map(d => ({
-                rect: {left: d.getBoundingClientRect().left, top: d.getBoundingClientRect().top},
-                hasButton: d.querySelectorAll('button').length > 0,
-                innerHTML: d.innerHTML.substring(0, 200)
-            })),
-            fileInputsCount: fileInputs.length,
-            leftButtonsCount: leftButtons.length,
-            leftButtonsInfo: leftButtons.slice(0, 5).map(b => ({
-                text: b.textContent?.substring(0, 50),
-                rect: {left: b.getBoundingClientRect().left, top: b.getBoundingClientRect().top}
-            }))
-        };
-    """)
-
-    print(f"📊 페이지 구조 분석:", flush=True)
-    print(f"   점선 박스: {page_structure['dashedDivsCount']}개", flush=True)
-    print(f"   file input: {page_structure['fileInputsCount']}개", flush=True)
-    print(f"   왼쪽 버튼: {page_structure['leftButtonsCount']}개", flush=True)
-    if page_structure['dashedDivsInfo']:
-        print(f"   첫 점선 박스: {page_structure['dashedDivsInfo'][0]}", flush=True)
-    if page_structure['leftButtonsInfo']:
-        print(f"   왼쪽 버튼들: {page_structure['leftButtonsInfo']}", flush=True)
-
-    # 이제 클릭 시도
+    # 피사체 영역을 정확하게 찾아서 클릭
     subject_clicked = driver.execute_script("""
-        const allDivs = Array.from(document.querySelectorAll('div'));
-        const dashedDivs = allDivs.filter(div => {
-            const style = window.getComputedStyle(div);
-            const rect = div.getBoundingClientRect();
-            return (style.borderStyle === 'dashed' ||
-                   style.borderStyle.includes('dashed')) &&
-                   rect.left < 200;
+        // 방법 1: "이미지를 생성합니다" 또는 "이미지를 업로드" 텍스트 포함하는 영역 찾기
+        const allElements = Array.from(document.querySelectorAll('div, button'));
+
+        // 피사체 관련 텍스트 찾기
+        const subjectKeywords = ['이미지를 업로드', '이미지를 생성', '파일 공유', '피사체'];
+        let targetElement = null;
+
+        for (const elem of allElements) {
+            const text = elem.textContent || '';
+            const hasKeyword = subjectKeywords.some(keyword => text.includes(keyword));
+
+            if (hasKeyword) {
+                const rect = elem.getBoundingClientRect();
+                // 왼쪽 사이드바 영역 (x < 250px) 이고, 적절한 크기
+                if (rect.left < 250 && rect.width > 50 && rect.height > 50) {
+                    targetElement = elem;
+
+                    // 내부에 버튼이 있으면 버튼 클릭
+                    const innerButton = elem.querySelector('button');
+                    if (innerButton && innerButton.offsetParent !== null) {
+                        innerButton.click();
+                        return {
+                            success: true,
+                            method: 'korean-text-inner-button',
+                            text: text.substring(0, 50),
+                            rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                        };
+                    }
+
+                    // 버튼 없으면 해당 요소 직접 클릭
+                    elem.click();
+                    return {
+                        success: true,
+                        method: 'korean-text-element',
+                        text: text.substring(0, 50),
+                        rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                    };
+                }
+            }
+        }
+
+        // 방법 2: 점선 박스 찾기 (fallback)
+        const dashedDivs = allElements.filter(elem => {
+            const style = window.getComputedStyle(elem);
+            const rect = elem.getBoundingClientRect();
+            return (style.borderStyle === 'dashed' || style.borderStyle.includes('dashed')) &&
+                   rect.left < 250 && rect.top > 80 && rect.top < 500;
         });
 
         if (dashedDivs.length > 0) {
             const firstDashed = dashedDivs[0];
-            const innerButtons = firstDashed.querySelectorAll('button');
+            const rect = firstDashed.getBoundingClientRect();
 
-            if (innerButtons.length > 0) {
-                innerButtons[0].click();
-                return {success: true, method: 'dashed-box-inner-button'};
-            } else {
-                firstDashed.click();
-                return {success: true, method: 'dashed-box-click'};
+            // 내부 버튼 찾기
+            const innerButton = firstDashed.querySelector('button');
+            if (innerButton && innerButton.offsetParent !== null) {
+                innerButton.click();
+                return {
+                    success: true,
+                    method: 'dashed-box-inner-button',
+                    rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                };
             }
+
+            firstDashed.click();
+            return {
+                success: true,
+                method: 'dashed-box-click',
+                rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+            };
         }
 
-        // 대체: 왼쪽 사이드바 첫 번째 버튼 클릭
-        const buttons = Array.from(document.querySelectorAll('button'));
-        const leftButtons = buttons.filter(btn => {
-            const rect = btn.getBoundingClientRect();
-            return rect.left < 200 && rect.top > 80 && rect.top < 400;
-        });
-
-        if (leftButtons.length > 0) {
-            leftButtons[0].click();
-            return {success: true, method: 'left-first-button'};
-        }
-
-        return {success: false};
+        return {success: false, method: 'none'};
     """)
 
     if subject_clicked.get('success'):
-        print(f"✅ 피사체 영역 클릭: {subject_clicked.get('method')}", flush=True)
+        print(f"✅ 피사체 영역 클릭 성공: {subject_clicked.get('method')}", flush=True)
+        if subject_clicked.get('text'):
+            print(f"   텍스트: {subject_clicked.get('text')}", flush=True)
+        if subject_clicked.get('rect'):
+            print(f"   위치: {subject_clicked.get('rect')}", flush=True)
     else:
-        print("⚠️ 피사체 영역을 찾지 못함", flush=True)
+        print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
+        # 디버그: 왼쪽 사이드바 구조 출력
+        debug_info = driver.execute_script("""
+            const leftElements = Array.from(document.querySelectorAll('div, button')).filter(e => {
+                const rect = e.getBoundingClientRect();
+                return rect.left < 250 && rect.top > 80 && rect.top < 500;
+            }).slice(0, 10);
 
-    # 클릭 후 충분한 대기 시간
-    time.sleep(2)
+            return leftElements.map(e => ({
+                tag: e.tagName,
+                text: (e.textContent || '').substring(0, 50),
+                rect: {left: e.getBoundingClientRect().left, top: e.getBoundingClientRect().top}
+            }));
+        """)
+        print(f"   왼쪽 사이드바 요소들: {debug_info}", flush=True)
+
+    # 클릭 후 대기
+    time.sleep(3)
 
     # 방법 2: file input 찾기 (최대 10초 대기)
     print("🔍 file input 찾는 중...", flush=True)
