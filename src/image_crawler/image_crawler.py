@@ -718,7 +718,7 @@ def upload_image_to_whisk(driver, image_path):
     abs_path = os.path.abspath(image_path)
     print(f"🔍 파일 업로드 시도: {os.path.basename(abs_path)}", flush=True)
 
-    # 방법 1: 왼쪽 사이드바 첫 번째 점선 박스(피사체 영역) 클릭
+    # 방법 1: 왼쪽 사이드바 첫 번째 점선 박스(피사체 영역) 내부의 버튼 클릭
     print("🔍 피사체 영역 찾는 중...", flush=True)
     subject_clicked = driver.execute_script("""
         // 방법 1: 왼쪽 사이드바의 점선 박스들 찾기
@@ -727,53 +727,67 @@ def upload_image_to_whisk(driver, image_path):
         // 점선 테두리가 있는 div 찾기 (border-style: dashed)
         const dashedDivs = allDivs.filter(div => {
             const style = window.getComputedStyle(div);
-            return style.borderStyle === 'dashed' ||
+            const rect = div.getBoundingClientRect();
+            // 왼쪽에 있고, 점선 스타일이 있는 div
+            return (style.borderStyle === 'dashed' ||
                    style.borderStyle.includes('dashed') ||
-                   div.style.border?.includes('dashed');
+                   div.style.border?.includes('dashed')) &&
+                   rect.left < 200;  // 왼쪽 사이드바에 있는 것만
         });
 
         console.log('Dashed divs found:', dashedDivs.length);
 
         if (dashedDivs.length > 0) {
-            // 첫 번째 점선 박스 클릭
+            // 첫 번째 점선 박스 내부의 버튼 찾기
             const firstDashed = dashedDivs[0];
-            firstDashed.click();
-            return {success: true, method: 'first-dashed-div', count: dashedDivs.length};
+            const innerButtons = firstDashed.querySelectorAll('button');
+
+            if (innerButtons.length > 0) {
+                // 내부 버튼 클릭
+                innerButtons[0].click();
+                return {success: true, method: 'dashed-box-inner-button', buttonCount: innerButtons.length};
+            } else {
+                // 버튼이 없으면 박스 자체 클릭
+                firstDashed.click();
+                return {success: true, method: 'dashed-box-itself', count: dashedDivs.length};
+            }
         }
 
         // 방법 2: data 속성으로 찾기
         const dataElements = Array.from(document.querySelectorAll('[data-idx="0"]'));
         if (dataElements.length > 0) {
+            const btn = dataElements[0].querySelector('button');
+            if (btn) {
+                btn.click();
+                return {success: true, method: 'data-idx-button'};
+            }
             dataElements[0].click();
-            return {success: true, method: 'data-idx-0'};
+            return {success: true, method: 'data-idx-div'};
         }
 
-        // 방법 3: 왼쪽 사이드바의 버튼들
+        // 방법 3: 왼쪽 사이드바의 모든 버튼 중 첫 번째 (add_photo 등)
         const buttons = Array.from(document.querySelectorAll('button'));
+        const leftButtons = buttons.filter(btn => {
+            const rect = btn.getBoundingClientRect();
+            return rect.left < 200 && rect.top > 100 && rect.top < 300;
+        });
 
-        // person 아이콘
+        if (leftButtons.length > 0) {
+            leftButtons[0].click();
+            return {success: true, method: 'left-sidebar-first-button'};
+        }
+
+        // 방법 4: person/add_photo 아이콘
         let subjectBtn = buttons.find(btn => {
             const text = btn.textContent || '';
-            const html = btn.innerHTML || '';
             return text.includes('person') ||
-                   text.includes('account_circle') ||
-                   html.includes('person');
+                   text.includes('add_photo_alternate') ||
+                   text.includes('account_circle');
         });
 
         if (subjectBtn) {
             subjectBtn.click();
-            return {success: true, method: 'person-button'};
-        }
-
-        // 방법 4: add_photo_alternate 아이콘
-        subjectBtn = buttons.find(btn => {
-            const text = btn.textContent || '';
-            return text.includes('add_photo_alternate');
-        });
-
-        if (subjectBtn) {
-            subjectBtn.click();
-            return {success: true, method: 'add-photo-button'};
+            return {success: true, method: 'icon-button'};
         }
 
         return {success: false};
@@ -893,7 +907,7 @@ def upload_image_to_whisk(driver, image_path):
             time.sleep(1)
 
     if not upload_success:
-        print(f"⚠️ 업로드 확인 실패 - 피사체 영역에 이미지가 표시되지 않았습니다", flush=True)
+        print(f"❌ 업로드 확인 실패 - 피사체 영역에 이미지가 표시되지 않았습니다", flush=True)
         # 디버그 스크린샷
         try:
             debug_path = abs_path.replace('.jpg', '_upload_debug.png').replace('.png', '_upload_debug.png')
@@ -901,6 +915,7 @@ def upload_image_to_whisk(driver, image_path):
             print(f"📸 디버그 스크린샷: {debug_path}", flush=True)
         except:
             pass
+        raise Exception("❌ Whisk 피사체 영역에 이미지 업로드 실패")
 
     time.sleep(2)
 
