@@ -453,6 +453,38 @@ def generate_image_with_imagefx(driver, prompt, format_type='shortform'):
             except Exception as e:
                 print(f"⚠️ ActionChains 재시도 실패: {e}", flush=True)
 
+        # 입력 후 충분히 대기 (내용이 반영될 시간)
+        print("⏳ 입력 내용 반영 대기 중...", flush=True)
+        time.sleep(3)
+
+        # 최종 확인: 입력창에 올바른 내용이 있는지 재확인
+        final_check = driver.execute_script("""
+            const selector = arguments[0];
+            const expectedText = arguments[1];
+            const elem = document.querySelector(selector);
+            if (elem) {
+                const content = elem.textContent || elem.innerText || elem.value || '';
+                const cleanContent = content.trim().replace(/\\s+/g, ' ');
+                const cleanExpected = expectedText.trim().replace(/\\s+/g, ' ');
+
+                return {
+                    hasContent: content.length > 0,
+                    contentPreview: content.substring(0, 100),
+                    matches: cleanContent.includes(cleanExpected.substring(0, 20))
+                };
+            }
+            return {hasContent: false, contentPreview: '', matches: false};
+        """, input_elem.get('selector'), prompt)
+
+        print(f"📋 최종 확인:", flush=True)
+        print(f"   내용 있음: {final_check.get('hasContent')}", flush=True)
+        print(f"   매칭 여부: {final_check.get('matches')}", flush=True)
+        print(f"   내용: {final_check.get('contentPreview')}...", flush=True)
+
+        if not final_check.get('matches'):
+            print("⚠️ 경고: 입력 내용이 예상과 다릅니다. 생성하면 엉뚱한 이미지가 나올 수 있습니다!", flush=True)
+            print(f"   기대: {prompt[:50]}...", flush=True)
+
         # 입력창 옆 생성 버튼 찾아서 클릭
         print("🔍 생성 버튼 찾는 중...", flush=True)
         generate_clicked = driver.execute_script("""
