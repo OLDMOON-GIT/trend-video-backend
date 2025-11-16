@@ -767,7 +767,7 @@ def upload_image_to_whisk(driver, image_path):
         const allElements = Array.from(document.querySelectorAll('div, button'));
 
         // 업로드 영역 후보 찾기 (업로드 관련 텍스트가 있는 요소)
-        const uploadKeywords = ['이미지를 업로드', '이미지를 생성', '파일 공유'];
+        const uploadKeywords = ['이미지 업로드', '이미지를 업로드', '이미지를 생성', 'Upload image', 'image'];
         const uploadAreas = [];
 
         for (const elem of allElements) {
@@ -821,37 +821,67 @@ def upload_image_to_whisk(driver, image_path):
             };
         }
 
-        // Fallback: 점선 박스 중 가장 위에 있는 것
+        // Fallback: 점선 박스 중에서 "피사체" 레이블 찾기
         const dashedDivs = allElements.filter(elem => {
             const style = window.getComputedStyle(elem);
             const rect = elem.getBoundingClientRect();
             return (style.borderStyle === 'dashed' || style.borderStyle.includes('dashed')) &&
                    rect.left < 250 && rect.top > 80 && rect.top < 600;
-        }).map(elem => ({
-            elem: elem,
-            rect: elem.getBoundingClientRect()
-        })).sort((a, b) => a.rect.top - b.rect.top);
+        }).map(elem => {
+            // 부모/형제 요소에서 레이블 텍스트 찾기
+            let labelText = '';
+            let current = elem.parentElement;
+            for (let i = 0; i < 5 && current; i++) {
+                const text = current.textContent || '';
+                if (text.length > 0 && text.length < 500) {
+                    labelText = text;
+                    break;
+                }
+                current = current.parentElement;
+            }
+
+            return {
+                elem: elem,
+                rect: elem.getBoundingClientRect(),
+                labelText: labelText.substring(0, 200),
+                hasSubjectKeyword: labelText.includes('피사체') || labelText.includes('Subject') || labelText.includes('subject')
+            };
+        }).sort((a, b) => {
+            // 피사체 키워드가 있는 것 우선, 없으면 top 위치 순
+            if (a.hasSubjectKeyword && !b.hasSubjectKeyword) return -1;
+            if (!a.hasSubjectKeyword && b.hasSubjectKeyword) return 1;
+            return a.rect.top - b.rect.top;
+        });
+
+        console.log('[Whisk Upload] Dashed boxes found:', dashedDivs.length);
+        dashedDivs.forEach((d, idx) => {
+            console.log(`  [${idx}] top=${d.rect.top}, hasSubject=${d.hasSubjectKeyword}, label="${d.labelText.substring(0, 50)}"`);
+        });
 
         if (dashedDivs.length > 0) {
-            const firstDashed = dashedDivs[0];
-            const innerButton = firstDashed.elem.querySelector('button');
+            const subjectDashed = dashedDivs[0];
+            const innerButton = subjectDashed.elem.querySelector('button');
 
             if (innerButton && innerButton.offsetParent !== null) {
                 innerButton.click();
                 return {
                     success: true,
-                    method: 'dashed-box-button',
-                    rect: {left: firstDashed.rect.left, top: firstDashed.rect.top},
-                    totalAreas: dashedDivs.length
+                    method: 'dashed-box-button-with-label',
+                    rect: {left: subjectDashed.rect.left, top: subjectDashed.rect.top},
+                    totalAreas: dashedDivs.length,
+                    hasSubjectKeyword: subjectDashed.hasSubjectKeyword,
+                    label: subjectDashed.labelText.substring(0, 100)
                 };
             }
 
-            firstDashed.elem.click();
+            subjectDashed.elem.click();
             return {
                 success: true,
-                method: 'dashed-box-direct',
-                rect: {left: firstDashed.rect.left, top: firstDashed.rect.top},
-                totalAreas: dashedDivs.length
+                method: 'dashed-box-direct-with-label',
+                rect: {left: subjectDashed.rect.left, top: subjectDashed.rect.top},
+                totalAreas: dashedDivs.length,
+                hasSubjectKeyword: subjectDashed.hasSubjectKeyword,
+                label: subjectDashed.labelText.substring(0, 100)
             };
         }
 
@@ -862,10 +892,40 @@ def upload_image_to_whisk(driver, image_path):
         print(f"✅ 피사체 영역 클릭 성공: {subject_clicked.get('method')}", flush=True)
         if subject_clicked.get('totalAreas'):
             print(f"   발견된 업로드 영역: {subject_clicked.get('totalAreas')}개 (가장 위 영역 선택)", flush=True)
+        if subject_clicked.get('hasSubjectKeyword'):
+            print(f"   피사체 키워드 확인: {subject_clicked.get('hasSubjectKeyword')}", flush=True)
+        if subject_clicked.get('label'):
+            print(f"   레이블: {subject_clicked.get('label')}", flush=True)
         if subject_clicked.get('text'):
             print(f"   텍스트: {subject_clicked.get('text')}", flush=True)
         if subject_clicked.get('rect'):
             print(f"   위치: top={subject_clicked.get('rect')['top']}, left={subject_clicked.get('rect')['left']}", flush=True)
+
+        # 추가: "이미지 업로드" 버튼 명시적으로 클릭
+        print("🔘 '이미지 업로드' 버튼 클릭 시도...", flush=True)
+        upload_button_clicked = driver.execute_script("""
+            // "이미지 업로드" 레이블이 있는 버튼 찾기
+            const allButtons = Array.from(document.querySelectorAll('button'));
+            const uploadButton = allButtons.find(btn => {
+                const text = btn.textContent || '';
+                const rect = btn.getBoundingClientRect();
+                return (text.includes('이미지 업로드') || text.includes('Upload image')) &&
+                       rect.left < 300 && rect.top > 50 && rect.top < 400;
+            });
+
+            if (uploadButton) {
+                uploadButton.click();
+                console.log('[Whisk] Clicked upload button:', uploadButton.textContent);
+                return {clicked: true, text: uploadButton.textContent};
+            }
+            return {clicked: false};
+        """)
+
+        if upload_button_clicked.get('clicked'):
+            print(f"   ✅ 버튼 클릭됨: {upload_button_clicked.get('text')}", flush=True)
+            time.sleep(1)
+        else:
+            print(f"   ⚠️ '이미지 업로드' 버튼을 찾지 못함", flush=True)
     else:
         print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
         # 디버그: 왼쪽 사이드바 구조 출력
