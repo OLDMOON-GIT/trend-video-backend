@@ -901,6 +901,10 @@ def upload_image_to_whisk(driver, image_path):
         if subject_clicked.get('rect'):
             print(f"   위치: top={subject_clicked.get('rect')['top']}, left={subject_clicked.get('rect')['left']}", flush=True)
 
+        # 피사체 클릭 후 UI 업데이트 대기
+        time.sleep(2)
+        print("⏳ UI 업데이트 대기 완료", flush=True)
+
         # 추가: "이미지 업로드" 요소 찾기 (모든 요소 대상)
         print("🔘 '이미지 업로드' 요소 찾기...", flush=True)
         upload_button_clicked = driver.execute_script("""
