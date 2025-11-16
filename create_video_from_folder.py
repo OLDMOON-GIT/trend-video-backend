@@ -66,6 +66,16 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import multiprocessing
 import tempfile
+from PIL import Image as PILImage
+import numpy as np
+
+# OpenCV 임포트 시도 (얼굴 감지용)
+try:
+    import cv2
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+    logger_msg = "⚠️ OpenCV가 없습니다. 얼굴 감지 없이 중앙 크롭만 수행합니다. 설치: pip install opencv-python"
 
 # 로깅 설정 (먼저 설정)
 # Windows에서 UTF-8 출력을 위해 stdout을 UTF-8로 재설정
@@ -403,6 +413,156 @@ class VideoFromFolderCreator:
             logger.error(f"썸네일 생성 중 예외 발생: {e}")
             import traceback
             logger.error(traceback.format_exc())
+
+    def _detect_focus_area(self, image_path: Path) -> Optional[tuple]:
+        """
+        이미지에서 인물이나 주요 물체를 감지하여 중심 좌표 반환
+        OpenCV Haar Cascade로 얼굴 감지
+
+        Returns:
+            (center_x, center_y) 또는 None (감지 실패 시)
+        """
+        if not OPENCV_AVAILABLE:
+            return None
+
+        try:
+            # 이미지 로드
+            img = cv2.imread(str(image_path))
+            if img is None:
+                return None
+
+            # 그레이스케일 변환
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+            # Haar Cascade로 얼굴 감지
+            cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            face_cascade = cv2.CascadeClassifier(cascade_path)
+
+            # 얼굴 감지
+            faces = face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+
+            if len(faces) > 0:
+                # 가장 큰 얼굴을 주요 인물로 선택
+                largest_face = max(faces, key=lambda f: f[2] * f[3])
+                x, y, w, h = largest_face
+
+                # 얼굴 중심 좌표
+                center_x = x + w // 2
+                center_y = y + h // 2
+
+                logger.info(f"  ✅ 얼굴 감지됨: ({center_x}, {center_y}), 크기: {w}x{h}")
+                return (center_x, center_y)
+
+            logger.info(f"  ℹ️ 얼굴 미감지 (중앙 크롭 사용)")
+            return None
+
+        except Exception as e:
+            logger.warning(f"  ⚠️ 얼굴 감지 실패: {e}")
+            return None
+
+    def _smart_crop_to_vertical(self, input_path: Path, output_path: Path) -> bool:
+        """
+        가로 이미지(16:9)를 세로(9:16)로 스마트 크롭 변환
+        얼굴이 감지되면 얼굴 중심으로 크롭, 아니면 중앙 크롭
+
+        Args:
+            input_path: 원본 이미지 경로
+            output_path: 출력 이미지 경로
+
+        Returns:
+            성공 여부
+        """
+        try:
+            # 얼굴/물체 감지
+            focus_point = self._detect_focus_area(input_path)
+
+            with PILImage.open(input_path) as img:
+                width, height = img.size
+                logger.info(f"  🎨 스마트 크롭: 원본 {width}x{height}")
+
+                # 목표 비율: 9:16 (세로)
+                target_ratio = 9 / 16
+
+                # 현재 높이를 기준으로 9:16 비율의 너비 계산
+                new_width = int(height * target_ratio)
+
+                if new_width > width:
+                    # 높이를 기준으로 계산한 너비가 원본보다 크면, 너비를 기준으로 재계산
+                    new_height = int(width / target_ratio)
+                    new_width = width
+
+                    # 얼굴이 감지되면 얼굴 중심으로, 아니면 상단 크롭
+                    if focus_point:
+                        focus_x, focus_y = focus_point
+                        center_y = focus_y
+                        top = max(0, center_y - new_height // 2)
+                        bottom = min(height, top + new_height)
+
+                        if bottom > height:
+                            bottom = height
+                            top = bottom - new_height
+                        if top < 0:
+                            top = 0
+                            bottom = new_height
+
+                        logger.info(f"  ✨ 얼굴 중심 크롭: y={center_y}")
+                    else:
+                        # 상단 부분을 우선적으로 크롭
+                        top = 0
+                        bottom = new_height
+
+                    left = 0
+                    right = width
+                else:
+                    # 높이는 그대로, 너비를 크롭
+                    new_height = height
+
+                    # 얼굴이 감지되면 얼굴 중심으로, 아니면 중앙 크롭
+                    if focus_point:
+                        focus_x, focus_y = focus_point
+                        center_x = focus_x
+                        left = max(0, center_x - new_width // 2)
+                        right = min(width, left + new_width)
+
+                        if right > width:
+                            right = width
+                            left = right - new_width
+                        if left < 0:
+                            left = 0
+                            right = new_width
+
+                        logger.info(f"  ✨ 얼굴 중심 크롭: x={center_x}")
+                    else:
+                        # 중앙 크롭
+                        left = (width - new_width) // 2
+                        right = left + new_width
+
+                    top = 0
+                    bottom = height
+
+                logger.info(f"  ✂️ 크롭 영역: ({left}, {top}) ~ ({right}, {bottom})")
+
+                # 이미지 크롭
+                img = img.crop((left, top, right, bottom))
+
+                # 표준 쇼츠 해상도로 리사이즈 (1080x1920)
+                target_size = (1080, 1920)
+                img = img.resize(target_size, PILImage.Resampling.LANCZOS)
+
+                logger.info(f"  ✅ 스마트 크롭 완료: {target_size[0]}x{target_size[1]} (9:16)")
+
+                # 저장
+                img.save(output_path, quality=95)
+                return True
+
+        except Exception as e:
+            logger.error(f"스마트 크롭 실패: {input_path} - {e}")
+            return False
 
     def _find_all_media_files(self):
         """
@@ -1146,8 +1306,17 @@ Return ONLY the refined prompt without any explanation or additional text."""
         cleaned = re.sub(r'\[.*?interrupted.*?\]', '', cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(r'\[.*?error.*?\]', '', cleaned, flags=re.IGNORECASE)
 
-        # Remove markdown
-        cleaned = cleaned.replace('```', '')
+        # Remove markdown formatting
+        cleaned = cleaned.replace('```', '')  # 코드블록
+        cleaned = re.sub(r'\*\*([^*]+)\*\*', r'\1', cleaned)  # **볼드**
+        cleaned = re.sub(r'__([^_]+)__', r'\1', cleaned)  # __볼드__
+        cleaned = re.sub(r'\*([^*]+)\*', r'\1', cleaned)  # *이탤릭*
+        cleaned = re.sub(r'_([^_]+)_', r'\1', cleaned)  # _이탤릭_
+        cleaned = re.sub(r'`([^`]+)`', r'\1', cleaned)  # `코드`
+        cleaned = re.sub(r'^#+\s+', '', cleaned, flags=re.MULTILINE)  # # 헤딩
+        cleaned = re.sub(r'^>\s+', '', cleaned, flags=re.MULTILINE)  # > 인용
+        cleaned = re.sub(r'^\s*[-*]\s+', '', cleaned, flags=re.MULTILINE)  # - 리스트
+        cleaned = re.sub(r'^\s*\d+\.\s+', '', cleaned, flags=re.MULTILINE)  # 1. 리스트
 
         # Fix quotes
         cleaned = cleaned.replace('""', '"').replace("''", "'")
@@ -1360,6 +1529,19 @@ Return ONLY the refined prompt without any explanation or additional text."""
         # 구두점에 쉼표 추가 (자연스러운 쉼표 효과)
         tts_text = self._add_natural_pauses(clean_text)
 
+        # ============================================================
+        # 긴 텍스트 처리: 5000자 이상이면 조각으로 나눔
+        # ============================================================
+        MAX_CHUNK_SIZE = 5000  # Edge TTS 안정적 처리 길이
+
+        if len(tts_text) > MAX_CHUNK_SIZE:
+            logger.warning(f"텍스트가 길어서 조각으로 나눔: {len(tts_text)}자 -> {MAX_CHUNK_SIZE}자씩")
+            return await self._generate_edge_tts_chunked(tts_text, output_path)
+
+        # ============================================================
+        # 일반 처리 (5000자 이하)
+        # ============================================================
+
         # Edge TTS로 생성하면서 타임스탬프 수집
         # rate: -15%로 설정하여 약간 천천히 말하게 함
         communicate = edge_tts.Communicate(tts_text, self.voice, rate='-15%')
@@ -1451,6 +1633,145 @@ Return ONLY the refined prompt without any explanation or additional text."""
             logger.warning(f"TTS 생성 완료: {duration:.2f}초, 타임스탬프 없음 (대본 기반으로 폴백 예정)")
 
         return duration, word_timings
+
+    async def _generate_edge_tts_chunked(self, text: str, output_path: Path) -> tuple:
+        """긴 텍스트를 조각으로 나눠 Edge TTS 생성 후 병합"""
+        logger.info(f"[CHUNKED TTS] 긴 텍스트 조각 처리 시작: {len(text)}자")
+
+        # 문장 단위로 나눔 (마침표, 느낌표, 물음표 기준)
+        import re
+        sentences = re.split(r'([.!?]\s+)', text)
+
+        # 분리자도 포함하여 재조합
+        full_sentences = []
+        for i in range(0, len(sentences)-1, 2):
+            if i+1 < len(sentences):
+                full_sentences.append(sentences[i] + sentences[i+1])
+            else:
+                full_sentences.append(sentences[i])
+        if len(sentences) % 2 == 1:
+            full_sentences.append(sentences[-1])
+
+        # 5000자씩 청크로 묶기
+        MAX_CHUNK_SIZE = 5000
+        chunks = []
+        current_chunk = ""
+
+        for sentence in full_sentences:
+            if len(current_chunk) + len(sentence) <= MAX_CHUNK_SIZE:
+                current_chunk += sentence
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk)
+                current_chunk = sentence
+
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        logger.info(f"[CHUNKED TTS] {len(chunks)}개 청크로 분할 완료")
+
+        # 각 청크에 대해 TTS 생성
+        all_audio_data = []
+        all_word_timings = []
+        cumulative_time = 0.0
+
+        for idx, chunk in enumerate(chunks):
+            logger.info(f"[CHUNKED TTS] 청크 {idx+1}/{len(chunks)} 처리 중... ({len(chunk)}자)")
+
+            # Edge TTS 생성
+            communicate = edge_tts.Communicate(chunk, self.voice, rate='-15%')
+
+            word_timings = []
+            audio_data = b""
+
+            async for chunk_data in communicate.stream():
+                chunk_type = chunk_data.get("type", "unknown")
+
+                if chunk_type == "audio":
+                    audio_data += chunk_data["data"]
+                elif chunk_type == "WordBoundary":
+                    # 단어별 타임스탬프 저장 (누적 시간 추가)
+                    word_timings.append({
+                        "word": chunk_data["text"],
+                        "start": chunk_data["offset"] / 10_000_000.0 + cumulative_time,
+                        "end": (chunk_data["offset"] + chunk_data["duration"]) / 10_000_000.0 + cumulative_time
+                    })
+
+            # 임시 파일에 오디오 저장
+            temp_path = output_path.parent / f"temp_chunk_{idx}.mp3"
+            with open(temp_path, "wb") as f:
+                f.write(audio_data)
+
+            # 오디오 길이 측정
+            try:
+                audio_clip = AudioFileClip(str(temp_path))
+                chunk_duration = audio_clip.duration
+                audio_clip.close()
+            except Exception as e:
+                logger.warning(f"청크 {idx} 길이 측정 실패: {e}")
+                chunk_duration = 1.0
+
+            all_audio_data.append(audio_data)
+            all_word_timings.extend(word_timings)
+            cumulative_time += chunk_duration
+
+            logger.info(f"[CHUNKED TTS] 청크 {idx+1} 완료: {chunk_duration:.2f}초, 단어 {len(word_timings)}개")
+
+        # 모든 오디오 조각을 하나의 파일로 병합
+        logger.info(f"[CHUNKED TTS] {len(all_audio_data)}개 오디오 청크 병합 중...")
+
+        # 임시 파일들을 ffmpeg로 병합
+        temp_list_path = output_path.parent / "temp_concat_list.txt"
+        with open(temp_list_path, "w", encoding="utf-8") as f:
+            for idx in range(len(chunks)):
+                temp_chunk_path = output_path.parent / f"temp_chunk_{idx}.mp3"
+                # Windows 경로를 유닉스 스타일로 변환 (ffmpeg 호환)
+                unix_path = str(temp_chunk_path).replace('\\', '/')
+                f.write(f"file '{unix_path}'\n")
+
+        # ffmpeg로 병합
+        import subprocess
+        ffmpeg_cmd = [
+            'ffmpeg', '-y', '-f', 'concat', '-safe', '0',
+            '-i', str(temp_list_path),
+            '-c', 'copy',
+            str(output_path)
+        ]
+
+        try:
+            subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+            logger.info(f"[CHUNKED TTS] 병합 완료: {output_path.name}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"[CHUNKED TTS] ffmpeg 병합 실패: {e.stderr.decode()}")
+            # 폴백: 첫 번째 청크만 사용
+            with open(output_path, "wb") as f:
+                f.write(all_audio_data[0])
+            logger.warning("[CHUNKED TTS] 폴백: 첫 번째 청크만 저장")
+
+        # 임시 파일 삭제
+        for idx in range(len(chunks)):
+            temp_chunk_path = output_path.parent / f"temp_chunk_{idx}.mp3"
+            try:
+                temp_chunk_path.unlink()
+            except:
+                pass
+        try:
+            temp_list_path.unlink()
+        except:
+            pass
+
+        # 최종 오디오 길이 측정
+        try:
+            audio_clip = AudioFileClip(str(output_path))
+            total_duration = audio_clip.duration
+            audio_clip.close()
+        except Exception as e:
+            logger.warning(f"최종 오디오 길이 측정 실패: {e}")
+            total_duration = cumulative_time
+
+        logger.info(f"[CHUNKED TTS] 전체 완료: {total_duration:.2f}초, 총 단어 {len(all_word_timings)}개")
+
+        return total_duration, all_word_timings
 
     async def _generate_google_tts(self, text: str, output_path: Path) -> tuple:
         """Google Cloud TTS로 음성 생성 + 단어별 타임스탬프 추출"""
@@ -1791,6 +2112,39 @@ Return ONLY the refined prompt without any explanation or additional text."""
         """씬 비디오 생성 (이미지 + 오디오) - FFmpeg 직접 사용"""
         try:
             logger.info(f"씬 {scene_num} 비디오 생성 중...")
+
+            # ============================================================
+            # 숏폼 영상인 경우 16:9 이미지를 9:16으로 스마트 크롭
+            # ============================================================
+            processed_image_path = image_path
+            temp_image_file = None
+
+            if self.aspect_ratio == "9:16":
+                try:
+                    # 이미지 비율 체크
+                    with PILImage.open(image_path) as img:
+                        width, height = img.size
+                        img_ratio = width / height
+
+                        # 16:9 비율 (가로 영상)인지 확인 (허용 오차 ±10%)
+                        target_landscape_ratio = 16 / 9  # 1.778
+                        is_landscape = abs(img_ratio - target_landscape_ratio) < 0.2
+
+                        if is_landscape:
+                            logger.info(f"  🎨 씬 {scene_num}: 롱폼 이미지 감지 ({width}x{height}, 비율: {img_ratio:.3f})")
+                            logger.info(f"  ✂️ 스마트 크롭 적용 중 (얼굴/물체 중심)...")
+
+                            # 임시 파일 생성
+                            temp_image_file = image_path.parent / f"temp_cropped_scene_{scene_num}.jpg"
+
+                            # 스마트 크롭 적용
+                            if self._smart_crop_to_vertical(image_path, temp_image_file):
+                                processed_image_path = temp_image_file
+                                logger.info(f"  ✅ 스마트 크롭 완료: {temp_image_file.name}")
+                            else:
+                                logger.warning(f"  ⚠️ 스마트 크롭 실패, 원본 이미지 사용 (레터박스 적용)")
+                except Exception as e:
+                    logger.warning(f"  ⚠️ 이미지 비율 체크 실패: {e}, 원본 이미지 사용")
 
             # FFmpeg 명령어로 이미지 + 오디오 결합 (초고속)
             # -loop 1: 이미지 반복
