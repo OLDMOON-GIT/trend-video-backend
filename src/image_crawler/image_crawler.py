@@ -883,53 +883,84 @@ def upload_image_to_whisk(driver, image_path):
         """)
         print(f"   왼쪽 사이드바 요소들: {debug_info}", flush=True)
 
-    # 클릭 후 대기
-    time.sleep(2)
-
-    # 추가: 피사체 영역 내부의 모든 버튼 찾아서 클릭 시도
-    inner_buttons_found = driver.execute_script("""
-        const allButtons = Array.from(document.querySelectorAll('button'));
-        const leftSideButtons = allButtons.filter(btn => {
-            const rect = btn.getBoundingClientRect();
-            // 왼쪽 사이드바 + 상단 영역 (피사체)
-            return rect.left < 250 && rect.top > 80 && rect.top < 300 && btn.offsetParent !== null;
-        }).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
-
-        if (leftSideButtons.length > 0) {
-            // 가장 위 버튼 클릭
-            leftSideButtons[0].click();
-            return {
-                clicked: true,
-                buttonCount: leftSideButtons.length,
-                buttonText: leftSideButtons[0].textContent || 'no-text',
-                top: leftSideButtons[0].getBoundingClientRect().top
-            };
-        }
-        return {clicked: false, buttonCount: 0};
+    # 클릭 전에 먼저 ALL file inputs 검색 (hidden 포함)
+    print("🔍 페이지 내 모든 file input 검색 (hidden 포함)...", flush=True)
+    all_file_inputs = driver.execute_script("""
+        const allInputs = Array.from(document.querySelectorAll('input[type="file"]'));
+        return allInputs.map((input, idx) => ({
+            index: idx,
+            id: input.id || `no-id-${idx}`,
+            name: input.name || 'no-name',
+            visible: input.offsetParent !== null,
+            display: window.getComputedStyle(input).display,
+            visibility: window.getComputedStyle(input).visibility,
+            opacity: window.getComputedStyle(input).opacity,
+            accept: input.accept || 'no-accept'
+        }));
     """)
 
-    if inner_buttons_found.get('clicked'):
-        print(f"   🔘 내부 버튼 클릭: {inner_buttons_found.get('buttonText')} (상단 {inner_buttons_found.get('buttonCount')}개 중 첫 번째)", flush=True)
+    print(f"   발견된 file input: {len(all_file_inputs)}개", flush=True)
+    for info in all_file_inputs:
+        print(f"      [{info['index']}] id={info['id']}, visible={info['visible']}, display={info['display']}", flush=True)
+
+    # 방법 1: 기존 hidden file input 직접 사용
+    print("🔍 file input 선택 시도...", flush=True)
+    file_input = None
+
+    try:
+        # 모든 file input 가져오기 (hidden 포함)
+        file_inputs_all = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
+
+        if file_inputs_all:
+            # 첫 번째 것 사용 (보통 Whisk의 native input)
+            file_input = file_inputs_all[0]
+            print(f"✅ file input 발견: 총 {len(file_inputs_all)}개 중 첫 번째 사용", flush=True)
+        else:
+            print("⚠️ file input이 페이지에 없음 - 클릭으로 생성 시도", flush=True)
+    except Exception as e:
+        print(f"⚠️ file input 검색 실패: {e}", flush=True)
+
+    # 방법 2: file input이 없으면 피사체 영역 클릭해서 생성 시도
+    if not file_input:
         time.sleep(2)
 
-    # 방법 2: file input 찾기 (최대 15초 대기)
-    print("🔍 file input 찾는 중...", flush=True)
+        # 추가: 피사체 영역 내부의 모든 버튼 찾아서 클릭 시도
+        inner_buttons_found = driver.execute_script("""
+            const allButtons = Array.from(document.querySelectorAll('button'));
+            const leftSideButtons = allButtons.filter(btn => {
+                const rect = btn.getBoundingClientRect();
+                // 왼쪽 사이드바 + 상단 영역 (피사체)
+                return rect.left < 250 && rect.top > 80 && rect.top < 300 && btn.offsetParent !== null;
+            }).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
 
-    file_input = None
-    for attempt in range(15):
-        try:
-            # 모든 file input 찾기
-            file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
+            if (leftSideButtons.length > 0) {
+                // 가장 위 버튼 클릭
+                leftSideButtons[0].click();
+                return {
+                    clicked: true,
+                    buttonCount: leftSideButtons.length,
+                    buttonText: leftSideButtons[0].textContent || 'no-text',
+                    top: leftSideButtons[0].getBoundingClientRect().top
+                };
+            }
+            return {clicked: false, buttonCount: 0};
+        """)
 
-            if file_inputs:
-                # 가장 최근에 추가된 것 사용
-                file_input = file_inputs[-1]
-                print(f"✅ file input 발견 (시도 {attempt + 1}): 총 {len(file_inputs)}개", flush=True)
-                break
-        except:
-            pass
+        if inner_buttons_found.get('clicked'):
+            print(f"   🔘 내부 버튼 클릭: {inner_buttons_found.get('buttonText')} (상단 {inner_buttons_found.get('buttonCount')}개 중 첫 번째)", flush=True)
+            time.sleep(2)
 
-        if attempt < 9:
+        # file input 재검색 (최대 10초)
+        print("🔍 file input 재검색...", flush=True)
+        for attempt in range(10):
+            try:
+                file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"]')
+                if file_inputs:
+                    file_input = file_inputs[0]  # 첫 번째 사용
+                    print(f"✅ file input 발견 (시도 {attempt + 1}): 총 {len(file_inputs)}개", flush=True)
+                    break
+            except:
+                pass
             time.sleep(1)
 
     # file input을 못 찾으면 재시도 (피사체 영역 다시 클릭)
