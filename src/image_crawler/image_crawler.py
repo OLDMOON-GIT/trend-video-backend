@@ -120,7 +120,7 @@ def setup_chrome_driver():
 
     return driver
 
-def generate_image_with_imagefx(driver, prompt):
+def generate_image_with_imagefx(driver, prompt, format_type='shortform'):
     """ImageFX로 이미지 생성 및 다운로드"""
     print("\n" + "="*80, flush=True)
     print("1️⃣ ImageFX - 첫 이미지 생성", flush=True)
@@ -139,6 +139,9 @@ def generate_image_with_imagefx(driver, prompt):
             break
         time.sleep(1)
     time.sleep(5)
+
+    # 종횡비 선택
+    select_aspect_ratio(driver, format_type)
 
     # 디버그: 페이지 상태 상세 확인
     page_info = driver.execute_script("""
@@ -913,11 +916,85 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
         print(f"❌ 입력 오류: {e}", flush=True)
         return False
 
-def main(scenes_json_file, use_imagefx=False):
+def select_aspect_ratio(driver, format_type='shortform'):
+    """종횡비 선택 (9:16 또는 16:9)"""
+    # 숏폼/SORA2: 9:16, 롱폼: 16:9
+    aspect_ratio = '9:16' if format_type in ['shortform', 'sora2'] else '16:9'
+    print(f"\n📐 종횡비 선택: {aspect_ratio} ({format_type})", flush=True)
+
+    try:
+        # 종횡비 버튼/드롭다운 찾아서 클릭
+        result = driver.execute_script("""
+            const targetRatio = arguments[0];  // "9:16" or "16:9"
+
+            // 방법 1: 버튼 텍스트로 찾기
+            const buttons = Array.from(document.querySelectorAll('button, div[role="button"]'));
+            for (const btn of buttons) {
+                const text = btn.textContent || '';
+                if (text.includes(targetRatio) || text.includes('9 : 16') || text.includes('16 : 9')) {
+                    if (text.includes(targetRatio.replace(':', ' : '))) {
+                        btn.click();
+                        return {success: true, method: 'button-text', found: text};
+                    }
+                }
+            }
+
+            // 방법 2: 종횡비 아이콘 찾기 (aspect_ratio, crop, dimensions 등)
+            const ratioButtons = Array.from(document.querySelectorAll('[aria-label*="aspect"], [aria-label*="ratio"], [aria-label*="dimensions"]'));
+            if (ratioButtons.length > 0) {
+                ratioButtons[0].click();
+                return {success: true, method: 'aria-label', needsSelection: true};
+            }
+
+            // 방법 3: 설정/옵션 버튼 찾기
+            for (const btn of buttons) {
+                const text = btn.textContent || '';
+                const ariaLabel = btn.getAttribute('aria-label') || '';
+                if (text.includes('settings') || text.includes('옵션') || text.includes('더보기') ||
+                    ariaLabel.includes('settings') || ariaLabel.includes('options')) {
+                    btn.click();
+                    return {success: true, method: 'settings', needsSelection: true};
+                }
+            }
+
+            return {success: false};
+        """, aspect_ratio)
+
+        if result.get('success'):
+            print(f"✅ 종횡비 선택 완료: {result.get('method')}", flush=True)
+            time.sleep(1)
+
+            # 드롭다운/메뉴가 열렸으면 종횡비 선택
+            if result.get('needsSelection'):
+                select_result = driver.execute_script("""
+                    const targetRatio = arguments[0];
+                    const items = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"], button, div'));
+                    for (const item of items) {
+                        const text = item.textContent || '';
+                        if (text.includes(targetRatio) || text.includes(targetRatio.replace(':', ' : '))) {
+                            item.click();
+                            return {success: true, found: text};
+                        }
+                    }
+                    return {success: false};
+                """, aspect_ratio)
+
+                if select_result.get('success'):
+                    print(f"✅ 종횡비 항목 선택 완료: {select_result.get('found')}", flush=True)
+                else:
+                    print(f"⚠️ 종횡비 항목을 찾지 못했습니다 (기본값 사용)", flush=True)
+        else:
+            print(f"⚠️ 종횡비 버튼을 찾지 못했습니다 (기본값 사용)", flush=True)
+
+        time.sleep(1)
+    except Exception as e:
+        print(f"⚠️ 종횡비 선택 중 오류: {e} (기본값 사용)", flush=True)
+
+def main(scenes_json_file, use_imagefx=False, format_type='shortform'):
     """메인 실행 함수"""
     print("=" * 80, flush=True)
     if use_imagefx:
-        print("🚀 ImageFX + Whisk 자동화 시작", flush=True)
+        print(f"🚀 ImageFX + Whisk 자동화 시작 ({format_type} - {('9:16' if format_type in ['shortform', 'sora2'] else '16:9')})", flush=True)
     else:
         print("🚀 Whisk 자동화 시작", flush=True)
     print("=" * 80, flush=True)
@@ -963,10 +1040,13 @@ def main(scenes_json_file, use_imagefx=False):
             print(f"   내용: {first_prompt[:100]}{'...' if len(first_prompt) > 100 else ''}\n", flush=True)
 
             # ImageFX로 첫 이미지 생성
-            image_path = generate_image_with_imagefx(driver, first_prompt)
+            image_path = generate_image_with_imagefx(driver, first_prompt, format_type)
 
             # Whisk에 업로드
             upload_image_to_whisk(driver, image_path)
+
+            # Whisk에서도 종횡비 선택
+            select_aspect_ratio(driver, format_type)
 
         else:
             # Whisk만 사용
@@ -1271,7 +1351,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='이미지 크롤링 자동화')
     parser.add_argument('scenes_file', help='씬 데이터 JSON 파일')
     parser.add_argument('--use-imagefx', action='store_true', help='ImageFX로 첫 이미지 생성')
+    parser.add_argument('--format', choices=['shortform', 'longform', 'sora2'], help='영상 포맷 (종횡비 자동 선택)')
 
     args = parser.parse_args()
 
-    sys.exit(main(args.scenes_file, use_imagefx=args.use_imagefx))
+    # 파일명에서 format 자동 감지
+    format_type = args.format
+    if not format_type:
+        filename = os.path.basename(args.scenes_file).lower()
+        if 'sora2' in filename or 'shortform' in filename or 'short' in filename:
+            format_type = 'shortform'  # 9:16
+        elif 'longform' in filename or 'long' in filename:
+            format_type = 'longform'  # 16:9
+        else:
+            format_type = 'shortform'  # 기본값: 9:16
+
+    sys.exit(main(args.scenes_file, use_imagefx=args.use_imagefx, format_type=format_type))
