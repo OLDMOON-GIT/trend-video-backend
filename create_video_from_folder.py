@@ -377,8 +377,23 @@ class VideoFromFolderCreator:
         raise FileNotFoundError(f"{self.folder_path}에 'story'가 포함된 JSON 파일이 없습니다.")
 
     def _create_thumbnail(self):
-        """씬 1 이미지로 썸네일 자동 생성"""
+        """씬 1 이미지로 썸네일 자동 생성 (업로드된 썸네일이 없을 때만)"""
         try:
+            # 이미 업로드된 썸네일이 있는지 확인
+            thumbnail_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+            existing_thumbnail = None
+
+            for ext in thumbnail_extensions:
+                thumbnail_path = self.folder_path / f"thumbnail{ext}"
+                if thumbnail_path.exists():
+                    existing_thumbnail = thumbnail_path
+                    break
+
+            if existing_thumbnail:
+                logger.info(f"✅ 업로드된 썸네일 발견: {existing_thumbnail.name}")
+                logger.info("   썸네일 자동 생성을 건너뜁니다.")
+                return
+
             logger.info("🖼️  썸네일 자동 생성 중...")
 
             # create_thumbnail.py를 subprocess로 실행
