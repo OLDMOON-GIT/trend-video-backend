@@ -377,26 +377,13 @@ class VideoFromFolderCreator:
         raise FileNotFoundError(f"{self.folder_path}에 'story'가 포함된 JSON 파일이 없습니다.")
 
     def _create_thumbnail(self):
-        """씬 1 이미지로 썸네일 자동 생성 (업로드된 썸네일이 없을 때만)"""
+        """글씨 쓴 유튜브용 썸네일 제작 (항상 실행)"""
         try:
-            # 이미 업로드된 썸네일이 있는지 확인
-            thumbnail_extensions = ['.jpg', '.jpeg', '.png', '.webp']
-            existing_thumbnail = None
-
-            for ext in thumbnail_extensions:
-                thumbnail_path = self.folder_path / f"thumbnail{ext}"
-                if thumbnail_path.exists():
-                    existing_thumbnail = thumbnail_path
-                    break
-
-            if existing_thumbnail:
-                logger.info(f"✅ 업로드된 썸네일 발견: {existing_thumbnail.name}")
-                logger.info("   썸네일 자동 생성을 건너뜁니다.")
-                return
-
-            logger.info("🖼️  썸네일 자동 생성 중...")
+            logger.info("🖼️  썸네일 제작 중... (글씨 쓰기)")
 
             # create_thumbnail.py를 subprocess로 실행
+            # - 업로드된 thumbnail.* 파일이 있으면 그걸 사용
+            # - 없으면 첫 번째 씬 이미지 사용
             import subprocess
 
             thumbnail_script = Path(__file__).parent / "create_thumbnail.py"
@@ -414,7 +401,7 @@ class VideoFromFolderCreator:
             )
 
             if result.returncode == 0:
-                logger.info("✅ 썸네일 생성 완료")
+                logger.info("✅ 썸네일 생성 완료 (글씨 쓴 버전)")
                 if result.stdout:
                     logger.info(f"썸네일 출력: {result.stdout[:200]}")
             else:

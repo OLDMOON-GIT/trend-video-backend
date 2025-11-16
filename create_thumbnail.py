@@ -71,13 +71,24 @@ def get_story_data(folder: Path) -> dict:
 
 
 def find_scene1_image(folder: Path) -> Path:
-    """Find scene 1 image"""
+    """Find scene 1 image (우선순위: 업로드된 thumbnail → 첫 이미지)"""
     image_extensions = ['.jpg', '.jpeg', '.png', '.webp']
 
+    # 1. 업로드된 thumbnail.* 파일이 있으면 우선 사용 (프론트엔드에서 분리한 첫 이미지)
+    for ext in image_extensions:
+        thumbnail_path = folder / f"thumbnail{ext}"
+        if thumbnail_path.exists():
+            logger.info(f"✅ 업로드된 썸네일 발견: {thumbnail_path.name} (이걸로 글씨 쓴 썸네일 제작)")
+            return thumbnail_path
+
+    # 2. 없으면 모든 이미지 중 가장 오래된 것 사용
     all_images = []
     for ext in image_extensions:
         all_images.extend(folder.glob(f"*{ext}"))
         all_images.extend(folder.glob(f"*{ext.upper()}"))
+
+    # thumbnail.* 파일은 제외 (이미 위에서 체크했으므로)
+    all_images = [img for img in all_images if 'thumbnail' not in img.name.lower()]
 
     if not all_images:
         raise FileNotFoundError(f"No images found: {folder}")
