@@ -618,9 +618,9 @@ def generate_image_with_imagefx(driver, prompt):
         raise Exception("❌ 다운로드된 이미지 파일을 찾을 수 없습니다 - Downloads 폴더에 새 파일이 없습니다")
 
 def upload_image_to_whisk(driver, image_path):
-    """Whisk에 이미지 업로드"""
+    """Whisk에 이미지 업로드 (피사체 영역)"""
     print("\n" + "="*80, flush=True)
-    print("2️⃣ Whisk - 인물 이미지 업로드", flush=True)
+    print("2️⃣ Whisk - 피사체 이미지 업로드", flush=True)
     print("="*80, flush=True)
 
     driver.get('https://labs.google/fx/ko/tools/whisk/project')
@@ -630,74 +630,130 @@ def upload_image_to_whisk(driver, image_path):
     abs_path = os.path.abspath(image_path)
     print(f"🔍 파일 업로드 시도: {os.path.basename(abs_path)}", flush=True)
 
-    # 숨겨진 file input 생성
-    driver.execute_script("""
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.id = 'auto-upload-input';
-        input.accept = 'image/*';
-        input.style.position = 'absolute';
-        input.style.left = '-9999px';
-        document.body.appendChild(input);
+    # 방법 1: 왼쪽 첫 번째 피사체 영역 찾아서 클릭
+    print("🔍 피사체 영역 찾는 중...", flush=True)
+    subject_clicked = driver.execute_script("""
+        // 왼쪽 사이드바의 버튼들 찾기
+        const buttons = Array.from(document.querySelectorAll('button'));
+
+        // 방법 1: person 아이콘이 있는 버튼 찾기
+        let subjectBtn = buttons.find(btn => {
+            const text = btn.textContent || '';
+            const html = btn.innerHTML || '';
+            // person, account_circle, face 등의 아이콘 텍스트
+            return text.includes('person') ||
+                   text.includes('account') ||
+                   html.includes('person') ||
+                   html.includes('M12 12c2.21');  // person icon SVG path
+        });
+
+        // 방법 2: 첫 번째 점선 테두리 박스 찾기
+        if (!subjectBtn) {
+            const dashedBoxes = Array.from(document.querySelectorAll('[style*="dashed"], [class*="dashed"]'));
+            if (dashedBoxes.length > 0) {
+                const firstBox = dashedBoxes[0];
+                const clickable = firstBox.querySelector('button') || firstBox;
+                if (clickable) {
+                    clickable.click();
+                    return {success: true, method: 'dashed-box'};
+                }
+            }
+        }
+
+        // 방법 3: add_photo_alternate가 있는 첫 번째 버튼
+        if (!subjectBtn) {
+            subjectBtn = buttons.find(btn => {
+                const text = btn.textContent || '';
+                return text.includes('add_photo_alternate');
+            });
+        }
+
+        if (subjectBtn) {
+            subjectBtn.click();
+            return {success: true, method: 'button-click'};
+        }
+
+        return {success: false};
     """)
 
-    print("✅ file input 생성 완료", flush=True)
+    if subject_clicked.get('success'):
+        print(f"✅ 피사체 영역 클릭: {subject_clicked.get('method')}", flush=True)
+        time.sleep(2)
+    else:
+        print("⚠️ 피사체 영역을 찾지 못함, 직접 file input 검색", flush=True)
+
+    # 방법 2: 페이지의 file input 찾아서 파일 할당
+    print("🔍 file input 찾는 중...", flush=True)
+
+    # 먼저 기존 file input 확인
+    file_input_found = driver.execute_script("""
+        const inputs = document.querySelectorAll('input[type="file"]');
+        return inputs.length;
+    """)
+
+    print(f"   발견된 file input: {file_input_found}개", flush=True)
+
+    # file input이 있으면 그것 사용, 없으면 생성
+    if file_input_found > 0:
+        # 첫 번째 file input 사용
+        file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
+        print("✅ 기존 file input 발견", flush=True)
+    else:
+        # 숨겨진 file input 생성
+        driver.execute_script("""
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.id = 'auto-upload-input';
+            input.accept = 'image/*';
+            input.style.position = 'absolute';
+            input.style.left = '-9999px';
+            document.body.appendChild(input);
+        """)
+        file_input = driver.find_element(By.ID, 'auto-upload-input')
+        print("✅ file input 생성 완료", flush=True)
+
     time.sleep(1)
 
     # 파일 할당
-    file_input = driver.find_element(By.ID, 'auto-upload-input')
     print(f"📤 파일 할당 중...", flush=True)
     file_input.send_keys(abs_path)
     time.sleep(2)
     print("✅ 파일 할당 완료", flush=True)
 
-    # 업로드 처리
-    upload_result = driver.execute_script("""
-        const input = document.getElementById('auto-upload-input');
-        if (!input || !input.files || input.files.length === 0) {
-            return {success: false, error: '파일이 할당되지 않음'};
+    # change 이벤트 발생
+    driver.execute_script("""
+        const input = document.querySelector('input[type="file"]');
+        if (input) {
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.dispatchEvent(new Event('input', { bubbles: true }));
         }
+    """)
 
-        const file = input.files[0];
+    print("✅ change 이벤트 발생 완료", flush=True)
+    time.sleep(3)
 
-        // change 이벤트 발생
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-
-        // add_photo_alternate 버튼 찾기
-        const findUploadButton = () => {
-            const all = document.querySelectorAll('*');
-            for (let elem of all) {
-                const text = elem.textContent || '';
-                if (elem.tagName === 'BUTTON' && text.includes('add_photo_alternate')) {
-                    return elem;
-                }
-            }
-            return null;
-        };
-
-        const btn = findUploadButton();
-        if (btn) {
-            const clickEvent = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true
-            });
-            btn.dispatchEvent(clickEvent);
-        }
+    # 업로드 확인
+    uploaded = driver.execute_script("""
+        // 업로드된 이미지 확인
+        const imgs = Array.from(document.querySelectorAll('img'));
+        const uploadedImg = imgs.find(img => {
+            const src = img.src || '';
+            // blob URL이나 새로운 이미지가 있는지 확인
+            return src.startsWith('blob:') || src.includes('googleusercontent');
+        });
 
         return {
-            success: true,
-            fileName: file.name,
-            fileSize: file.size
+            hasImage: !!uploadedImg,
+            imageCount: imgs.length
         };
     """)
 
-    if not upload_result.get('success'):
-        raise Exception(f"업로드 실패: {upload_result.get('error')}")
+    if uploaded.get('hasImage'):
+        print(f"✅ 이미지 업로드 확인 완료!", flush=True)
+    else:
+        print(f"⚠️ 이미지 업로드 확인 필요 (총 이미지: {uploaded.get('imageCount')}개)", flush=True)
 
-    print(f"✅ 파일 업로드 성공!", flush=True)
-    print(f"   파일명: {upload_result.get('fileName')}", flush=True)
-    print(f"   파일 크기: {upload_result.get('fileSize')} bytes", flush=True)
-    time.sleep(3)
+    time.sleep(2)
 
 def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=False):
     """Whisk 입력창에 프롬프트 입력 (클립보드 + Ctrl+V 방식)"""
@@ -987,19 +1043,20 @@ def main(scenes_json_file, use_imagefx=False):
         os.makedirs(output_folder, exist_ok=True)
         print(f"📁 저장 폴더: {output_folder}", flush=True)
 
-        # 페이지의 모든 이미지 찾기 (더 넓은 범위로)
+        # 페이지의 모든 이미지 찾기 (blob URL 포함)
         images = driver.execute_script("""
             const imgs = Array.from(document.querySelectorAll('img'));
             const filtered = imgs.filter(img => {
                 // 크기가 충분히 큰 이미지만
-                if (img.offsetWidth < 100 || img.offsetHeight < 100) return false;
+                if (img.offsetWidth < 200 || img.offsetHeight < 200) return false;
 
-                // base64나 blob URL 제외
                 const src = img.src || '';
-                if (src.startsWith('data:') || src.startsWith('blob:')) return false;
 
-                // HTTP/HTTPS URL만
-                if (!src.startsWith('http')) return false;
+                // data URL은 제외 (너무 작은 아이콘 등)
+                if (src.startsWith('data:')) return false;
+
+                // blob, HTTP, HTTPS URL 허용
+                if (!src.startsWith('http') && !src.startsWith('blob:')) return false;
 
                 return true;
             });
@@ -1008,7 +1065,8 @@ def main(scenes_json_file, use_imagefx=False):
                 src: img.src,
                 width: img.offsetWidth,
                 height: img.offsetHeight,
-                alt: img.alt || ''
+                alt: img.alt || '',
+                isBlob: img.src.startsWith('blob:')
             }));
         """)
 
@@ -1019,29 +1077,66 @@ def main(scenes_json_file, use_imagefx=False):
             print(f"   [{idx+1}] {img['width']}x{img['height']} - {img['src'][:80]}...", flush=True)
 
         import requests
+        import base64
         downloaded = []
         for i, img_data in enumerate(images[:len(scenes)]):
             img_src = img_data['src']
-            if not img_src.startswith('http'):
-                continue
+            is_blob = img_data.get('isBlob', False)
 
             scene = scenes[i]
             scene_number = scene.get('scene_number') or scene.get('scene_id') or f"scene_{str(i).zfill(2)}"
-            ext = '.jpg'
+            ext = '.png'  # blob은 대부분 PNG로 저장
             if 'png' in img_src.lower():
                 ext = '.png'
+            elif 'jpg' in img_src.lower() or 'jpeg' in img_src.lower():
+                ext = '.jpg'
             elif 'webp' in img_src.lower():
                 ext = '.webp'
 
             output_path = os.path.join(output_folder, f"{scene_number}{ext}")
 
             try:
-                response = requests.get(img_src, timeout=30)
-                if response.status_code == 200:
-                    with open(output_path, 'wb') as f:
-                        f.write(response.content)
-                    downloaded.append(output_path)
-                    print(f"   ✅ {scene_number}{ext}", flush=True)
+                if is_blob:
+                    # blob URL을 canvas로 변환하여 base64로 다운로드
+                    print(f"   📥 blob 이미지 다운로드 중: {scene_number}...", flush=True)
+                    base64_data = driver.execute_script("""
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.crossOrigin = 'anonymous';
+                            img.onload = function() {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.naturalWidth || img.width;
+                                canvas.height = img.naturalHeight || img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                const dataUrl = canvas.toDataURL('image/png');
+                                resolve(dataUrl);
+                            };
+                            img.onerror = function() {
+                                resolve(null);
+                            };
+                            img.src = arguments[0];
+                        });
+                    """, img_src)
+
+                    if base64_data:
+                        # base64 디코딩하여 파일로 저장
+                        base64_str = base64_data.split(',')[1]
+                        image_bytes = base64.b64decode(base64_str)
+                        with open(output_path, 'wb') as f:
+                            f.write(image_bytes)
+                        downloaded.append(output_path)
+                        print(f"   ✅ {scene_number}{ext} (blob)", flush=True)
+                    else:
+                        print(f"   ❌ {scene_number}: blob 변환 실패", flush=True)
+                else:
+                    # HTTP/HTTPS URL은 requests로 다운로드
+                    response = requests.get(img_src, timeout=30)
+                    if response.status_code == 200:
+                        with open(output_path, 'wb') as f:
+                            f.write(response.content)
+                        downloaded.append(output_path)
+                        print(f"   ✅ {scene_number}{ext}", flush=True)
             except Exception as e:
                 print(f"   ❌ {scene_number}: {e}", flush=True)
 
