@@ -1504,6 +1504,93 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                 print(f"✅ {scene_number} 입력 완료 (정책 위반 없음)", flush=True)
                 break  # 성공하면 재시도 루프 탈출
             
+            # 🔴 각 씬의 이미지를 즉시 수집 (모든 씬 처리 후가 아니라 각 씬마다)
+            # 이렇게 해야 씬 00의 이미지가 반복되지 않음
+            print(f"\n📥 {scene_number}의 이미지 수집 중...", flush=True)
+            try:
+                # Whisk 페이지에서 생성된 이미지 찾기 (이번 씬만)
+                scene_image = driver.execute_script("""
+                    const imgs = Array.from(document.querySelectorAll('img'));
+
+                    // 가장 최근에 생성된 큰 이미지 찾기
+                    const validImgs = imgs.filter(img => {
+                        if (img.offsetWidth < 100 || img.offsetHeight < 100) return false;
+                        const src = img.src || '';
+                        if (src.startsWith('data:')) return false;
+                        if (!src.startsWith('http') && !src.startsWith('blob:')) return false;
+                        return true;
+                    });
+
+                    // 크기 순으로 정렬 (가장 큰 것이 생성된 이미지)
+                    const sorted = validImgs.sort((a, b) => {
+                        const sizeA = a.offsetWidth * a.offsetHeight;
+                        const sizeB = b.offsetWidth * b.offsetHeight;
+                        return sizeB - sizeA;
+                    });
+
+                    // 첫 번째 이미지만 반환 (이번 씬에서 생성한 것)
+                    if (sorted.length > 0) {
+                        const img = sorted[0];
+                        return {
+                            src: img.src,
+                            width: img.offsetWidth,
+                            height: img.offsetHeight,
+                            isBlob: img.src.startsWith('blob:')
+                        };
+                    }
+                    return null;
+                """)
+
+                if scene_image:
+                    print(f"   ✅ 이미지 발견: {scene_image['width']}x{scene_image['height']}", flush=True)
+                    # 이미지 즉시 다운로드
+                    import requests
+                    import base64
+
+                    try:
+                        if scene_image.get('isBlob'):
+                            base64_data = driver.execute_script("""
+                                const url = arguments[0];
+                                return new Promise((resolve, reject) => {
+                                    fetch(url)
+                                        .then(res => res.blob())
+                                        .then(blob => {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => resolve(reader.result);
+                                            reader.onerror = reject;
+                                            reader.readAsDataURL(blob);
+                                        });
+                                });
+                            """, scene_image['src'])
+
+                            if base64_data and base64_data.startswith('data:image'):
+                                header, base64_str = base64_data.split(',', 1)
+                                ext = '.' + header.split(';')[0].split('/')[-1] if 'image' in header else '.png'
+                                output_path = os.path.join(output_folder, f"{scene_number}{ext}")
+
+                                image_bytes = base64.b64decode(base64_str)
+                                with open(output_path, 'wb') as f:
+                                    f.write(image_bytes)
+                                print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
+
+                        elif scene_image['src'].startswith('http'):
+                            ext = '.jpg'
+                            if 'png' in scene_image['src'].lower(): ext = '.png'
+                            elif 'webp' in scene_image['src'].lower(): ext = '.webp'
+                            output_path = os.path.join(output_folder, f"{scene_number}{ext}")
+
+                            response = requests.get(scene_image['src'], timeout=30, headers={'Referer': 'https://labs.google/'})
+                            if response.status_code == 200:
+                                with open(output_path, 'wb') as f:
+                                    f.write(response.content)
+                                print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
+                    except Exception as e:
+                        print(f"   ❌ 다운로드 실패: {e}", flush=True)
+                else:
+                    print(f"   ⚠️ 이미지를 찾을 수 없습니다", flush=True)
+            except Exception as e:
+                print(f"   ❌ 이미지 수집 실패: {e}", flush=True)
+
             # 타이밍 제어 - 각 프롬프트 제출 후 충분한 대기 시간 확보
             if i < len(scenes) - 1:  # 마지막 씬이 아니면
                 if i == 0:  # 첫 번째 씬 후
@@ -1671,55 +1758,9 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         else:
             print("ℹ️ 백업할 기존 파일 없음\n", flush=True)
         
-        # 페이지의 모든 이미지 찾기 (blob 포함)
-        # Whisk의 결과 이미지를 정확하게 타겟팅
-        images = driver.execute_script("""
-            const imgs = Array.from(document.querySelectorAll('img'));
-            console.log('[DEBUG] Total imgs on page:', imgs.length);
-
-            // 1단계: 기본 필터링 (크기, URL 타입)
-            const basicFiltered = imgs.filter(img => {
-                // 최소 크기 (너무 작은 아이콘/썸네일 제외)
-                if (img.offsetWidth < 100 || img.offsetHeight < 100) return false;
-
-                const src = img.src || '';
-                // data: URL 제외
-                if (src.startsWith('data:')) return false;
-
-                // http 또는 blob URL만 허용
-                if (!src.startsWith('http') && !src.startsWith('blob:')) return false;
-
-                return true;
-            });
-            console.log('[DEBUG] After basic filter:', basicFiltered.length);
-
-            // 2단계: Whisk 결과 이미지 우선 선택 (크기 순으로 정렬)
-            const sorted = basicFiltered.sort((a, b) => {
-                // 더 큰 이미지를 우선
-                const sizeA = a.offsetWidth * a.offsetHeight;
-                const sizeB = b.offsetWidth * b.offsetHeight;
-                return sizeB - sizeA;
-            });
-
-            console.log('[DEBUG] Sorted by size, top 5:');
-            sorted.slice(0, 5).forEach((img, idx) => {
-                console.log(`  [${idx}] ${img.offsetWidth}x${img.offsetHeight} - ${img.src.substring(0, 60)}`);
-            });
-
-            return sorted.map(img => ({
-                src: img.src,
-                width: img.offsetWidth,
-                height: img.offsetHeight,
-                alt: img.alt || '',
-                isBlob: img.src.startsWith('blob:')
-            }));
-        """)
-        
-        # 디버그: 수집된 이미지 정보 출력
-        print(f"📋 수집된 이미지 정보 ({len(images)}개):", flush=True)
-        print(json.dumps(images, indent=2, ensure_ascii=False), flush=True)
-
-        download_images(driver, images, output_folder, scenes)
+        # ✅ 이미지 수집은 이미 각 씬마다 수행됨 (라인 1533-1618)
+        # 여기서는 추가 정보만 출력
+        print(f"\n📋 모든 씬의 이미지 수집 완료", flush=True)
 
         print(f"\n{'='*80}", flush=True)
         print("🎉 전체 워크플로우 완료!", flush=True)
