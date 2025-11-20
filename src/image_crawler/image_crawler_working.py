@@ -30,7 +30,99 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 import re
 
-def sanitize_prompt_for_google(prompt):
+def detect_policy_violation(driver):
+    """
+    페이지에서 Google 정책 위반 메시지를 감지합니다.
+
+    Returns:
+        dict: {
+            'violation_detected': bool,
+            'message': str or None,
+            'type': str or None ('policy', 'safety', 'content', etc.)
+        }
+    """
+    try:
+        result = driver.execute_script("""
+            const bodyText = document.body.innerText.toLowerCase();
+            const allText = document.body.textContent.toLowerCase();
+
+            // 정책 위반 관련 키워드들
+            const policyKeywords = [
+                '정책',
+                '위반',
+                'policy',
+                'violation',
+                'violates',
+                'not allowed',
+                'prohibited',
+                'restricted',
+                'safety',
+                '안전',
+                'guideline',
+                '가이드라인',
+                'inappropriate',
+                '부적절',
+                'blocked',
+                '차단',
+                'cannot generate',
+                '생성할 수 없'
+            ];
+
+            // 여러 키워드가 동시에 발견되면 정책 위반 가능성 높음
+            let matchCount = 0;
+            let matchedKeywords = [];
+
+            for (const keyword of policyKeywords) {
+                if (bodyText.includes(keyword) || allText.includes(keyword)) {
+                    matchCount++;
+                    matchedKeywords.push(keyword);
+                }
+            }
+
+            // 2개 이상의 키워드가 발견되면 정책 위반으로 간주
+            if (matchCount >= 2) {
+                // 에러 메시지 영역 찾기
+                const errorElements = Array.from(document.querySelectorAll('div, span, p'));
+                let errorMessage = '';
+
+                for (const elem of errorElements) {
+                    const text = elem.textContent || '';
+                    // 정책/위반 관련 텍스트를 포함하면서 적당한 길이의 메시지
+                    if (text.length > 20 && text.length < 500) {
+                        const lowerText = text.toLowerCase();
+                        if (policyKeywords.some(kw => lowerText.includes(kw))) {
+                            errorMessage = text.trim();
+                            break;
+                        }
+                    }
+                }
+
+                return {
+                    violation_detected: true,
+                    matched_keywords: matchedKeywords,
+                    message: errorMessage || bodyText.substring(0, 200),
+                    match_count: matchCount
+                };
+            }
+
+            return {
+                violation_detected: false,
+                matched_keywords: [],
+                message: null,
+                match_count: matchCount
+            };
+        """)
+
+        return result
+    except Exception as e:
+        print(f"⚠️ 정책 위반 감지 실패: {e}", flush=True)
+        return {
+            'violation_detected': False,
+            'message': None,
+            'match_count': 0
+        }
+
+def sanitize_prompt_for_google(prompt, aggressive=False):
     """
     Google 이미지 정책 위반을 방지하기 위해 프롬프트를 안전하게 변환합니다.
 
@@ -39,12 +131,15 @@ def sanitize_prompt_for_google(prompt):
     - 실제 인물, 브랜드, 로고
     - 위험한 활동
     - 저작권 침해
+
+    Args:
+        prompt: 원본 프롬프트
+        aggressive: True이면 더 강력한 필터링 적용
     """
     if not prompt or not isinstance(prompt, str):
         return prompt
 
-    # 안전 프리픽스 추가
-    safe_prefix = "safe for work, G-rated, family-friendly, professional quality, "
+    sanitized = prompt
 
     # 금지된 키워드 필터링 (대소문자 구분 없음)
     blocked_keywords = [
@@ -60,9 +155,8 @@ def sanitize_prompt_for_google(prompt):
         r'\b(drunk|alcohol|smoking|drug|dangerous|reckless)\b',
     ]
 
-    sanitized = prompt
     for pattern in blocked_keywords:
-        sanitized = re.sub(pattern, '[content]', sanitized, flags=re.IGNORECASE)
+        sanitized = re.sub(pattern, '', sanitized, flags=re.IGNORECASE)
 
     # 특정 유해 단어 제거
     harmful_words = {
@@ -75,13 +169,14 @@ def sanitize_prompt_for_google(prompt):
         'attack': 'approach',
         'fight': 'interact',
         'blood': 'red liquid',
+        'weapon': 'tool',
+        'gun': 'device',
     }
 
     for harmful, safe in harmful_words.items():
         sanitized = re.sub(rf'\b{harmful}\b', safe, sanitized, flags=re.IGNORECASE)
 
     # 브랜드/로고 멘션 제거
-    # "Nike shoes" -> "athletic shoes", "iPhone" -> "smartphone"
     brand_replacements = {
         r'nike\s+': 'athletic ',
         r'adidas\s+': 'sports ',
@@ -95,19 +190,23 @@ def sanitize_prompt_for_google(prompt):
     for brand_pattern, generic in brand_replacements.items():
         sanitized = re.sub(brand_pattern, generic, sanitized, flags=re.IGNORECASE)
 
-    # 최종 프롬프트 구성
-    # 이미 안전 프리픽스가 있으면 추가하지 않음
-    if not any(keyword in sanitized.lower() for keyword in ['safe', 'g-rated', 'family-friendly']):
-        sanitized = safe_prefix + sanitized
+    # Aggressive 모드: 안전 프리픽스 추가
+    if aggressive:
+        safe_prefix = "professional, safe for work, family-friendly, "
+        if not any(keyword in sanitized.lower() for keyword in ['safe', 'professional', 'family-friendly']):
+            sanitized = safe_prefix + sanitized
 
-    # 길이 제한 (너무 길면 잘림)
-    max_length = 500
+    # 중복 공백 제거
+    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+
+    # 길이 제한
+    max_length = 450
     if len(sanitized) > max_length:
-        sanitized = sanitized[:max_length] + '...'
+        sanitized = sanitized[:max_length].rsplit(' ', 1)[0] + '...'
 
     # 변경사항이 있으면 로그 출력
     if sanitized != prompt:
-        print(f"🔒 프롬프트 안전화 적용됨", flush=True)
+        print(f"🔒 프롬프트 안전화 적용됨 (aggressive={aggressive})", flush=True)
         print(f"   원본: {prompt[:80]}{'...' if len(prompt) > 80 else ''}", flush=True)
         print(f"   안전: {sanitized[:80]}{'...' if len(sanitized) > 80 else ''}", flush=True)
 
@@ -1343,26 +1442,33 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                 print(f"⏭️ {scene_number} - 프롬프트 없음", flush=True)
                 continue
 
-            # 프롬프트는 story.json에 이미 최적화되어 있으므로 그대로 사용
-            # sanitize 함수는 필요시에만 적용 (기본적으로 원본 사용)
-            safe_prompt = prompt  # sanitize_prompt_for_google(prompt) 비활성화
-
             # 디버그: 원본 프롬프트 일부 출력 (중복 확인용)
             print(f"\n🔍 {scene_number} 프롬프트 확인:", flush=True)
             print(f"   첫 100자: {prompt[:100]}...", flush=True)
             print(f"   마지막 50자: ...{prompt[-50:]}", flush=True)
 
-            max_retries = 2
+            max_retries = 3  # 정책 위반 재시도 포함하여 3회로 증가
+            safe_prompt = prompt  # 첫 시도는 원본 사용
+            aggressive_sanitize = False
+
             for attempt in range(max_retries):
                 print(f"\n{'-'*80}", flush=True)
                 print(f"📌 {scene_number} 입력 중 (시도 {attempt + 1}/{max_retries})...", flush=True)
                 print(f"{'-'*80}", flush=True)
 
+                # 2번째 시도부터 점진적으로 강한 필터링 적용
+                if attempt == 1:
+                    print(f"🔄 프롬프트 안전화 적용 (기본 모드)", flush=True)
+                    safe_prompt = sanitize_prompt_for_google(prompt, aggressive=False)
+                elif attempt == 2:
+                    print(f"🔄 프롬프트 안전화 적용 (강화 모드)", flush=True)
+                    safe_prompt = sanitize_prompt_for_google(prompt, aggressive=True)
+
                 prompt_source = 'image_prompt' if scene.get('image_prompt') else 'sora_prompt'
                 print(f"   프롬프트 출처: {prompt_source}", flush=True)
                 print(f"   내용: {safe_prompt[:80]}{'...' if len(safe_prompt) > 80 else ''}", flush=True)
 
-                # 프롬프트 입력 (원본 프롬프트 그대로 사용)
+                # 프롬프트 입력
                 success = input_prompt_to_whisk(driver, safe_prompt, is_first=(i == 0 and attempt == 0))
 
                 if not success:
@@ -1375,8 +1481,27 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                         print(f"   ❌ 최대 재시도 횟수 초과, 다음 씬으로 이동", flush=True)
                         break
 
-                # 입력 성공
-                print(f"✅ {scene_number} 입력 완료", flush=True)
+                # 입력 성공 후 정책 위반 검사 (2초 대기 후)
+                time.sleep(2)
+                print(f"🔍 정책 위반 여부 확인 중...", flush=True)
+                violation_check = detect_policy_violation(driver)
+
+                if violation_check.get('violation_detected'):
+                    print(f"⚠️ Google 정책 위반 감지!", flush=True)
+                    print(f"   매칭 키워드: {violation_check.get('matched_keywords', [])}", flush=True)
+                    if violation_check.get('message'):
+                        print(f"   메시지: {violation_check['message'][:100]}...", flush=True)
+
+                    if attempt < max_retries - 1:
+                        print(f"🔄 프롬프트를 수정하여 재시도합니다...", flush=True)
+                        time.sleep(3)
+                        continue
+                    else:
+                        print(f"   ❌ 최대 재시도 횟수 초과, 다음 씬으로 이동", flush=True)
+                        break
+
+                # 입력 성공 및 정책 위반 없음
+                print(f"✅ {scene_number} 입력 완료 (정책 위반 없음)", flush=True)
                 break  # 성공하면 재시도 루프 탈출
             
             # 타이밍 제어 - 각 프롬프트 제출 후 충분한 대기 시간 확보
