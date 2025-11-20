@@ -842,8 +842,18 @@ class VideoFromFolderCreator:
 
                 # image_prompt 추출 (imagefx_prompt도 지원)
                 image_prompt = scene.get('image_prompt') or scene.get('imagefx_prompt', '')
+                sora_prompt = scene.get('sora_prompt', '')
 
                 if not image_prompt:
+                    # 상품 콘텐츠(product-*.*)는 sora_prompt가 있으면 image_prompt 없어도 괜찮음
+                    version = self.story_data.get('version', '')
+                    is_product = version.startswith('product-') or 'product' in version.lower()
+
+                    if is_product and sora_prompt:
+                        # Sora로 비디오 생성할 거니까 이미지는 안 만들어도 됨
+                        logger.info(f"ℹ️ 씬 {scene_num}: 상품 콘텐츠, sora_prompt 있음 → 이미지 생성 스킵")
+                        return (scene_num, None, "sora_only")
+
                     logger.warning(f"⚠️ 씬 {scene_num}: image_prompt 또는 imagefx_prompt가 없습니다. 건너뜁니다.")
                     return (scene_num, None, "no_prompt")
 
