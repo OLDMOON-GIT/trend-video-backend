@@ -69,6 +69,17 @@ class LongFormStoryCreator:
         # Get image generation provider from config
         self.image_provider = config.get("ai", {}).get("image_generation", {}).get("provider", "openai")
 
+        # 자동 이미지 생성 플래그 가져오기 (설정 또는 환경변수)
+        # 기본값: False (예상치 못한 API 호출 방지)
+        self.auto_generate_images = config.get("ai", {}).get("image_generation", {}).get("auto_generate", False)
+        if os.getenv("AUTO_GENERATE_IMAGES", "false").lower() == "true":
+            self.auto_generate_images = True
+
+        if self.auto_generate_images:
+            self.logger.info("✓ 자동 이미지 생성 활성화됨 - image_prompt가 없을 때 이미지 자동 생성")
+        else:
+            self.logger.info("✗ 자동 이미지 생성 비활성화됨 - image_prompt가 없으면 이미지 생성 건너뜀")
+
     def _initialize_llm_client(self):
         """Initialize LLM client based on configured provider."""
         llm_config = self.config.get("ai", {}).get("llm", {})
@@ -740,7 +751,12 @@ class LongFormStoryCreator:
                         previous_image_path,
                         character_descriptions
                     )
-                    previous_image_path = image_path
+
+                    # 이 장면의 이미지 생성이 건너뛰어진 경우 (None, None 반환)
+                    if image_path is None:
+                        print(f"   ✓ Sora 프롬프트로 직접 생성 (이미지 생성 건너뜀)")
+                    else:
+                        previous_image_path = image_path
                     if char_desc:
                         character_descriptions.append(char_desc)
                         # Print character description for first scene
@@ -1224,6 +1240,12 @@ class LongFormStoryCreator:
                     'scene_dir': images_dir,
                     'scene_num': i
                 })
+        elif not self.auto_generate_images:
+            # Auto image generation disabled - skip image generation
+            print(f"   ⚠️  자동 이미지 생성 비활성화됨")
+            print(f"   이미지 생성을 건너뜁니다 - Sora 프롬프트로 직접 영상 생성")
+            print(f"   활성화하려면 환경변수 또는 설정에서 AUTO_GENERATE_IMAGES=true로 설정하세요")
+            # 이미지 생성 건너뜀 - Sora 텍스트-투-비디오로 영상 생성됨
         else:
             # Generate images
             print(f"   Using {self.image_provider.upper()} for image generation...")
@@ -1241,6 +1263,12 @@ class LongFormStoryCreator:
                         previous_image_path=previous_image_path,
                         character_descriptions=character_descriptions if i > 1 else None
                     )
+
+                    # 이 장면의 이미지 생성이 건너뛰어진 경우 (None, None 반환)
+                    if image_path is None:
+                        print(f"   씬 {i}: 건너뜀 (Sora 프롬프트로 직접 생성)")
+                        pbar.update(1)
+                        continue
 
                     # Accumulate character descriptions for consistency
                     if i == 1 and generated_character_descriptions:
@@ -1261,31 +1289,36 @@ class LongFormStoryCreator:
         print(f"\n[OK] Step 1 완료 - 소요시간: {self._format_elapsed_time(step_elapsed)}")
         print(f"  (Total Elapsed: {self._format_elapsed_time(time.time() - total_start_time)})")
 
-        # Show image location and ask for confirmation
-        print(f"\n{'='*70}")
-        print(f"[*] 이미지 확인")
-        print(f"{'='*70}")
-        print(f"생성된 이미지: {images_dir.absolute()}")
-        print(f"총 {num_scenes}개 이미지가 생성되었습니다.")
-        print(f"\n이미지를 확인하신 후 계속 진행하시겠습니까?")
+        # 이미지가 생성된 경우에만 확인 요청
+        if not self.auto_generate_images and len(scene_images) == 0:
+            print(f"\n[INFO] 이미지가 생성되지 않음 (자동 생성 비활성화)")
+            print(f"  Sora 텍스트-투-비디오 생성으로 영상이 만들어집니다")
+        else:
+            # Show image location and ask for confirmation
+            print(f"\n{'='*70}")
+            print(f"[*] 이미지 확인")
+            print(f"{'='*70}")
+            print(f"생성된 이미지: {images_dir.absolute()}")
+            print(f"총 {num_scenes}개 이미지가 생성되었습니다.")
+            print(f"\n이미지를 확인하신 후 계속 진행하시겠습니까?")
 
-        # Ask user for confirmation
-        while True:
-            user_input = input("계속 진행 (y/yes) / 중단 (n/no): ").strip().lower()
-            if user_input in ['y', 'yes', '계속']:
-                print("\n[OK] 계속 진행합니다...\n")
-                break
-            elif user_input in ['n', 'no', '중단']:
-                print("\n[STOP] 사용자가 중단했습니다.")
-                print(f"프로젝트 폴더: {project_dir}")
-                return {
-                    'project_dir': str(project_dir),
-                    'status': 'stopped_by_user',
-                    'images_generated': num_scenes,
-                    'images_dir': str(images_dir)
-                }
-            else:
-                print("y 또는 n을 입력해주세요.")
+            # Ask user for confirmation
+            while True:
+                user_input = input("계속 진행 (y/yes) / 중단 (n/no): ").strip().lower()
+                if user_input in ['y', 'yes', '계속']:
+                    print("\n[OK] 계속 진행합니다...\n")
+                    break
+                elif user_input in ['n', 'no', '중단']:
+                    print("\n[STOP] 사용자가 중단했습니다.")
+                    print(f"프로젝트 폴더: {project_dir}")
+                    return {
+                        'project_dir': str(project_dir),
+                        'status': 'stopped_by_user',
+                        'images_generated': len(scene_images),
+                        'images_dir': str(images_dir)
+                    }
+                else:
+                    print("y 또는 n을 입력해주세요.")
 
         # Save status
         self._save_project_status(
@@ -2169,7 +2202,14 @@ MANDATORY REQUIREMENTS:
 This is Scene {scene_num} with the SAME CHARACTERS. Keep them IDENTICAL."""
 
         # Get visual description (fallback to image_prompt if not available)
+        # Note: sora_prompt is for Sora video generation, NOT for image generation
         visual_desc = scene.get('visual_description', scene.get('image_prompt', ''))
+
+        # sora_prompt만 있고 image_prompt가 없으면, 이 장면의 이미지 생성 건너뜀
+        # (sora_prompt는 Sora 직접 비디오 생성용이며, 이미지 생성용이 아님)
+        if not visual_desc and scene.get('sora_prompt'):
+            self.logger.info(f"씬 {scene_num}: sora_prompt만 있음 - 이미지 생성 건너뜀 (Sora 비디오 생성 사용)")
+            return None, None  # None 반환 = 이미지 생성 안함
 
         # Sanitize visual description for DALL-E content policy
         sanitized_visual = self._sanitize_visual_description(visual_desc)
