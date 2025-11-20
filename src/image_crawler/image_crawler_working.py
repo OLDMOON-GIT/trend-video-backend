@@ -540,57 +540,100 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None):
     if aspect_ratio:
         print(f"📐 비율 선택 시도: {aspect_ratio}", flush=True)
 
-        aspect_ratio_result = driver.execute_script("""
-            const targetRatio = arguments[0];
+        # Step 1: 비율 선택 드롭다운/버튼 먼저 열기
+        menu_open_result = driver.execute_script("""
+            const allElements = Array.from(document.querySelectorAll('button, div[role="button"], div[role="combobox"]'));
 
-            // 16:9 또는 9:16을 포함하는 버튼이나 요소 찾기
-            const allElements = Array.from(document.querySelectorAll('button, div, span'));
-
-            // 정확한 비율 텍스트를 포함하는 요소 찾기
-            const ratioElements = allElements.filter(elem => {
-                const text = elem.textContent || '';
-                return text.includes(targetRatio);
+            // "비율", "aspect", "ratio" 등의 텍스트를 포함하는 요소 찾기
+            const ratioSelectorElements = allElements.filter(elem => {
+                const text = (elem.textContent || '').toLowerCase();
+                const ariaLabel = (elem.getAttribute('aria-label') || '').toLowerCase();
+                return text.includes('비율') ||
+                       text.includes('aspect') ||
+                       text.includes('ratio') ||
+                       ariaLabel.includes('비율') ||
+                       ariaLabel.includes('aspect') ||
+                       ariaLabel.includes('ratio');
             });
 
-            if (ratioElements.length > 0) {
-                // 클릭 가능한 요소 우선 (button이나 클릭 이벤트가 있는 것)
-                const clickableElement = ratioElements.find(elem =>
-                    elem.tagName === 'BUTTON' ||
-                    elem.onclick ||
-                    window.getComputedStyle(elem).cursor === 'pointer'
-                ) || ratioElements[0];
-
-                clickableElement.click();
-
+            // 드롭다운 열기
+            if (ratioSelectorElements.length > 0) {
+                ratioSelectorElements[0].click();
                 return {
-                    success: true,
-                    element: clickableElement.tagName,
-                    text: clickableElement.textContent.substring(0, 50)
+                    opened: true,
+                    element: ratioSelectorElements[0].tagName,
+                    text: ratioSelectorElements[0].textContent.substring(0, 50)
                 };
             }
 
-            // 비율 아이콘을 찾기 (SVG나 이미지로 표시될 수 있음)
-            const allButtons = Array.from(document.querySelectorAll('button'));
-            for (const button of allButtons) {
-                const ariaLabel = button.getAttribute('aria-label') || '';
-                const title = button.getAttribute('title') || '';
+            return {opened: false, totalElements: allElements.length};
+        """)
 
-                if (ariaLabel.includes(targetRatio) || title.includes(targetRatio)) {
-                    button.click();
-                    return {
-                        success: true,
-                        element: 'button',
-                        method: 'aria-label-or-title'
-                    };
-                }
+        if menu_open_result.get('opened'):
+            print(f"✅ 비율 선택 메뉴 열림", flush=True)
+            print(f"   요소: {menu_open_result.get('element')}", flush=True)
+            time.sleep(1)  # 메뉴가 열릴 때까지 대기
+        else:
+            print(f"⚠️ 비율 선택 메뉴를 찾지 못함", flush=True)
+
+        # Step 2: 원하는 비율 옵션 선택
+        # JavaScript로 버튼 찾기
+        ratio_button_info = driver.execute_script("""
+            const targetRatio = arguments[0];
+
+            // button 요소만 찾기
+            const allButtons = Array.from(document.querySelectorAll('button'));
+
+            // 정확히 targetRatio 텍스트만 가진 버튼 찾기
+            const ratioButtons = allButtons.filter(button => {
+                const text = button.textContent.trim();
+                return text === targetRatio;
+            });
+
+            if (ratioButtons.length > 0) {
+                const targetButton = ratioButtons[0];
+
+                // 버튼에 고유 ID 추가 (Selenium으로 찾기 위해)
+                targetButton.setAttribute('data-ratio-target', 'true');
+
+                return {
+                    found: true,
+                    text: targetButton.textContent.trim(),
+                    className: targetButton.className
+                };
             }
 
-            return {success: false, totalElements: allElements.length};
+            return {found: false};
         """, aspect_ratio)
+
+        if ratio_button_info.get('found'):
+            # Selenium WebElement를 찾아서 실제 클릭
+            from selenium.webdriver.common.by import By
+            try:
+                ratio_button = driver.find_element(By.CSS_SELECTOR, 'button[data-ratio-target="true"]')
+                ratio_button.click()  # Selenium의 실제 클릭
+                time.sleep(0.5)
+
+                aspect_ratio_result = {
+                    'success': True,
+                    'element': 'BUTTON',
+                    'text': ratio_button_info['text'],
+                    'className': ratio_button_info['className']
+                }
+
+                # 속성 제거
+                driver.execute_script("document.querySelector('button[data-ratio-target]').removeAttribute('data-ratio-target');")
+            except Exception as e:
+                print(f"⚠️ Selenium 클릭 실패: {e}", flush=True)
+                aspect_ratio_result = {'success': False}
+        else:
+            aspect_ratio_result = {'success': False}
 
         if aspect_ratio_result.get('success'):
             print(f"✅ 비율 선택 성공: {aspect_ratio}", flush=True)
             print(f"   요소: {aspect_ratio_result.get('element')}", flush=True)
+            if aspect_ratio_result.get('role'):
+                print(f"   역할: {aspect_ratio_result.get('role')}", flush=True)
             if aspect_ratio_result.get('text'):
                 print(f"   텍스트: {aspect_ratio_result.get('text')}", flush=True)
             time.sleep(2)  # 비율 선택 후 대기
@@ -1071,17 +1114,18 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             product_info = data.get('product_info', {})
             product_thumbnail = product_info.get('thumbnail', '')
 
-            # aspect_ratio가 없으면 format 필드에서 추출 시도
-            if not aspect_ratio and format_type:
-                # format이 "9:16 vertical (portrait)" 또는 "16:9" 형식인지 확인
-                if '9:16' in str(format_type):
-                    aspect_ratio = '9:16'
-                elif '16:9' in str(format_type):
+            # format 필드에서 비율 결정
+            # 원칙: longform만 16:9, 나머지는 모두 9:16
+            if format_type:
+                # 1. longform이거나 format에 '16:9'가 명시되어 있으면 16:9
+                if format_type == 'longform' or '16:9' in str(format_type):
                     aspect_ratio = '16:9'
-                elif format_type == 'longform':
-                    aspect_ratio = '16:9'
-                elif format_type == 'shortform':
+                # 2. 나머지는 모두 9:16 (shortform, product, sora2 등)
+                else:
                     aspect_ratio = '9:16'
+            # format_type이 없으면 aspect_ratio 그대로 사용하거나 기본값 9:16
+            elif not aspect_ratio:
+                aspect_ratio = '9:16'  # 기본값
 
             print(f"📐 비디오 형식: {format_type or 'unknown'}, 비율: {aspect_ratio or 'default'}", flush=True)
             if product_thumbnail:
@@ -1144,57 +1188,100 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             if aspect_ratio:
                 print(f"📐 비율 선택 시도: {aspect_ratio}", flush=True)
 
-                aspect_ratio_result = driver.execute_script("""
-                    const targetRatio = arguments[0];
+                # Step 1: 비율 선택 드롭다운/버튼 먼저 열기
+                menu_open_result = driver.execute_script("""
+                    const allElements = Array.from(document.querySelectorAll('button, div[role="button"], div[role="combobox"]'));
 
-                    // 16:9 또는 9:16을 포함하는 버튼이나 요소 찾기
-                    const allElements = Array.from(document.querySelectorAll('button, div, span'));
-
-                    // 정확한 비율 텍스트를 포함하는 요소 찾기
-                    const ratioElements = allElements.filter(elem => {
-                        const text = elem.textContent || '';
-                        return text.includes(targetRatio);
+                    // "비율", "aspect", "ratio" 등의 텍스트를 포함하는 요소 찾기
+                    const ratioSelectorElements = allElements.filter(elem => {
+                        const text = (elem.textContent || '').toLowerCase();
+                        const ariaLabel = (elem.getAttribute('aria-label') || '').toLowerCase();
+                        return text.includes('비율') ||
+                               text.includes('aspect') ||
+                               text.includes('ratio') ||
+                               ariaLabel.includes('비율') ||
+                               ariaLabel.includes('aspect') ||
+                               ariaLabel.includes('ratio');
                     });
 
-                    if (ratioElements.length > 0) {
-                        // 클릭 가능한 요소 우선 (button이나 클릭 이벤트가 있는 것)
-                        const clickableElement = ratioElements.find(elem =>
-                            elem.tagName === 'BUTTON' ||
-                            elem.onclick ||
-                            window.getComputedStyle(elem).cursor === 'pointer'
-                        ) || ratioElements[0];
-
-                        clickableElement.click();
-
+                    // 드롭다운 열기
+                    if (ratioSelectorElements.length > 0) {
+                        ratioSelectorElements[0].click();
                         return {
-                            success: true,
-                            element: clickableElement.tagName,
-                            text: clickableElement.textContent.substring(0, 50)
+                            opened: true,
+                            element: ratioSelectorElements[0].tagName,
+                            text: ratioSelectorElements[0].textContent.substring(0, 50)
                         };
                     }
 
-                    // 비율 아이콘을 찾기 (SVG나 이미지로 표시될 수 있음)
-                    const allButtons = Array.from(document.querySelectorAll('button'));
-                    for (const button of allButtons) {
-                        const ariaLabel = button.getAttribute('aria-label') || '';
-                        const title = button.getAttribute('title') || '';
+                    return {opened: false, totalElements: allElements.length};
+                """)
 
-                        if (ariaLabel.includes(targetRatio) || title.includes(targetRatio)) {
-                            button.click();
-                            return {
-                                success: true,
-                                element: 'button',
-                                method: 'aria-label-or-title'
-                            };
-                        }
+                if menu_open_result.get('opened'):
+                    print(f"✅ 비율 선택 메뉴 열림", flush=True)
+                    print(f"   요소: {menu_open_result.get('element')}", flush=True)
+                    time.sleep(1)  # 메뉴가 열릴 때까지 대기
+                else:
+                    print(f"⚠️ 비율 선택 메뉴를 찾지 못함", flush=True)
+
+                # Step 2: 원하는 비율 옵션 선택 (Selenium click 사용)
+                # JavaScript로 버튼 찾기
+                ratio_button_info = driver.execute_script("""
+                    const targetRatio = arguments[0];
+
+                    // button 요소만 찾기 (더 정확함)
+                    const allButtons = Array.from(document.querySelectorAll('button'));
+
+                    // 정확히 targetRatio 텍스트만 가진 버튼 찾기
+                    const ratioButtons = allButtons.filter(button => {
+                        const text = button.textContent.trim();
+                        return text === targetRatio;
+                    });
+
+                    if (ratioButtons.length > 0) {
+                        const targetButton = ratioButtons[0];
+
+                        // 버튼에 고유 ID 추가 (Selenium으로 찾기 위해)
+                        targetButton.setAttribute('data-ratio-target', 'true');
+
+                        return {
+                            found: true,
+                            text: targetButton.textContent.trim(),
+                            className: targetButton.className
+                        };
                     }
 
-                    return {success: false, totalElements: allElements.length};
+                    return {found: false};
                 """, aspect_ratio)
+
+                if ratio_button_info.get('found'):
+                    # Selenium WebElement를 찾아서 실제 클릭 (더 확실함)
+                    from selenium.webdriver.common.by import By
+                    try:
+                        ratio_button = driver.find_element(By.CSS_SELECTOR, 'button[data-ratio-target="true"]')
+                        ratio_button.click()  # Selenium의 실제 클릭
+                        time.sleep(0.5)  # 클릭 후 대기
+
+                        aspect_ratio_result = {
+                            'success': True,
+                            'element': 'BUTTON',
+                            'text': ratio_button_info['text'],
+                            'className': ratio_button_info['className']
+                        }
+
+                        # 속성 제거
+                        driver.execute_script("document.querySelector('button[data-ratio-target]').removeAttribute('data-ratio-target');")
+                    except Exception as e:
+                        print(f"⚠️ Selenium 클릭 실패: {e}", flush=True)
+                        aspect_ratio_result = {'success': False}
+                else:
+                    aspect_ratio_result = {'success': False}
 
                 if aspect_ratio_result.get('success'):
                     print(f"✅ 비율 선택 성공: {aspect_ratio}", flush=True)
                     print(f"   요소: {aspect_ratio_result.get('element')}", flush=True)
+                    if aspect_ratio_result.get('role'):
+                        print(f"   역할: {aspect_ratio_result.get('role')}", flush=True)
                     if aspect_ratio_result.get('text'):
                         print(f"   텍스트: {aspect_ratio_result.get('text')}", flush=True)
                     time.sleep(2)  # 비율 선택 후 대기
@@ -1312,8 +1399,8 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         print("🕐 이미지 생성 대기", flush=True)
         print("="*80, flush=True)
 
-        # 씬 개수에 비례한 타임아웃 설정 (씬당 30초)
-        max_wait_time = len(scenes) * 30
+        # 씬 개수에 비례한 타임아웃 설정 (씬당 90초 - Whisk는 생성이 느림)
+        max_wait_time = max(120, len(scenes) * 90)  # 최소 120초
         print(f"⏳ 이미지 생성 중... (최대 {max_wait_time}초, 씬 {len(scenes)}개)", flush=True)
 
         # 디버그: 초기 페이지 상태 확인
@@ -1341,36 +1428,60 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             result = driver.execute_script("""
                 const text = document.body.innerText;
                 const imgs = Array.from(document.querySelectorAll('img'));
-                const largeImgs = imgs.filter(img => img.offsetWidth > 100 && img.offsetHeight > 100);
+
+                // Whisk 결과 이미지 필터링: blob URL이면서 충분히 큰 이미지
+                const whiskImgs = imgs.filter(img => {
+                    const src = img.src || '';
+                    // blob URL 또는 http URL
+                    if (!src.startsWith('blob:') && !src.startsWith('http')) return false;
+                    // data URL 제외
+                    if (src.startsWith('data:')) return false;
+                    // 충분히 큰 이미지 (natural 크기 또는 offset 크기)
+                    const hasSize = (img.naturalWidth > 100 && img.naturalHeight > 100) ||
+                                   (img.offsetWidth > 100 && img.offsetHeight > 100);
+                    return hasSize;
+                });
+
                 const allImgs = imgs.map(img => ({
                     src: img.src.substring(0, 50),
                     width: img.offsetWidth,
-                    height: img.offsetHeight
+                    height: img.offsetHeight,
+                    naturalWidth: img.naturalWidth,
+                    naturalHeight: img.naturalHeight
                 }));
+
                 return {
-                    generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading'),
-                    imageCount: largeImgs.length,
+                    generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading') || text.includes('처리'),
+                    imageCount: whiskImgs.length,
                     allImagesCount: imgs.length,
-                    sampleImages: allImgs.slice(0, 3)
+                    sampleImages: allImgs.slice(0, 5)
                 };
             """)
 
             # 모든 씬의 이미지가 생성될 때까지 대기
+            # Whisk는 씬당 여러 배리에이션을 생성할 수 있으므로, 최소 씬 개수만큼만 확인
             expected_count = len(scenes)
-            if not result['generating'] and result['imageCount'] >= expected_count:
-                print(f"✅ 생성 완료! ({i+1}초) - 이미지 {result['imageCount']}/{expected_count}개 발견", flush=True)
-                break
+            if result['imageCount'] >= expected_count:
+                # Generating 상태가 아니면 완료
+                if not result['generating']:
+                    print(f"✅ 생성 완료! ({i+1}초) - 이미지 {result['imageCount']}/{expected_count}개 발견", flush=True)
+                    break
+                else:
+                    # 이미지는 있지만 아직 생성 중
+                    if i % 20 == 0 and i > 0:
+                        print(f"   생성 진행 중... ({i}초) - 이미지 {result['imageCount']}개 발견, 추가 생성 대기 중", flush=True)
             elif i >= max_wait_time - 1:
                 # 타임아웃 (현재까지 생성된 만큼만 사용)
                 print(f"⚠️ 타임아웃 ({i+1}초/{max_wait_time}초) - 이미지 {result['imageCount']}/{expected_count}개 발견", flush=True)
                 if result['imageCount'] < expected_count:
                     print(f"⚠️ 경고: {expected_count - result['imageCount']}개 이미지가 생성되지 않았습니다!", flush=True)
+                    print(f"   샘플 이미지 (최대 5개): {result['sampleImages']}", flush=True)
                 break
 
-            if i % 10 == 0 and i > 0:
-                print(f"   대기 중... ({i}초) - 큰 이미지: {result['imageCount']}개, 전체: {result['allImagesCount']}개", flush=True)
-                if i == 10 and result['allImagesCount'] > 0:
-                    print(f"   샘플 이미지: {result['sampleImages']}", flush=True)
+            if i % 15 == 0 and i > 0:
+                print(f"   대기 중... ({i}초) - Whisk 이미지: {result['imageCount']}개, 전체: {result['allImagesCount']}개", flush=True)
+                if i == 15:
+                    print(f"   샘플 (최대 5개): {result['sampleImages']}", flush=True)
             time.sleep(1)
 
         time.sleep(5)
