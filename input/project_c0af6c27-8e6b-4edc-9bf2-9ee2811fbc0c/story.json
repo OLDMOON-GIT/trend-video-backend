@@ -1,0 +1,86 @@
+{
+  "title": "[광고] 신발 방수 스프레이",
+  "version": "product-1.0",
+  "product_info": {
+    "thumbnail": "",
+    "product_link": "",
+    "description": "안젖소 신발 방수 스프레이"
+  },
+  "youtube_description": {
+    "text": "[광고] 비 오는 날도 걱정 없는 신발 관리 🔥\n\n✅ 강력한 방수 코팅으로 물과 얼룩 완벽 차단!\n✅ 모든 재질의 신발에 안전하게 사용 가능.\n✅ 간편한 스프레이 타입으로 빠른 시공!\n✅ 오래 지속되는 방수 효과로 경제적.\n\n🛒 구매하기\n\n\n🏠 더 많은 상품보기\n{home_url}\n\n#신발방수 #방수스프레이 #신발관리 #비오는날 #안젖소 #신발코팅 #방수코팅 #신발용품 #생활용품 #실용템\n\n이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
+  },
+  "metadata": {
+    "genre": "상품 소개 영상",
+    "format": "9:16 vertical (portrait)",
+    "total_duration_seconds": 30,
+    "style": "cinematic product showcase",
+    "mood": "desirable, appealing, satisfying",
+    "key_techniques": [
+      "product focus",
+      "lifestyle context",
+      "detail shots",
+      "emotional connection"
+    ],
+    "target_platform": "mobile shopping",
+    "emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+    "scene_count": 4,
+    "category": "상품",
+    "scriptId": "c0af6c27-8e6b-4edc-9bf2-9ee2811fbc0c"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 3초 상품 매력",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "image_prompt": "Close-up product shot of sleek white spray bottle with orange cap labeled 안젖소, held by Korean hands in grey sweater, premium matte white texture with minimalist orange accent design, product label and nozzle details clearly visible, dramatic rim lighting creating depth and reflections, cool white tones with warm beige background, professional product photography, indoor entryway setting with window light",
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product hero shot with human element, camera starts slightly blurred then racks focus sharply onto Korean person's hands wearing casual grey sweater holding sleek white spray bottle with orange cap labeled 안젖소, Korean person's hands centered in vertical frame examining product closely with East Asian skin tone visible, premium matte white bottle texture with modern minimalist orange accent design, same Korean person throughout entire video wearing grey sweater and dark jeans, hands rotating bottle to show product label and nozzle details, dramatic rim lighting with subtle shadows creating depth on white bottle surface, slow push-in on hands and product revealing intricate spray nozzle mechanism, establishing the main Korean character who will appear in all following scenes, desirable and eye-catching mood with product prominence, shot on 35mm film with anamorphic bokeh, shallow depth gradually deepening to reveal cozy indoor home entryway backdrop with shoe rack visible, warm natural daylight streaming through window with cool white product tones popping against warm interior, consistent Korean character and location established from the start, camera movement leads viewer's eye naturally as hands lower preparing for transition to wider lifestyle context",
+      "narration": "비 오는 날마다 젖은 신발 때문에 고민하셨나요? 이제 안젖소 방수 스프레이 하나로 해결하세요",
+      "scene_number": 1
+    },
+    {
+      "scene_id": "scene_01_problem",
+      "scene_name": "문제/필요 - 9초 공감",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "image_prompt": "Person in grey sweater crouching in home entryway looking at soaked wet sneakers, water droplets visible on shoe surface, frustrated disappointed facial expression, water stains and dirt marks on light colored canvas sneakers, multiple damaged water-stained shoes on rack behind, umbrella and wet floor mat visible, grey rainy day lighting through window, muted blue-grey color palette, relatable emotional mood",
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle problem scene, camera transitions from previous hands shot by pulling back to reveal full upper body of the SAME KOREAN PERSON from Scene 0 with East Asian features clearly visible crouching in home entryway looking down at soaked wet sneakers with water droplets visible on shoe surface, same grey sweater and dark jeans visible confirming character continuity, same Korean person now shown from waist up in vertical frame struggling with the problem of wet damaged shoes, Korean face with East Asian facial features showing frustrated disappointed expression touching wet shoe material with fingertips, water stains and dirt marks visible on light colored canvas sneakers, same home entryway location established in Scene 0 now visible in wider shot with umbrella and wet floor mat, lighting gradually shifts from product focus to grey rainy day reality with overcast window light, slow tracking sideways with same Korean person revealing multiple pairs of damaged water-stained shoes on rack, maintaining Korean character and environmental consistency, relatable and empathetic mood building connection with everyday shoe care struggles, shot on 35mm film maintaining visual continuity from previous scene, depth of field opens up showing same entryway backdrop with rain visible through window, muted realistic color palette with desaturated blue-grey rainy tones contrasting with previous product warmth, same Korean person looks down at their ruined shoes searching for solution as camera slowly drifts toward where better product will appear",
+      "narration": "출근길 비를 맞고 돌아온 신발, 물에 젖어 변색되고 냄새까지 나기 시작해요. 매번 새 신발을 사기엔 부담스럽고, 신발장엔 망가진 신발들만 쌓여가죠. 좋아하던 운동화도 한 번 비를 맞으면 다시 신기 힘들어지는 경험",
+      "scene_number": 2
+    },
+    {
+      "scene_id": "scene_02_solution",
+      "scene_name": "해결/기능 - 9초 설득",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "image_prompt": "Close-up of hands spraying white 안젖소 spray bottle with orange cap onto fresh clean sneaker, fine mist dispersing evenly, spray technique demonstration, water beads and protective barrier visible on treated shoe surface, satisfied focused facial expression, ultra-fine mist particles in light, warm natural window light, professional product demonstration, modern home entryway background",
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product solution reveal, camera continues previous movement as the SAME KOREAN PERSON from previous scenes now holds the white 안젖소 spray bottle with Korean hands clearly visible spraying fine mist onto fresh clean sneaker held in other hand, same grey sweater confirming character continuity in same home entryway location, seamless transition as same Korean person's hands with East Asian skin tone come into frame applying the solution product with confident smooth motions, close-up of Korean hands in vertical frame showing proper spray technique from 20cm distance creating even coating on shoe surface, ultra-fine mist particles visible in backlight catching on shoe fabric creating protective barrier effect, same vertical framing maintaining Korean character consistency with face partially visible showing concentrated focused expression, lighting transforms from cold problem atmosphere to warm satisfied solution with natural window sunlight creating premium product demonstration showcase, camera orbits 180 degrees around same Korean person's hands and product revealing spray application from multiple angles while maintaining continuous story with same Korean character, convincing and satisfying mood as solution unfolds on same Korean person demonstrating product, shot on 35mm film with consistent bokeh character highlighting mist particles, same Korean person's satisfied subtle smile with East Asian features gradually visible as camera pulls slightly back revealing treated shoe now with visible water beads rolling off surface, vibrant yet natural warm interior color palette with white spray bottle and orange cap prominent, camera movement mirrors same Korean person's hand interaction building tactile connection and demonstrating ease of use, same entryway backdrop visible confirming location continuity with shoe rack and window, preparing for final emotional payoff with same Korean character showing results",
+      "narration": "안젖소 방수 스프레이를 가볍게 뿌리면 보이지 않는 방수막이 형성돼요. 물과 얼룩을 완벽하게 차단하면서도 신발 재질은 그대로 보호해줍니다. 운동화부터 가죽 구두까지 모든 신발에 안전하게 사용할 수 있어요",
+      "scene_number": 3
+    },
+    {
+      "scene_id": "scene_03_cta",
+      "scene_name": "행동유도 + CTA - 9초 구매욕구",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "image_prompt": "Person standing confidently in home entryway holding treated sneaker with water droplets beading up and rolling off shoe surface, satisfied relieved smile showing lifestyle transformation, grey sweater with complete look, multiple treated water-repellent shoes on rack in background, golden hour afternoon sunlight creating warm glow, premium satisfaction mood, water resistance demonstration",
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic emotional finale, camera gracefully pulls back from previous spray application moment revealing the SAME KOREAN PERSON from all previous scenes now standing confidently in entryway with East Asian facial features clearly visible holding treated sneaker while water droplets dramatically bead up and roll off shoe surface under running water test, same Korean person in full frame showing complete lifestyle transformation from frustrated to satisfied, vertical composition widens from hands to full upper body of same Korean character with East Asian appearance wearing same grey sweater throughout entire video confirming continuity, product beautifully integrated into daily shoe care routine with multiple treated shoes on rack all showing water-repellent surface, same home entryway location visible throughout entire video journey with natural warm daylight, lighting reaches golden hour perfection with warm afternoon sun glow suggesting comfort capability and satisfaction with product results, slow crane movement upward and back revealing same Korean person's complete happy moment admiring protected shoes, same Korean character's face now fully visible with East Asian features showing genuine satisfaction and relief with product effectiveness, same entryway backdrop establishing consistent location throughout all 4 scenes with window and shoe rack, desirable and rewarding mood crescendos as we see same Korean person's journey complete from product introduction to problem to solution to satisfaction, shot on 35mm film with final bokeh blooming beautifully around same Korean person creating dreamy separation, depth of field creates premium separation while maintaining Korean character focus on satisfied expression, warm golden interior color palette with white product bottle still visible on shelf with treated shoes displaying water beads, camera movement completes full narrative journey with same Korean person from initial product showcase to final lifestyle satisfaction, final frame holds on same Korean person holding protected shoe with water rolling off surface and satisfied relieved smile as emotional anchor inviting viewer to own this moment and join this journey",
+      "narration": "이제 비 오는 날도 걱정 없이 좋아하는 신발을 신으세요. 한 번 뿌리면 오래 지속되는 강력한 방수 효과를 경험할 수 있어요. 상품 링크는 댓글에 있습니다. 구독과 좋아요 부탁드립니다",
+      "scene_number": 4
+    }
+  ],
+  "quality_check": {
+    "scene_count": 4,
+    "total_duration": 30,
+    "vertical_format": true,
+    "product_focused": true,
+    "cinematic_style": true,
+    "hook_effectiveness": "strong",
+    "problem_solution_clear": true,
+    "cta_compelling": true,
+    "product_link_mention_included": true,
+    "subscription_request_included": true,
+    "youtube_description_included": true,
+    "youtube_description_starts_with_ad": true
+  }
+}
