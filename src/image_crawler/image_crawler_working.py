@@ -43,65 +43,81 @@ def detect_policy_violation(driver):
     """
     try:
         result = driver.execute_script("""
-            const bodyText = document.body.innerText.toLowerCase();
-            const allText = document.body.textContent.toLowerCase();
-
-            // 정책 위반 관련 키워드들
-            const policyKeywords = [
-                '정책',
-                '위반',
-                'policy',
-                'violation',
-                'violates',
-                'not allowed',
-                'prohibited',
-                'restricted',
-                'safety',
-                '안전',
-                'guideline',
-                '가이드라인',
-                'inappropriate',
-                '부적절',
-                'blocked',
-                '차단',
-                'cannot generate',
-                '생성할 수 없'
+            // 🔴 1단계: 에러/경고 UI 요소 찾기 (오탐 방지 핵심!)
+            // 실제 정책 위반 메시지는 특정 UI 컴포넌트 안에만 표시됨
+            const errorSelectors = [
+                '[role="alert"]',
+                '[role="status"]',
+                '.error-message',
+                '.warning-message',
+                '.policy-violation',
+                'div[class*="error"]',
+                'div[class*="warning"]',
+                'div[class*="alert"]',
+                'span[class*="error"]',
+                'p[class*="error"]'
             ];
 
-            // 여러 키워드가 동시에 발견되면 정책 위반 가능성 높음
-            let matchCount = 0;
-            let matchedKeywords = [];
+            let errorElements = [];
+            for (const selector of errorSelectors) {
+                const elements = Array.from(document.querySelectorAll(selector));
+                errorElements = errorElements.concat(elements);
+            }
 
-            for (const keyword of policyKeywords) {
-                if (bodyText.includes(keyword) || allText.includes(keyword)) {
-                    matchCount++;
-                    matchedKeywords.push(keyword);
+            // 추가: 에러 메시지 같은 텍스트 길이를 가진 요소들도 검사
+            // (Whisk는 동적으로 생성되는 에러 메시지용 div 사용)
+            const allDivs = Array.from(document.querySelectorAll('div, span, p'));
+            for (const elem of allDivs) {
+                const text = elem.textContent || '';
+                // 길이가 30~300자 정도의 텍스트만 에러 메시지 후보로 간주
+                if (text.length > 30 && text.length < 300) {
+                    errorElements.push(elem);
                 }
             }
 
-            // 2개 이상의 키워드가 발견되면 정책 위반으로 간주
-            if (matchCount >= 2) {
-                // 에러 메시지 영역 찾기
-                const errorElements = Array.from(document.querySelectorAll('div, span, p'));
-                let errorMessage = '';
+            // 🔴 2단계: 에러 요소 내부에서만 정책 위반 패턴 검색
+            const specificViolationPatterns = [
+                // 한글 Google 정책 위반 메시지 (구체적인 문구)
+                '유명인.*동영상.*생성.*google.*정책',
+                '유명인.*google.*정책.*위반',
+                'google.*정책.*위반.*유명인',
 
-                for (const elem of errorElements) {
-                    const text = elem.textContent || '';
-                    // 정책/위반 관련 텍스트를 포함하면서 적당한 길이의 메시지
-                    if (text.length > 20 && text.length < 500) {
-                        const lowerText = text.toLowerCase();
-                        if (policyKeywords.some(kw => lowerText.includes(kw))) {
-                            errorMessage = text.trim();
-                            break;
-                        }
+                // 영문 Google 정책 위반 메시지
+                'celebrity.*video.*google.*policy',
+                'violates.*google.*policy.*celebrity',
+                'google.*policy.*violation.*celebrity'
+            ];
+
+            let violationDetected = false;
+            let errorMessage = '';
+            let matchedPatterns = [];
+
+            // 에러 요소들 중에서만 패턴 검색
+            for (const elem of errorElements) {
+                const text = elem.textContent || '';
+                const lowerText = text.toLowerCase();
+
+                for (const pattern of specificViolationPatterns) {
+                    const regex = new RegExp(pattern, 'i');
+                    if (regex.test(lowerText)) {
+                        violationDetected = true;
+                        matchedPatterns.push(pattern);
+                        errorMessage = text.trim();
+                        break;  // 첫 매칭에서 종료
                     }
                 }
 
+                if (violationDetected) {
+                    break;  // 정책 위반 발견 시 즉시 종료
+                }
+            }
+
+            if (violationDetected) {
                 return {
                     violation_detected: true,
-                    matched_keywords: matchedKeywords,
-                    message: errorMessage || bodyText.substring(0, 200),
-                    match_count: matchCount
+                    matched_keywords: matchedPatterns,
+                    message: errorMessage || '정책 위반 메시지 감지됨',
+                    match_count: matchedPatterns.length
                 };
             }
 
@@ -109,7 +125,7 @@ def detect_policy_violation(driver):
                 violation_detected: false,
                 matched_keywords: [],
                 message: null,
-                match_count: matchCount
+                match_count: 0
             };
         """)
 
@@ -1479,16 +1495,28 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             # 이렇게 해야 씬 00의 이미지가 반복되지 않음
             print(f"\n📥 {scene_number}의 이미지 수집 중...", flush=True)
             try:
+                # 🔴 중요: 이미 다운로드한 src 목록을 JavaScript로 전달
+                already_downloaded = list(downloaded_image_srcs)
+
                 # Whisk 페이지에서 생성된 이미지 찾기 (이번 씬만)
                 scene_image = driver.execute_script("""
                     const imgs = Array.from(document.querySelectorAll('img'));
+                    const alreadyDownloaded = arguments[0];  // Python에서 전달받은 이미 다운로드한 src 목록
 
                     // 가장 최근에 생성된 큰 이미지 찾기
+                    let excludedCount = 0;
                     const validImgs = imgs.filter(img => {
                         if (img.offsetWidth < 100 || img.offsetHeight < 100) return false;
                         const src = img.src || '';
                         if (src.startsWith('data:')) return false;
                         if (!src.startsWith('http') && !src.startsWith('blob:')) return false;
+
+                        // 🔴 핵심: 이미 다운로드한 이미지는 제외!
+                        if (alreadyDownloaded.includes(src)) {
+                            excludedCount++;
+                            return false;
+                        }
+
                         return true;
                     });
 
@@ -1509,19 +1537,33 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                             width: img.offsetWidth,
                             height: img.offsetHeight,
                             isBlob: img.src.startsWith('blob:'),
-                            allSrcs: allVariationSrcs  // 모든 variation src 배열
+                            allSrcs: allVariationSrcs,  // 모든 variation src 배열
+                            totalImages: imgs.length,
+                            excludedCount: excludedCount,
+                            candidateCount: validImgs.length
                         };
                     }
-                    return null;
-                """)
+                    return {
+                        src: null,
+                        totalImages: imgs.length,
+                        excludedCount: excludedCount,
+                        candidateCount: validImgs.length
+                    };
+                """, already_downloaded)
 
-                if scene_image:
+                print(f"   📊 이미지 통계: 전체 {scene_image.get('totalImages', 0)}개, "
+                      f"제외 {scene_image.get('excludedCount', 0)}개, "
+                      f"후보 {scene_image.get('candidateCount', 0)}개", flush=True)
+
+                if scene_image and scene_image.get('src'):
                     print(f"   ✅ 이미지 발견: {scene_image['width']}x{scene_image['height']}", flush=True)
                     # 이미지 즉시 다운로드
                     import requests
                     import base64
 
                     try:
+                        download_success = False
+
                         if scene_image.get('isBlob'):
                             base64_data = driver.execute_script("""
                                 const url = arguments[0];
@@ -1546,6 +1588,7 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                                 with open(output_path, 'wb') as f:
                                     f.write(image_bytes)
                                 print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
+                                download_success = True
 
                         elif scene_image['src'].startswith('http'):
                             ext = '.jpg'
@@ -1558,12 +1601,15 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                                 with open(output_path, 'wb') as f:
                                     f.write(response.content)
                                 print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
+                                download_success = True
 
-                                # 중복 방지: 이 씬의 모든 variation src 기록
-                                all_srcs = scene_image.get('allSrcs', [scene_image['src']])
-                                for src in all_srcs:
-                                    downloaded_image_srcs.add(src)
-                                print(f"   📝 이미지 src 기록됨: {len(all_srcs)}개 variations (총 {len(downloaded_image_srcs)}개 기록)", flush=True)
+                        # 🔴 중복 방지: 다운로드 성공 시 모든 variation src 기록
+                        if download_success:
+                            all_srcs = scene_image.get('allSrcs', [scene_image['src']])
+                            for src in all_srcs:
+                                downloaded_image_srcs.add(src)
+                            print(f"   📝 이미지 src 기록됨: {len(all_srcs)}개 variations (총 {len(downloaded_image_srcs)}개 기록)", flush=True)
+
                     except Exception as e:
                         print(f"   ❌ 다운로드 실패: {e}", flush=True)
                 else:
@@ -1757,6 +1803,16 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                 print(f"🗑️ 임시 썸네일 파일 삭제: {product_thumbnail_path}", flush=True)
         except Exception as e:
             print(f"⚠️ 임시 파일 삭제 실패: {e}", flush=True)
+
+        # ✅ 완료 마커 파일 생성 (scheduler가 상태 확인용)
+        try:
+            import datetime
+            completion_marker = os.path.join(output_folder, '.crawl_complete')
+            with open(completion_marker, 'w') as f:
+                f.write(f"Completed at: {datetime.datetime.now().isoformat()}\n")
+            print(f"✅ 완료 마커 파일 생성: {completion_marker}", flush=True)
+        except Exception as e:
+            print(f"⚠️ 마커 파일 생성 실패: {e}", flush=True)
 
         if driver:
             print("\n✅ 작업 완료. 브라우저를 닫습니다.", flush=True)
