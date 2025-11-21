@@ -1046,55 +1046,12 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
         print(f"✅ Ctrl+V 붙여넣기 완료", flush=True)
         time.sleep(0.8)
 
-        # 엔터 키 입력
+        # 엔터 키 입력 (생성 시작)
         actions = ActionChains(driver)
         actions.send_keys(Keys.RETURN).perform()
-        print("⏎ 엔터 입력 완료", flush=True)
+        print("⏎ 엔터 입력 완료 (생성 시작)", flush=True)
         time.sleep(1)
-
-        # 생성 버튼 찾아서 클릭 (여러 가능한 텍스트/selector 시도)
-        generate_button_found = False
-        button_texts = ['Generate', 'Create', '생성', 'Remix', 'Go']
-        button_selectors = [
-            'button[type="submit"]',
-            'button[aria-label*="generate"]',
-            'button[aria-label*="create"]',
-            "button:has-text('Generate')", # Corrected: Single quotes
-            '.generate-button',
-            '[data-test-id="generate-button"]'
-        ]
-
-        # 텍스트로 버튼 찾기
-        for text in button_texts:
-            try:
-                buttons = driver.find_elements(By.XPATH, f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{text.lower()}')]")
-                for btn in buttons:
-                    if btn.is_displayed() and btn.is_enabled():
-                        btn.click()
-                        print(f"✅ '{text}' 버튼 클릭 완료", flush=True)
-                        generate_button_found = True
-                        break
-                if generate_button_found:
-                    break
-            except:
-                continue
-
-        # selector로 버튼 찾기 (텍스트로 못 찾았을 경우)
-        if not generate_button_found:
-            for selector in button_selectors:
-                try:
-                    btn = driver.find_element(By.CSS_SELECTOR, selector)
-                    if btn.is_displayed() and btn.is_enabled():
-                        btn.click()
-                        print(f"✅ 생성 버튼 클릭 완료 ({selector})", flush=True)
-                        generate_button_found = True
-                        break
-                except:
-                    continue
-
-        if not generate_button_found:
-            print("⚠️ 생성 버튼을 찾지 못함 - 엔터로 처리됨", flush=True)
-
+        # 엔터만으로 생성이 시작되므로 버튼 클릭은 하지 않음 (중복 실행 방지)
         return True
 
     except Exception as e:
@@ -1242,6 +1199,12 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         return 1
 
     print(f"📝 총 {len(scenes)}개 씬 처리 예정\n", flush=True)
+
+    # 출력 폴더 결정 (per-scene collection에서 사용하기 위해 미리 정의)
+    if output_dir:
+        output_folder = os.path.abspath(output_dir)
+    else:
+        output_folder = os.path.dirname(os.path.abspath(scenes_json_file))
 
     driver = None
     try:
@@ -1503,7 +1466,12 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                 # 입력 성공 및 정책 위반 없음
                 print(f"✅ {scene_number} 입력 완료 (정책 위반 없음)", flush=True)
                 break  # 성공하면 재시도 루프 탈출
-            
+
+            # Whisk가 이미지를 생성할 시간 대기 (씬당 최소 30초)
+            generation_wait = 30
+            print(f"\n⏳ 이미지 생성 대기 중... ({generation_wait}초)", flush=True)
+            time.sleep(generation_wait)
+
             # 🔴 각 씬의 이미지를 즉시 수집 (모든 씬 처리 후가 아니라 각 씬마다)
             # 이렇게 해야 씬 00의 이미지가 반복되지 않음
             print(f"\n📥 {scene_number}의 이미지 수집 중...", flush=True)
@@ -1711,12 +1679,7 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         except Exception as e:
             print(f"⚠️ 스크린샷 저장 실패: {e}", flush=True)
 
-        # 출력 폴더 결정
-        if output_dir:
-            output_folder = os.path.abspath(output_dir)
-        else:
-            output_folder = os.path.dirname(os.path.abspath(scenes_json_file))
-
+        # 출력 폴더 확인 (이미 앞에서 정의됨)
         print(f"📁 출력 폴더: {output_folder}", flush=True)
 
         # 기존 이미지/영상 파일을 backup 폴더로 이동
