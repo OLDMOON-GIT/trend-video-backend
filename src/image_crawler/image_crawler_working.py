@@ -1393,6 +1393,9 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         print("3️⃣ Whisk - 프롬프트 입력", flush=True)
         print("="*80, flush=True)
 
+        # 중복 방지용: 이미 다운로드한 이미지 src 추적 (Whisk variation 중복 방지)
+        downloaded_image_srcs = set()
+
         # 모든 씬을 순차적으로 처리
         for i in range(len(scenes)):
             scene = scenes[i]
@@ -1496,14 +1499,17 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                         return sizeB - sizeA;
                     });
 
-                    // 첫 번째 이미지만 반환 (이번 씬에서 생성한 것)
+                    // 첫 번째 이미지와 모든 variation src 반환
                     if (sorted.length > 0) {
                         const img = sorted[0];
+                        // Whisk의 모든 variation src 수집 (중복 방지용)
+                        const allVariationSrcs = sorted.map(img => img.src);
                         return {
                             src: img.src,
                             width: img.offsetWidth,
                             height: img.offsetHeight,
-                            isBlob: img.src.startsWith('blob:')
+                            isBlob: img.src.startsWith('blob:'),
+                            allSrcs: allVariationSrcs  // 모든 variation src 배열
                         };
                     }
                     return null;
@@ -1552,6 +1558,12 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                                 with open(output_path, 'wb') as f:
                                     f.write(response.content)
                                 print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
+
+                                # 중복 방지: 이 씬의 모든 variation src 기록
+                                all_srcs = scene_image.get('allSrcs', [scene_image['src']])
+                                for src in all_srcs:
+                                    downloaded_image_srcs.add(src)
+                                print(f"   📝 이미지 src 기록됨: {len(all_srcs)}개 variations (총 {len(downloaded_image_srcs)}개 기록)", flush=True)
                     except Exception as e:
                         print(f"   ❌ 다운로드 실패: {e}", flush=True)
                 else:
