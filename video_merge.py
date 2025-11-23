@@ -127,18 +127,10 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
 
     # filter_complex 문자열 생성
     # [0:v][0:a][1:v][1:a]...[n:v][n:a]concat=n=N:v=1:a=1[outv][outa]
-
-    # ⛔ CRITICAL FEATURE: SAR 필터 정규화
-    # 버그 이력: 2025-01-12 - SAR 불일치로 영상 concat 실패
-    # ❌ setsar=1 필터 제거 금지!
-    # 관련 문서: CRITICAL_FEATURES.md
-    sar_filters = []
-    concat_inputs = []
+    filter_parts = []
     for i in range(len(video_paths)):
-        sar_filters.append(f"[{i}:v]setsar=1[v{i}]")
-        concat_inputs.append(f"[v{i}][{i}:a]")
-
-    filter_str = ";".join(sar_filters) + ";" + "".join(concat_inputs) + f"concat=n={len(video_paths)}:v=1:a=1[outv][outa]"
+        filter_parts.append(f"[{i}:v][{i}:a]")
+    filter_str = "".join(filter_parts) + f"concat=n={len(video_paths)}:v=1:a=1[outv][outa]"
 
     logger.info(f"🎬 FFmpeg filter_complex 명령 실행 중...")
 
@@ -168,7 +160,7 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
         logger.error(f"❌ FFmpeg stderr: {result.stderr}")
         raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
 
-    logger.info(f"비디오 병합 완료: {output_path.name}")
+    logger.info(f"✅ 비디오 병합 완료: {output_path.name}")
 
     if not output_path.exists():
         raise RuntimeError(f"출력 비디오가 생성되지 않았습니다: {output_path}")
@@ -176,310 +168,9 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
     return output_path
 
 
-def align_videos_to_scenes(video_paths: list, scenes: list, whisper_segments: list, output_path: Path) -> Path:
+async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNeural") -> Path:
     """
-    scenes 배열에 맞춰 비디오를 배치 (원본 대본 구조 사용)
-
-    간단하게: scene 1 → video 1, scene 2 → video 2 ...
-    각 scene의 narration 시간만큼 해당 비디오 사용
-
-    Args:
-        video_paths: 입력 비디오 파일 경로 리스트
-        scenes: scenes 배열 (각 scene은 narration, duration 포함)
-        whisper_segments: Whisper 세그먼트 (자막용, 비디오 배치에는 사용 안 함)
-        output_path: 출력 비디오 경로
-    """
-    ffmpeg = get_ffmpeg_path()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg not found. Install FFmpeg or imageio-ffmpeg.")
-
-    logger.info(f"\n🎬 scenes 배열에 맞춰 비디오 배치 중...")
-    logger.info(f"   scenes: {len(scenes)}개")
-    logger.info(f"   비디오: {len(video_paths)}개")
-
-    # scenes와 비디오 매칭 - 간단하게!
-    video_segments = []
-    cumulative_time = 0.0
-
-    for i, scene in enumerate(scenes):
-        # scene 1 → video 1, scene 2 → video 2, ...
-        video_idx = min(i, len(video_paths) - 1)
-        video_path = video_paths[video_idx]
-
-        scene_narration = scene.get('narration', '').strip()
-        scene_duration = scene.get('duration', 0)
-
-        if not scene_narration:
-            logger.warning(f"   씬 {i+1}: 나레이션이 비어있음, 건너뜀")
-            continue
-
-        # scene의 narration에 해당하는 Whisper segments의 실제 시간 찾기
-        # Whisper segments에서 현재 cumulative_time부터 시작하는 segments를 찾아서
-        # 이 scene의 narration이 끝날 때까지의 실제 시간 계산
-        scene_start_time = cumulative_time
-        scene_end_time = scene_start_time
-
-        for seg in whisper_segments:
-            if seg['start'] >= cumulative_time:
-                if scene_end_time == scene_start_time:
-                    scene_start_time = seg['start']
-                scene_end_time = seg['end']
-
-                # 이 scene의 예상 duration에 도달하면 중단
-                if (scene_end_time - scene_start_time) >= scene_duration * 0.9:
-                    break
-
-        # 실제 사용할 duration
-        if scene_end_time > scene_start_time:
-            duration = scene_end_time - scene_start_time
-            cumulative_time = scene_end_time
-        elif scene_duration > 0:
-            duration = scene_duration
-            cumulative_time += scene_duration
-        else:
-            logger.warning(f"   씬 {i+1}: duration을 찾을 수 없음, 3초 사용")
-            duration = 3.0
-            cumulative_time += 3.0
-
-        video_segments.append({
-            'video_path': video_path,
-            'duration': duration,
-            'scene_text': scene_narration[:30]
-        })
-
-        logger.info(f"   씬 {i+1}: {duration:.2f}초 → {video_path.name}")
-
-    # FFmpeg filter_complex로 각 비디오를 trim하고 concat
-    input_args = []
-    trim_filters = []
-    concat_inputs = []
-
-    for i, vs in enumerate(video_segments):
-        input_args.extend(['-i', str(vs['video_path'])])
-        trim_filters.append(f"[{i}:v]trim=duration={vs['duration']},setpts=PTS-STARTPTS[v{i}]")
-        trim_filters.append(f"[{i}:a]atrim=duration={vs['duration']},asetpts=PTS-STARTPTS[a{i}]")
-        concat_inputs.append(f"[v{i}][a{i}]")
-
-    trim_filter_str = ";".join(trim_filters)
-    concat_input_str = "".join(concat_inputs)
-    concat_filter = f"{concat_input_str}concat=n={len(video_segments)}:v=1:a=1[outv][outa]"
-    filter_complex = f"{trim_filter_str};{concat_filter}"
-
-    logger.info(f"🎬 FFmpeg filter_complex 실행 중...")
-
-    cmd = [
-        ffmpeg,
-        '-y',
-        *input_args,
-        '-filter_complex', filter_complex,
-        '-map', '[outv]',
-        '-map', '[outa]',
-        '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-crf', '23',
-        '-c:a', 'aac',
-        '-b:a', '192k',
-        str(output_path)
-    ]
-
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=600
-    )
-
-    if result.returncode != 0:
-        logger.error(f"❌ FFmpeg stderr: {result.stderr}")
-        raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
-
-    logger.info(f"scenes 기반 비디오 병합 완료: {output_path.name}")
-
-    if not output_path.exists():
-        raise RuntimeError(f"출력 비디오가 생성되지 않았습니다: {output_path}")
-
-    return output_path
-
-
-def align_videos_to_segments(video_paths: list, segments: list, output_path: Path) -> Path:
-    """
-    나레이션 세그먼트에 맞춰 비디오를 배치
-
-    Args:
-        video_paths: 입력 비디오 파일 경로 리스트
-        segments: Whisper 세그먼트 리스트 (각 세그먼트는 start, end, text 포함)
-        output_path: 출력 비디오 경로
-    """
-    ffmpeg = get_ffmpeg_path()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg not found. Install FFmpeg or imageio-ffmpeg.")
-
-    logger.info(f"\n🎬 세그먼트에 맞춰 비디오 배치 중...")
-    logger.info(f"   세그먼트: {len(segments)}개")
-    logger.info(f"   비디오: {len(video_paths)}개")
-
-    # 세그먼트와 비디오 매칭 (순환 없음, 마지막 비디오 유지)
-    video_segments = []
-    for i, seg in enumerate(segments):
-        # 비디오 개수를 넘어가면 마지막 비디오 계속 사용
-        video_idx = min(i, len(video_paths) - 1)
-        video_path = video_paths[video_idx]
-        duration = seg['end'] - seg['start']
-
-        video_segments.append({
-            'video_path': video_path,
-            'duration': duration,
-            'segment_text': seg['text'][:30]  # 로그용
-        })
-
-        logger.info(f"   세그먼트 {i+1}: {duration:.2f}초 → {video_path.name}")
-
-    # FFmpeg filter_complex로 각 비디오를 trim하고 concat
-    input_args = []
-    trim_filters = []
-    concat_inputs = []
-
-    for i, vs in enumerate(video_segments):
-        # 각 비디오 파일을 입력으로 추가 (중복 가능)
-        input_args.extend(['-i', str(vs['video_path'])])
-
-        # 해당 비디오를 duration에 맞춰 trim
-        # trim은 처음부터 duration만큼만 가져옴
-        trim_filters.append(f"[{i}:v]trim=duration={vs['duration']},setpts=PTS-STARTPTS[v{i}]")
-        trim_filters.append(f"[{i}:a]atrim=duration={vs['duration']},asetpts=PTS-STARTPTS[a{i}]")
-
-        concat_inputs.append(f"[v{i}][a{i}]")
-
-    # filter_complex 문자열 조합
-    trim_filter_str = ";".join(trim_filters)
-    concat_input_str = "".join(concat_inputs)
-    concat_filter = f"{concat_input_str}concat=n={len(video_segments)}:v=1:a=1[outv][outa]"
-
-    filter_complex = f"{trim_filter_str};{concat_filter}"
-
-    logger.info(f"🎬 FFmpeg filter_complex 실행 중...")
-
-    cmd = [
-        ffmpeg,
-        '-y',
-        *input_args,
-        '-filter_complex', filter_complex,
-        '-map', '[outv]',
-        '-map', '[outa]',
-        '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-crf', '23',
-        '-c:a', 'aac',
-        '-b:a', '192k',
-        str(output_path)
-    ]
-
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=600
-    )
-
-    if result.returncode != 0:
-        logger.error(f"❌ FFmpeg stderr: {result.stderr}")
-        raise RuntimeError(f"FFmpeg 실패:\n{result.stderr}")
-
-    logger.info(f"세그먼트 기반 비디오 병합 완료: {output_path.name}")
-
-    if not output_path.exists():
-        raise RuntimeError(f"출력 비디오가 생성되지 않았습니다: {output_path}")
-
-    return output_path
-
-
-def transcribe_audio_with_whisper(audio_path: Path, original_text: str) -> list:
-    """
-    Whisper로 타임스탬프만 얻고, 텍스트는 원본 나레이션 사용
-    """
-    try:
-        import whisper
-        import re
-
-        logger.info(f"🎧 Whisper로 타이밍 분석 중...")
-
-        # Whisper 모델 로드 (base 모델 사용)
-        model = whisper.load_model("base")
-
-        # 오디오 인식 (타임스탬프만 필요)
-        result = model.transcribe(
-            str(audio_path),
-            language="ko",
-            verbose=False
-        )
-
-        # Whisper 세그먼트 타임스탬프 추출
-        whisper_segments = result["segments"]
-        logger.info(f"✅ Whisper 타이밍 분석 완료: {len(whisper_segments)}개 세그먼트")
-
-        # 원본 텍스트를 문장 단위로 분리
-        sentences = re.split(r'([.!?。！？]+)', original_text)
-
-        # 분리된 구두점을 앞 문장에 붙이기
-        original_sentences = []
-        for i in range(0, len(sentences)-1, 2):
-            if i+1 < len(sentences):
-                sentence = (sentences[i] + sentences[i+1]).strip()
-                if sentence:
-                    original_sentences.append(sentence)
-
-        # 마지막 문장 처리
-        if len(sentences) % 2 == 1 and sentences[-1].strip():
-            original_sentences.append(sentences[-1].strip())
-
-        if not original_sentences:
-            original_sentences = [original_text.strip()]
-
-        logger.info(f"📝 원본 텍스트: {len(original_sentences)}개 문장")
-
-        # Whisper 타임스탬프 + 원본 텍스트 결합
-        subtitle_data = []
-
-        # 세그먼트 개수와 문장 개수가 다를 경우 조정
-        num_segments = min(len(whisper_segments), len(original_sentences))
-
-        if len(whisper_segments) != len(original_sentences):
-            logger.warning(f"⚠️ 세그먼트 개수 불일치: Whisper {len(whisper_segments)}개, 원본 {len(original_sentences)}개")
-            logger.warning(f"   → {num_segments}개만 사용")
-
-        for i in range(num_segments):
-            subtitle_data.append({
-                "start": whisper_segments[i]["start"],
-                "end": whisper_segments[i]["end"],
-                "text": original_sentences[i]  # 원본 텍스트 사용!
-            })
-
-        # 남은 원본 문장이 있으면 마지막 세그먼트에 이어붙이기
-        if len(original_sentences) > num_segments:
-            remaining = " ".join(original_sentences[num_segments:])
-            if subtitle_data:
-                subtitle_data[-1]["text"] += " " + remaining
-                logger.info(f"📝 남은 문장을 마지막 세그먼트에 추가")
-
-        # 타임스탬프 샘플 출력
-        if subtitle_data:
-            logger.info(f"📊 타임스탬프 + 원본 텍스트 (처음 3개):")
-            for i, seg in enumerate(subtitle_data[:3]):
-                duration = seg['end'] - seg['start']
-                logger.info(f"   {i+1}. {seg['start']:.3f}s ~ {seg['end']:.3f}s ({duration:.3f}초): '{seg['text'][:50]}'")
-
-        return subtitle_data
-
-    except Exception as e:
-        logger.warning(f"⚠️ Whisper 분석 실패: {e}")
-        logger.warning(f"   타임스탬프 없이 진행합니다.")
-        return None
-
-
-async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNeural"):
-    """
-    Edge TTS로 음성 생성 후 Whisper로 정확한 타임스탬프 얻기
-    Returns: (audio_path, subtitle_data)
+    Edge TTS로 음성 생성
     """
     try:
         import edge_tts
@@ -493,24 +184,12 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
     if not clean_text:
         raise ValueError("나레이션 텍스트가 비어있습니다.")
 
-    # Edge TTS로 음성만 생성 (타임스탬프는 Whisper에서 얻음)
+    # Edge TTS로 음성 생성
     communicate = edge_tts.Communicate(clean_text, voice)
-
-    with open(output_path, "wb") as audio_file:
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_file.write(chunk["data"])
+    await communicate.save(str(output_path))
 
     logger.info(f"✅ TTS 생성 완료: {output_path.name}")
-
-    # Whisper로 오디오 인식해서 정확한 타임스탬프 얻기
-    subtitle_data = transcribe_audio_with_whisper(output_path, clean_text)
-
-    # Whisper 실패 시 빈 리스트 반환 (자막 없이 진행)
-    if subtitle_data is None:
-        subtitle_data = []
-
-    return output_path, subtitle_data
+    return output_path
 
 
 def format_srt_time(seconds: float) -> str:
@@ -529,59 +208,6 @@ def format_ass_timestamp(seconds: float) -> str:
     secs = int(seconds % 60)
     centisecs = int((seconds % 1) * 100)
     return f"{hours}:{minutes:02d}:{secs:02d}.{centisecs:02d}"
-
-
-def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars_per_line: int = 30) -> Path:
-    """Whisper 세그먼트 데이터에서 ASS 자막 파일 생성
-
-    Args:
-        subtitle_data: Whisper 세그먼트 데이터 (이미 문장 단위로 분리됨)
-        output_path: 출력 파일 경로
-        max_chars_per_line: 한 줄 최대 글자 수 (현재 미사용)
-    """
-    if not subtitle_data:
-        logger.error("❌ 자막 생성 실패: 타임스탬프 데이터가 비어있습니다.")
-        return None
-
-    # Whisper 세그먼트를 그대로 사용 (이미 문장 단위로 분리됨)
-    logger.info(f"📝 Whisper 세그먼트 기반 자막 생성: {len(subtitle_data)}개 세그먼트")
-
-    # 자막 샘플 로그 (디버깅)
-    if subtitle_data:
-        logger.info(f"📊 자막 샘플 (처음 3개):")
-        for i, sub in enumerate(subtitle_data[:3]):
-            duration = sub['end'] - sub['start']
-            logger.info(f"   {i+1}. {sub['start']:.3f}s ~ {sub['end']:.3f}s ({duration:.3f}초): '{sub['text'][:50]}'")
-
-    # ASS 파일 작성
-    ass_path = output_path.with_suffix('.ass')
-
-    with open(ass_path, 'w', encoding='utf-8') as f:
-        # ASS 헤더
-        f.write("[Script Info]\n")
-        f.write("ScriptType: v4.00+\n")
-        f.write("PlayResX: 1920\n")
-        f.write("PlayResY: 1080\n")
-        f.write("\n")
-
-        # 스타일 정의
-        f.write("[V4+ Styles]\n")
-        f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
-        f.write("Style: Default,Pretendard Variable,48,&H00FFFFFF,&H000088EF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,30,30,40,1\n")
-        f.write("\n")
-
-        # 이벤트 (자막)
-        f.write("[Events]\n")
-        f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
-
-        for sub in subtitle_data:
-            start_time = format_ass_timestamp(sub["start"])
-            end_time = format_ass_timestamp(sub["end"])
-            text = sub["text"]
-            f.write(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text}\n")
-
-    logger.info(f"✅ ASS 자막 파일 생성 완료: {ass_path} ({len(subtitle_data)}개 라인)")
-    return ass_path
 
 
 def create_ass_from_text(text: str, duration: float, output_path: Path, max_chars_per_line: int = 22) -> Path:
@@ -742,11 +368,10 @@ def get_audio_duration(audio_path: Path) -> float:
         return 0.0
 
 
-def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, subtitle_text: str = None, add_subtitles: bool = False, subtitle_data: list = None) -> Path:
+def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, subtitle_text: str = None, add_subtitles: bool = False) -> Path:
     """
     FFmpeg로 비디오에 오디오 (및 선택적으로 자막) 추가
     TTS가 짧아도 비디오 전체 길이에 맞춰 무음 추가
-    subtitle_data: TTS 타임스탬프 데이터 (있으면 정확한 동기화)
     """
     ffmpeg = get_ffmpeg_path()
     if not ffmpeg:
@@ -761,20 +386,14 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
     logger.info(f"⏱️ 비디오 길이: {video_duration:.2f}초")
     logger.info(f"⏱️ 오디오 길이: {audio_duration:.2f}초")
 
-    # 비디오와 오디오 길이 비교하여 필터 준비
-    video_filter = None
-    audio_filter = None
-
-    if video_duration < audio_duration:
-        # 비디오가 짧으면: 마지막 프레임을 freeze하여 오디오 길이에 맞춤
-        freeze_duration = audio_duration - video_duration
-        video_filter = f"tpad=stop_mode=clone:stop_duration={freeze_duration:.3f}"
-        logger.info(f"⚠️ 비디오가 TTS보다 짧습니다. 마지막 프레임을 {freeze_duration:.2f}초 freeze합니다.")
-        logger.info(f"🎬 비디오 패딩 필터 적용: {video_filter}")
-    elif audio_duration < video_duration:
-        # 오디오가 짧으면: 무음 추가하여 비디오 길이에 맞춤
-        audio_filter = f"apad=whole_dur={video_duration:.3f}"
+    if audio_duration < video_duration:
         logger.info(f"⚠️ TTS가 비디오보다 짧습니다. 무음을 추가하여 비디오 길이에 맞춥니다.")
+
+    # 오디오 필터 준비 (오디오가 짧으면 패딩)
+    audio_filter = None
+    if audio_duration < video_duration and audio_duration > 0 and video_duration > 0:
+        # apad 필터로 비디오 길이에 맞춰 무음 추가
+        audio_filter = f"apad=whole_dur={video_duration:.3f}"
         logger.info(f"🔇 오디오 패딩 필터 적용: {audio_filter}")
 
     # 자막이 있는 경우
@@ -783,27 +402,17 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
         logger.info(f"📝 자막 텍스트 길이: {len(subtitle_text)}자")
         logger.info(f"📝 자막 텍스트 미리보기: {subtitle_text[:100]}...")
 
-        # ASS 자막 파일 생성
-        temp_path = video_path.parent / f"{video_path.stem}_temp.srt"
+        # 비디오 길이 확인
+        duration = get_video_duration(video_path)
+        logger.info(f"⏱️ 비디오 길이: {duration}초")
 
-        # 타임스탬프 데이터가 있으면 정확한 동기화 사용
-        if subtitle_data:
-            logger.info(f"⏱️ TTS 타임스탬프 기반 자막 생성 (완벽 동기화)")
-            ass_path = create_ass_from_timestamps(subtitle_data, temp_path)
+        if duration == 0:
+            logger.warning("⚠️ 비디오 길이를 확인할 수 없어 자막을 건너뜁니다.")
+            subtitle_text = None
         else:
-            # 타임스탬프가 없으면 텍스트 기반 추정
-            logger.info(f"⏱️ 텍스트 기반 자막 생성 (TTS 오디오 길이 기준)")
-            duration = audio_duration if audio_duration > 0 else get_video_duration(video_path)
-            logger.info(f"⏱️ 자막 기준 길이: {duration}초")
-
-            if duration == 0:
-                logger.warning("⚠️ 오디오/비디오 길이를 확인할 수 없어 자막을 건너뜁니다.")
-                subtitle_text = None
-                ass_path = None
-            else:
-                ass_path = create_ass_from_text(subtitle_text, duration, temp_path)
-
-        if subtitle_text:
+            # ASS 자막 파일 생성 (롱폼 방식)
+            temp_path = video_path.parent / f"{video_path.stem}_temp.srt"
+            ass_path = create_ass_from_text(subtitle_text, duration, temp_path)
 
             if not ass_path or not ass_path.exists():
                 logger.error(f"❌ ASS 자막 파일 생성 실패!")
@@ -823,22 +432,15 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
                 # Windows 경로를 FFmpeg 호환 경로로 변환 (롱폼 방식)
                 ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
 
-                # 비디오 필터 생성 (tpad + ass 결합)
-                vf_parts = []
-                if video_filter:
-                    vf_parts.append(video_filter)
-                vf_parts.append(f"ass={ass_path_str}")
-                vf_combined = ",".join(vf_parts)
-
                 # FFmpeg 명령어 (ASS 자막 포함)
-                # 비디오 길이를 TTS에 맞추고, 오디오가 짧으면 나머지는 무음
+                # 비디오 길이에 맞추고, 오디오가 짧으면 나머지는 무음
                 # 주의: -vf 사용 시 비디오 재인코딩 필요 (자막을 비디오에 오버레이)
                 cmd = [
                     ffmpeg,
                     '-y',
                     '-i', str(video_path),
                     '-i', str(audio_path),
-                    '-vf', vf_combined,
+                    '-vf', f"ass={ass_path_str}",
                     '-c:v', 'libx264',  # 자막 오버레이를 위해 재인코딩 필요
                     '-preset', 'medium',
                     '-crf', '23',
@@ -889,24 +491,11 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
             '-y',
             '-i', str(video_path),
             '-i', str(audio_path),
-        ]
-
-        # 비디오 필터가 있으면 재인코딩 필요
-        if video_filter:
-            cmd.extend([
-                '-vf', video_filter,
-                '-c:v', 'libx264',
-                '-preset', 'medium',
-                '-crf', '23',
-            ])
-        else:
-            cmd.extend(['-c:v', 'copy'])  # 비디오는 복사
-
-        cmd.extend([
+            '-c:v', 'copy',  # 비디오는 복사
             '-c:a', 'aac',   # 오디오는 aac로 인코딩
             '-map', '0:v:0',  # 첫 번째 입력의 비디오
             '-map', '1:a:0',  # 두 번째 입력의 오디오
-        ])
+        ]
 
         # 오디오 필터 추가 (패딩이 필요한 경우)
         if audio_filter:
@@ -952,65 +541,29 @@ async def main():
 
         video_files = [Path(p) for p in config['video_files']]
 
-        # 파일명에 시퀀스 번호가 있는지 확인 (Frontend와 동일한 로직)
-        def extract_sequence(filepath: Path):
-            """
-            파일명에서 시퀀스 번호 추출 (Frontend extractSequenceNumber와 동일한 로직)
-            - 1.mp4, 02.mp4 (숫자로 시작)
-            - video_01.mp4, scene-02.mp4 (_숫자 또는 -숫자)
-            - Video_fx (47).mp4 (괄호 안 숫자, 랜덤 ID 없을 때만)
-
-            Returns: (sequence_number or None, ctime)
-            """
-            filename = filepath.name
-            # 확장자를 제외한 파일명
-            name_without_ext = filepath.stem
-
-            # 파일 생성 시간 (항상 가져오기)
-            try:
-                ctime = filepath.stat().st_ctime
-            except:
-                ctime = 0
-
-            # 1. 파일명이 숫자로 시작: "1.mp4", "02.mp4"
-            match = re.match(r'^(\d+)\.', filename)
+        # 파일명에 시퀀스 번호가 있는지 확인
+        def extract_sequence(filename: str):
+            """파일명에서 시퀀스 번호 추출 (예: video_001.mp4 -> 1, clip_03.mp4 -> 3)"""
+            match = re.search(r'_(\d+)\.(mp4|mov|avi|mkv)$', filename, re.IGNORECASE)
             if match:
-                return (int(match.group(1)), ctime)
+                return int(match.group(1))
+            return None
 
-            # 2. _숫자. 또는 -숫자. 패턴: "video_01.mp4", "scene-02.mp4"
-            match = re.search(r'[_-](\d{1,3})\.', filename)
-            if match:
-                return (int(match.group(1)), ctime)
+        # 시퀀스 번호가 있는 파일이 하나라도 있는지 확인
+        has_sequence = any(extract_sequence(p.name) is not None for p in video_files)
 
-            # 3. (숫자) 패턴: "Video_fx (47).mp4"
-            # 단, 랜덤 ID가 없을 때만 (8자 이상의 영숫자 조합이 없을 때)
-            match = re.search(r'\((\d+)\)', filename)
-            if match and not re.search(r'[_-]\w{8,}', filename):
-                return (int(match.group(1)), ctime)
-
-            # 시퀀스 번호 없음 - 파일 생성 시간 사용
-            return (None, ctime)
-
-        # 정렬: 시퀀스 번호가 있으면 우선, 없으면 시간 순서
-        logger.info(f"📋 파일 정렬 중 (시퀀스 번호 우선 → 생성 시간)")
-        video_files.sort(key=lambda p: (
-            extract_sequence(p)[0] is None,  # 시퀀스 없는 것을 뒤로
-            extract_sequence(p)[0] if extract_sequence(p)[0] is not None else 0,  # 시퀀스 정렬
-            extract_sequence(p)[1]  # 시간 정렬
-        ))
-
-        # 정렬 결과 로깅
-        for idx, vf in enumerate(video_files, start=1):
-            seq_info = extract_sequence(vf)
-            seq_str = f"[시퀀스: {seq_info[0]}]" if seq_info[0] is not None else "[시퀀스 없음]"
-            logger.info(f"  {idx}. {vf.name} {seq_str}")
+        if has_sequence:
+            # 시퀀스가 있으면: 시퀀스 번호로 정렬
+            logger.info(f"📋 시퀀스 번호로 정렬")
+            video_files.sort(key=lambda p: (extract_sequence(p.name) or 0, p.name))
+        else:
+            # 시퀀스가 없으면: 파일 생성 시간으로 정렬 (오래된 파일 먼저)
+            logger.info(f"📋 파일 생성 시간으로 정렬 (오래된 파일 먼저)")
+            video_files.sort(key=lambda p: p.stat().st_ctime)
 
         narration_text = config.get('narration_text', '')
         add_subtitles = config.get('add_subtitles', False)
         remove_watermark = config.get('remove_watermark', False)
-        tts_voice = config.get('tts_voice', 'ko-KR-SunHiNeural')  # TTS 음성 (기본값: SunHi)
-        title = config.get('title', '')  # 대본의 title
-        scenes = config.get('scenes', None)  # scenes 배열 (비디오 배치용)
         output_dir = Path(config['output_dir'])
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1029,105 +582,31 @@ async def main():
         # 워터마크 제거 기능 비활성화 (작동하지 않음)
         processed_video_files = video_files
 
-        # 나레이션이 있으면 TTS 생성
+        # 1단계: 비디오 병합
+        merged_video = output_dir / 'merged_video.mp4'
+        concatenate_videos(processed_video_files, merged_video)
+
+        final_output = merged_video
+
+        # 2단계: TTS 나레이션 (및 자막) 추가 (선택사항)
         if narration_text:
-            # scenes 배열이 있으면 롱폼 방식으로: 씬별로 TTS + 비디오 생성 → 병합
-            if scenes:
-                logger.info(f"\n🎬 씬별로 비디오 생성 (롱폼 방식)")
-                logger.info(f"   씬 개수: {len(scenes)}개")
-                logger.info(f"   비디오 개수: {len(processed_video_files)}개")
+            logger.info(f"\n🎙️ TTS 나레이션 추가")
+            logger.info(f"텍스트: {narration_text[:100]}...")
+            if add_subtitles:
+                logger.info(f"📝 자막: 추가됨")
 
-                scene_videos = []
-                scenes_dir = output_dir / 'scenes'
-                scenes_dir.mkdir(exist_ok=True)
+            tts_audio = output_dir / 'narration.mp3'
+            await generate_tts(narration_text, tts_audio)
 
-                for i, scene in enumerate(scenes):
-                    scene_narration = scene.get('narration', '').strip()
-                    if not scene_narration:
-                        logger.warning(f"   씬 {i+1}: 나레이션 없음, 건너뜀")
-                        continue
-
-                    # 비디오 선택 (scene 1 → video 1, scene 2 → video 2, ...)
-                    video_idx = min(i, len(processed_video_files) - 1)
-                    video_path = processed_video_files[video_idx]
-
-                    logger.info(f"\n   씬 {i+1}/{len(scenes)}: {scene_narration[:40]}...")
-
-                    # 1. 씬별 TTS 생성
-                    scene_audio = scenes_dir / f'scene_{i+1}_audio.mp3'
-                    scene_tts_path, scene_subtitle_data = await generate_tts(scene_narration, scene_audio, tts_voice)
-
-                    # 2. 비디오 + 오디오 결합 (롱폼의 이미지처럼, 비디오를 오디오 길이만큼 사용)
-                    scene_video = scenes_dir / f'scene_{i+1}.mp4'
-                    add_audio_to_video(
-                        video_path,
-                        scene_tts_path,
-                        scene_video,
-                        scene_narration,
-                        add_subtitles,
-                        scene_subtitle_data
-                    )
-
-                    scene_videos.append(scene_video)
-                    logger.info(f"   ✅ 씬 {i+1} 완료: {scene_video.name}")
-
-                # 3. 모든 씬 비디오 병합
-                logger.info(f"\n📦 전체 씬 병합 중...")
-                final_output = output_dir / 'final_output.mp4'
-                concatenate_videos(scene_videos, final_output)
-
-            else:
-                # scenes 배열이 없으면 기존 방식 (전체 나레이션 → Whisper 세그먼트)
-                logger.info(f"\n🎙️ TTS 나레이션 생성 (비디오 배치 기준)")
-                logger.info(f"텍스트: {narration_text[:100]}...")
-
-                tts_audio = output_dir / 'narration.mp3'
-                # TTS 생성 및 Whisper 세그먼트 수집
-                tts_path, subtitle_data = await generate_tts(narration_text, tts_audio, tts_voice)
-
-                if subtitle_data:
-                    logger.info(f"\n🎬 나레이션 세그먼트에 맞춰 비디오 배치")
-                    logger.info(f"   세그먼트 개수: {len(subtitle_data)}개")
-                    logger.info(f"   비디오 개수: {len(processed_video_files)}개")
-
-                    merged_video = output_dir / 'merged_video.mp4'
-                    logger.info(f"   📋 Whisper 세그먼트 사용")
-                    align_videos_to_segments(processed_video_files, subtitle_data, merged_video)
-
-                    # 비디오에 오디오 + 자막 추가
-                    final_with_audio = output_dir / 'final_with_narration.mp4'
-                    add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles, subtitle_data)
-                    final_output = final_with_audio
-                else:
-                    # Whisper 실패 시 기존 방식 (순차 병합)
-                    logger.warning(f"⚠️ 세그먼트 정보 없음, 기존 방식으로 병합")
-                merged_video = output_dir / 'merged_video.mp4'
-                concatenate_videos(processed_video_files, merged_video)
-
-                final_with_audio = output_dir / 'final_with_narration.mp4'
-                add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles, [])
-                final_output = final_with_audio
+            final_with_audio = output_dir / 'final_with_narration.mp4'
+            # 자막 추가 여부에 따라 처리
+            add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles)
+            final_output = final_with_audio
         else:
-            # 나레이션 없이 병합만 수행
             logger.info(f"\nℹ️ 나레이션 없이 병합만 수행")
-            merged_video = output_dir / 'merged_video.mp4'
-            concatenate_videos(processed_video_files, merged_video)
-            final_output = merged_video
-
-        # title이 있으면 최종 파일명을 title.mp4로 변경
-        if title:
-            # 파일명으로 사용할 수 없는 문자 제거
-            safe_title = re.sub(r'[<>:"/\\|?*]', '', title)
-            final_output_with_title = output_dir / f"{safe_title}.mp4"
-
-            # 파일 이동 (리네임)
-            import shutil
-            shutil.move(str(final_output), str(final_output_with_title))
-            final_output = final_output_with_title
-            logger.info(f"📝 파일명을 대본 제목으로 변경: {safe_title}.mp4")
 
         logger.info(f"\n{'='*60}")
-        logger.info(f"비디오 병합 완료!")
+        logger.info(f"✅ 비디오 병합 완료!")
         logger.info(f"📁 출력 파일: {final_output}")
         logger.info(f"{'='*60}\n")
 
