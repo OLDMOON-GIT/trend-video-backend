@@ -126,19 +126,14 @@ def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
         input_args.extend(['-i', str(path)])
 
     # filter_complex 문자열 생성
-    # [0:v][0:a][1:v][1:a]...[n:v][n:a]concat=n=N:v=1:a=1[outv][outa]
-
-    # ⛔ CRITICAL FEATURE: SAR 필터 정규화
-    # 버그 이력: 2025-01-12 - SAR 불일치로 영상 concat 실패
-    # ❌ setsar=1 필터 제거 금지!
-    # 관련 문서: CRITICAL_FEATURES.md
-    sar_filters = []
+    # 모든 비디오를 1920x1080으로 통일 + SAR 1:1 정규화 후 concat
+    scale_filters = []
     concat_inputs = []
     for i in range(len(video_paths)):
-        sar_filters.append(f"[{i}:v]setsar=1[v{i}]")
+        scale_filters.append(f"[{i}:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=25[v{i}]")
         concat_inputs.append(f"[v{i}][{i}:a]")
 
-    filter_str = ";".join(sar_filters) + ";" + "".join(concat_inputs) + f"concat=n={len(video_paths)}:v=1:a=1[outv][outa]"
+    filter_str = ";".join(scale_filters) + ";" + "".join(concat_inputs) + f"concat=n={len(video_paths)}:v=1:a=1[outv][outa]"
 
     logger.info(f"🎬 FFmpeg filter_complex 명령 실행 중...")
 
@@ -754,28 +749,51 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
 
     logger.info(f"🔊 비디오에 오디오 추가 중...")
 
-    # 비디오와 오디오 길이 확인
-    video_duration = get_video_duration(video_path)
-    audio_duration = get_audio_duration(audio_path)
+    # 이미지 파일인지 확인
+    is_image = video_path.suffix.lower() in ['.png', '.jpg', '.jpeg', '.webp']
 
-    logger.info(f"⏱️ 비디오 길이: {video_duration:.2f}초")
-    logger.info(f"⏱️ 오디오 길이: {audio_duration:.2f}초")
+    if is_image:
+        logger.info(f"📷 이미지 파일 감지: {video_path.name}")
+        # 이미지는 길이가 없으므로 오디오 길이를 사용
+        audio_duration = get_audio_duration(audio_path)
+        video_duration = 0  # 이미지는 길이 없음
+        logger.info(f"⏱️ 오디오 길이: {audio_duration:.2f}초")
+    else:
+        # 비디오와 오디오 길이 확인
+        video_duration = get_video_duration(video_path)
+        audio_duration = get_audio_duration(audio_path)
+        logger.info(f"⏱️ 비디오 길이: {video_duration:.2f}초")
+        logger.info(f"⏱️ 오디오 길이: {audio_duration:.2f}초")
 
     # 비디오와 오디오 길이 비교하여 필터 준비
-    video_filter = None
+    video_filters = []
     audio_filter = None
 
-    if video_duration < audio_duration:
-        # 비디오가 짧으면: 마지막 프레임을 freeze하여 오디오 길이에 맞춤
-        freeze_duration = audio_duration - video_duration
-        video_filter = f"tpad=stop_mode=clone:stop_duration={freeze_duration:.3f}"
-        logger.info(f"⚠️ 비디오가 TTS보다 짧습니다. 마지막 프레임을 {freeze_duration:.2f}초 freeze합니다.")
-        logger.info(f"🎬 비디오 패딩 필터 적용: {video_filter}")
-    elif audio_duration < video_duration:
-        # 오디오가 짧으면: 무음 추가하여 비디오 길이에 맞춤
-        audio_filter = f"apad=whole_dur={video_duration:.3f}"
-        logger.info(f"⚠️ TTS가 비디오보다 짧습니다. 무음을 추가하여 비디오 길이에 맞춥니다.")
-        logger.info(f"🔇 오디오 패딩 필터 적용: {audio_filter}")
+    # 이미지인 경우: loop 필터로 오디오 길이만큼 재생
+    if is_image:
+        # 이미지를 오디오 길이만큼 loop (25fps 기준)
+        total_frames = int(audio_duration * 25) + 25  # 여유 프레임 추가
+        video_filters.append(f"loop=loop={total_frames}:size=1:start=0")
+        video_filters.append("fps=25")
+        logger.info(f"📷 이미지 loop 필터 적용: {total_frames} 프레임 ({audio_duration:.2f}초 @ 25fps)")
+    else:
+        # 비디오인 경우: FPS 통일
+        video_filters.append("fps=25")
+
+    if not is_image:
+        if video_duration < audio_duration:
+            # 비디오가 짧으면: 마지막 프레임을 freeze하여 오디오 길이에 맞춤
+            freeze_duration = audio_duration - video_duration
+            video_filters.append(f"tpad=stop_mode=clone:stop_duration={freeze_duration:.3f}")
+            logger.info(f"⚠️ 비디오가 TTS보다 짧습니다. 마지막 프레임을 {freeze_duration:.2f}초 freeze합니다.")
+        elif audio_duration < video_duration:
+            # 오디오가 짧으면: 무음 추가하여 비디오 길이에 맞춤
+            audio_filter = f"apad=whole_dur={video_duration:.3f}"
+            logger.info(f"⚠️ TTS가 비디오보다 짧습니다. 무음을 추가하여 비디오 길이에 맞춥니다.")
+            logger.info(f"🔇 오디오 패딩 필터 적용: {audio_filter}")
+
+    video_filter = ",".join(video_filters) if video_filters else None
+    logger.info(f"🎬 비디오 필터 적용: {video_filter}")
 
     # 자막이 있는 경우
     if subtitle_text and add_subtitles:
@@ -823,9 +841,10 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
                 # Windows 경로를 FFmpeg 호환 경로로 변환 (롱폼 방식)
                 ass_path_str = str(ass_path).replace('\\', '/').replace(':', '\\\\:')
 
-                # 비디오 필터 생성 (tpad + ass 결합)
+                # 비디오 필터 생성 (fps + tpad + ass 결합)
                 vf_parts = []
                 if video_filter:
+                    # video_filter는 이미 fps와 tpad를 포함
                     vf_parts.append(video_filter)
                 vf_parts.append(f"ass={ass_path_str}")
                 vf_combined = ",".join(vf_parts)
@@ -850,6 +869,11 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
                 # 오디오 필터 추가 (패딩이 필요한 경우)
                 if audio_filter:
                     cmd.extend(['-af', audio_filter])
+
+                # 이미지인 경우 shortest 플래그로 오디오 길이에 맞춤
+                if is_image:
+                    cmd.append('-shortest')
+                    logger.info(f"📷 -shortest 플래그 추가: 오디오 길이에 맞춤")
 
                 cmd.append(str(output_path))
 
@@ -891,7 +915,7 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
             '-i', str(audio_path),
         ]
 
-        # 비디오 필터가 있으면 재인코딩 필요
+        # 비디오 필터가 있으면 재인코딩 필요 (fps 통일을 위해 항상 필터 적용)
         if video_filter:
             cmd.extend([
                 '-vf', video_filter,
@@ -900,7 +924,13 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
                 '-crf', '23',
             ])
         else:
-            cmd.extend(['-c:v', 'copy'])  # 비디오는 복사
+            # video_filter가 없으면 이상한 상황이지만 안전하게 처리
+            cmd.extend([
+                '-vf', 'fps=25',
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', '23',
+            ])
 
         cmd.extend([
             '-c:a', 'aac',   # 오디오는 aac로 인코딩
@@ -911,6 +941,11 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
         # 오디오 필터 추가 (패딩이 필요한 경우)
         if audio_filter:
             cmd.extend(['-af', audio_filter])
+
+        # 이미지인 경우 shortest 플래그로 오디오 길이에 맞춤
+        if is_image:
+            cmd.append('-shortest')
+            logger.info(f"📷 -shortest 플래그 추가: 오디오 길이에 맞춤")
 
         cmd.append(str(output_path))
 
