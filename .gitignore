@@ -36,6 +36,10 @@ output/*
 !output/.gitkeep
 input/*
 !input/.gitkeep
+uploads/
+tasks/*
+!tasks/.gitkeep
+.chrome-automation-profile/
 
 # Logs
 logs/*.log
