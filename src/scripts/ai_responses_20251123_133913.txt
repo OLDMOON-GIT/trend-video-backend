@@ -1,0 +1,155 @@
+다층 서사 건축 모드를 시작합니다.
+
+✅ 제목 확인 완료: 작업복을 입고 있는 예비 시어머니 무시한 며느리 알고 보니 시어머니는 1000억대 부자
+✅ ImageFX 프롬프트 8개 생성 완료
+✅ 대본 작성 완료 (씬 0~7)
+✅ SceneMemory 교차검사 완료
+
+json
+{
+  "title": "작업복을 입고 있는 예비 시어머니 무시한 며느리 알고 보니 시어머니는 1000억대 부자",
+  "version": "10.0",
+  "metadata": {
+    "genre": "시니어 사연드라마",
+    "target_audience": "50대 이상",
+    "emotional_arc": "충격 → 모욕 → 복수 → 카타르시스",
+    "key_themes": ["계급갈등", "오만과 편견", "숨겨진 정체", "응징"],
+    "symbolic_objects": ["작업복", "명함", "보석함"],
+    "total_word_count": 12600,
+    "estimated_tts_duration_seconds": 2520,
+    "recommended_shorts_edit": "60초 내 핵심 발췌",
+    "category": "막장드라마",
+    "scriptId": "54560cea-513e-4b1c-a282-c33c01731a9d"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_bomb",
+      "scene_name": "3초 폭탄 씬",
+      "duration_seconds": 3,
+      "word_count": 380,
+      "image_prompt": "Photorealistic professional photograph, Korean dramatic scene, realistic photography style, DSLR camera, high resolution, natural skin texture, young woman 30s disgusted contemptuous expression direct frontal eye contact looking directly at camera, positioned right frame, pushing away gesture rejection, facial close-up eyes facing forward, left space text, asymmetric composition, dramatic tension, sharp focus face hands, luxury restaurant harsh lighting strong contrast, desaturated grey + vibrant crimson accents, freeze frame, NO TEXT",
+      "narration": "며느리가 예비 시어머니를 식당 입구에서 쫓아냈습니다. 작업복을 입고 있다는 이유만으로. 가족들이 다 지켜보는 가운데 일어난 일입니다. 예비 시어머니는 아무 말도 하지 않았습니다. 조용히 돌아섰습니다. 그 손이 떨리고 있었습니다. 며느리는 웃고 있었습니다. 주변 사람들의 시선 따위 신경 쓰지 않았습니다. 3일 뒤 며느리는 사색이 되었습니다. 그 예비 시어머니가 누구인지 알게 된 순간이었습니다."
+    },
+    {
+      "scene_id": "scene_01_main",
+      "scene_name": "약혼자 집안의 첫 만남",
+      "time_period": "현재",
+      "location": "고급 레스토랑",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "oppressive",
+      "symbolic_object": "작업복",
+      "image_prompt": "Photorealistic professional photograph, Korean dramatic scene cinematography, realistic photography style, DSLR camera, high resolution, natural skin texture, young woman 30s arrogant cold expression, luxury restaurant interior marble floors crystal chandelier, seated at reserved table white tablecloth, designer handbag visible Chanel, diamond ring prominent, mid-shot eye-level angle, window light afternoon golden, desaturated elegant tones + crimson lipstick accent, shallow depth of field, oppressive atmosphere wealth display, NO TEXT",
+      "narration": "민지는 샹들리에가 빛나는 레스토랑 안쪽 테이블에 앉아 있었습니다. 약혼자 준호의 어머니를 처음 만나는 자리였습니다. 손목의 까르띠에 시계를 힐끗 보았습니다. 이미 약속 시간에서 10분이 지났습니다. '역시 서민 출신은 시간 개념도 없나봐.' 민지는 속으로 비웃었습니다. 그녀의 아버지는 강남에서 세 개의 빌딩을 소유한 부동산 재벌이었습니다. 준호는 서울대 의대를 졸업한 성형외과 레지던트였습니다. 완벽한 조건이었습니다. 다만 준호의 집안이 문제였습니다. 지방 소도시 출신이라고 들었습니다. 어머니가 무슨 일을 하시는지조차 명확하지 않았습니다. '뭐, 아들만 괜찮으면 되지.' 민지는 테이블 위 메뉴판을 넘겼습니다. 1인당 30만 원짜리 코스 요리였습니다. 시어머니가 될 사람이 이런 곳에 와본 적이나 있을까요. 설명해줘야 할 것들이 많을 것 같았습니다. 포크는 어떻게 쓰는지, 냅킨은 어떻게 펴는지. 민지의 입가에 미소가 번졌습니다. 우월감이 주는 기분 좋은 떨림이었습니다. 레스토랑 입구 쪽에서 소란스러운 소리가 들렸습니니다. 민지가 고개를 돌렸습니다. 회색 작업복을 입은 중년 여성이 들어서고 있었습니다. 머리는 단정하게 묶여 있었지만 옷에는 먼지가 묻어 있었습니다. 직원이 당황한 표정으로 그 여성을 막아섰습니다. '저런 사람이 여기는 왜 오는 거야?' 민지는 인상을 찌푸렸습니다. 그때 그 여성이 민지 쪽을 바라봤습니다. 눈이 마주쳤습니다. 여성이 조심스럽게 손을 들어 올렸습니다. 민지의 심장이 철렁 내려앉았습니다. 준호가 보여준 사진 속 얼굴이었습니다. 시어머니였습니다. 이런 의미 있는 이야기를 더 많이 전하고 싶습니다. 구독과 좋아요가 큰 힘이 됩니다. 민지는 재빨리 자리에서 일어났습니다. 직원보다 먼저 그 여성에게 다가갔습니다. '실례지만 여기 예약하셨나요?' 민지의 목소리는 차가웠습니다. 시어머니가 당황한 표정으로 대답했습니다. '준호가 이 식당으로 오라고 했는데...' '아, 잘못 오신 것 같은데요. 여기는 드레스 코드가 있거든요.' 민지는 시어머니의 작업복을 위아래로 훑어봤습니다. 노골적인 시선이었습니다. 주변 테이블의 손님들이 쳐다보기 시작했습니다. 속삭이는 소리들이 들렸습니다. 시어머니의 얼굴이 붉어졌습니다. 당혹감과 수치심이 뒤섞인 표정이었습니다. '집에 가서 옷 좀 갈아입고 오시면 어떨까요? 준호한테 연락해서 다시 약속 잡을게요.' 민지는 웃었습니다. 완벽하게 계산된, 예의 바른 듯 보이지만 모욕적인 미소였습니다. 시어머니는 아무 말도 하지 못했습니다. 입술만 바르르 떨렸습니다. 천천히 고개를 끄덕였습니다. 그리고 돌아섰습니다. 구부정한 등이 레스토랑 문을 나섰습니다. 민지는 다시 자리로 돌아와 앉았습니다. 심장이 빠르게 뛰었습니다. 흥분과 우월감이 뒤섞인 감정이었습니다. 준호에게 문자를 보냈습니다. '어머님이 작업복 입고 오셔서 좀 난처했어. 다음엔 미리 얘기해줘.' 핸드폰 화면을 내려놓으며 민지는 생각했습니다. 앞으로 시어머니 교육이 필요하겠다고."
+    },
+    {
+      "scene_id": "scene_02_main",
+      "scene_name": "준호의 혼란",
+      "time_period": "현재 - 3시간 후",
+      "location": "준호의 아파트",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "tense",
+      "symbolic_object": "명함",
+      "image_prompt": "Photorealistic professional photograph, Korean dramatic scene cinematography, realistic photography style, DSLR camera, high resolution, natural skin texture, young man 30s doctor conflicted anxious expression, modern apartment interior minimalist, standing near window cityscape background evening, hands gripping phone tightly stress visible, close-up mid-shot, natural window light fading blue hour, cool desaturated tones + screen glow accent, tense atmosphere internal conflict, NO TEXT",
+      "narration": "준호는 핸드폰을 들여다봤습니다. 민지에게서 온 문자였습니다. '작업복을 입고 오셔서'라는 구절에서 눈길이 멈췄습니다. 손이 차갑게 식었습니다. 어머니에게 전화를 걸었습니다. 벨이 길게 울렸습니다. 받지 않았습니다. 세 번째 시도 끝에 어머니의 목소리가 들렸습니다. '준호야.' 평소보다 낮은 목소리였습니다. 힘이 빠진, 지친 목소리였습니다. '엄마, 무슨 일 있었어요?' 준호가 물었습니다. 어머니는 한참 동안 침묵했습니다. 숨소리만 들렸습니다. 가늘고 조심스러운 숨소리였습니다. '괜찮아. 내가 준비를 잘못했네. 미안하다.' '엄마...' '민지씨 좋은 애구나. 예의도 바르고. 너 잘 만났다.' 어머니의 목소리에 떨림이 섞여 있었습니다. 준호는 가슴이 먹먹해졌습니다. 어머니는 평생 자신을 위해 희생했습니다. 아버지가 일찍 돌아가신 후 홀로 그를 키웠습니다. 새벽 4시에 일어나 청소 일을 하고, 낮에는 식당에서 일했습니다. 밤에는 공장 야간 근무를 했습니다. 준호가 의대에 합격했을 때 어머니는 울었습니다. 기쁨의 눈물이었습니다. '엄마 이제 편하게 살 수 있겠구나.' 어머니는 그렇게 말했습니다. 하지만 여전히 일을 멈추지 않았습니다. 준호가 레지던트 월급으로는 생활비가 빠듯하다는 걸 알고 있었기 때문입니다. '엄마, 다음에 다시 만나요. 제대로 된 자리에서.' 준호가 말했습니다. 어머니는 짧게 대답했습니다. '그래.' 그리고 전화를 끊었습니다. 준호는 민지에게 전화를 걸었습니다. '여보, 오늘 무슨 일 있었어?' 민지의 목소리는 밝았습니다. '어머님이 작업복 입고 오셔서 좀 당황스러웠어. 레스토랑 분위기도 그렇고. 그래서 집에 가서 옷 갈아입고 오시라고 했지.' '그게...' 준호가 말을 이었습니다. '우리 엄마가 청소 일 하시거든. 아마 일 끝나고 바로 오신 것 같아.' 민지는 잠시 침묵했습니다. 그리고 웃었습니다. 가볍고 밝은 웃음이었습니다. '오빠, 그럼 미리 얘기를 해줬어야지. 나도 준비를 했을 텐데. 괜찮아, 다음에 잘하면 되지 뭐.' 준호는 대답하지 못했습니다. 민지의 말투에서 무언가 걸렸습니다. '다음에 잘하면 되지'라는 말이 자꾸 귓가에 맴돌았습니다. 마치 시험을 치르는 것 같았습니다. 합격과 불합격이 있는. 어머니가 평가받는 것 같았습니다. '그래, 다음에 제대로 된 자리 만들게.' 준호는 그렇게 말하고 전화를 끊었습니다. 창밖을 내다봤습니다. 서울 야경이 반짝였습니다. 수많은 불빛들이 어둠 속에서 빛나고 있었습니다. 준호는 생각했습니다. 자신이 오른 이 높은 곳에 어머니도 함께 올라올 수 있을까. 아니, 올라와야 할까. 준호는 책상 서랍을 열었습니다. 오래된 사진 한 장이 있었습니다. 어머니와 함께 찍은 의대 합격 발표날의 사진이었습니다. 어머니의 손에는 청소 도구가 들려 있었습니다. 일터에서 달려온 것이었습니다. 작업복 차림 그대로였습니다. 어머니는 활짝 웃고 있었습니다. 준호도 웃고 있었습니다. 그때는 부끄럽지 않았습니다. 자랑스러웠습니다. 지금은 달랐습니다. 민지를 만난 후 모든 것이 달라졌습니다. 강남의 화려한 세계를 알게 되었습니다. 그곳의 기준을 알게 되었습니다. 준호는 사진을 다시 서랍 깊숙이 밀어넣었습니다."
+    },
+    {
+      "scene_id": "scene_03_main",
+      "scene_name": "민지의 승리감",
+      "time_period": "현재 - 같은 날 저녁",
+      "location": "민지의 펜트하우스",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "ominous",
+      "symbolic_object": "보석함",
+      "image_prompt": "Photorealistic professional photograph, Korean dramatic scene cinematography, realistic photography style, DSLR camera, high resolution, natural skin texture, young woman 30s satisfied smirking expression, luxury penthouse interior floor-to-ceiling windows Seoul skyline night, sitting on velvet sofa expensive jewelry box open on table, wide shot high angle, artificial warm lighting chandelier + cold city lights outside contrast, rich saturated tones + diamond sparkle accents, ominous atmosphere superiority complex, NO TEXT",
+      "narration": "민지는 펜트하우스 소파에 몸을 기댔습니다. 손에는 와인 잔이 들려 있었습니다. 샤토 마고 2015년산이었습니다. 한 병에 300만 원이 넘는 와인이었습니다. 입안에서 부드럽게 퍼지는 타닌의 맛을 음미했습니다. 오늘 일을 떠올렸습니다. 작업복을 입고 나타난 시어머니의 얼굴이 선명했습니다. 당황하던 표정, 붉어지던 얼굴, 떨리던 입술. 민지는 웃음이 났습니다. 통쾌했습니다. 테이블 위에는 보석함이 놓여 있었습니다. 어머니에게 받은 다이아몬드 세트였습니다. 5캐럿짜리 목걸이와 귀걸이였습니다. 약혼 선물이라고 했습니다. 민지는 보석함을 열었습니다. 다이아몬드가 조명을 받아 영롱하게 빛났습니다. 이것 하나면 준호네 가족이 1년 동안 벌 돈보다 많을 것이었습니다. 민지는 친구 수진에게 전화를 걸었습니다. '야, 나 오늘 대박 사건 있었어.' 수진의 관심 있는 목소리가 들렸습니다. '뭔데?' '시어머니가 작업복 입고 레스토랑에 나타난 거야. 그것도 그 비싼 곳에.' 수진이 웃었습니다. 깔깔거리는 웃음소리였습니다. '헐, 진짜? 그래서 어떻게 했어?' '당연히 돌려보냈지. 드레스 코드 어쩌고 하면서. 주변 사람들 다 쳐다봤어.' '와, 너 진짜 대단하다. 나 같으면 못 그랬을 거야.' 수진이 감탄했습니다. 민지는 우쭐했습니다. '근데 말이야, 시어머니 교육 제대로 시켜야 할 것 같아. 우리 집안 창피하게 만들 수는 없잖아.' '맞아. 결혼하면 시어머니가 문제잖아. 미리 선 확실히 긋는 게 좋아.' 수진이 동조했습니다. 민지는 와인을 한 모금 더 마셨습니다. '다음에 만날 때는 제대로 된 옷 입고 오라고 할 거야. 아니, 아예 쇼핑 같이 가서 옷부터 사줘야 할 것 같아. 우리 시어머니니까.' '너 진짜 착하다. 나 같으면 그냥 안 만날 것 같은데.' 수진이 말했습니다. 민지는 고개를 저었습니다. 전화기 너머로는 보이지 않는 몸짓이었지만 습관적으로 나온 행동이었습니다. '아니야. 만나줘야지. 준호 생각해서라도. 대신 내 방식대로 할 거야.' 통화를 끊고 민지는 거울 앞에 섰습니다. 전신 거울이었습니다. 명품 브랜드 드레스를 입은 자신의 모습이 비쳤습니다. 완벽했습니다. 이 모습이 자신이었습니다. 이 수준이 자신의 기준이었습니다. 시어머니는 그 기준에 맞춰야 했습니다. 맞출 수 없다면 최소한 민망하지 않은 수준이 되어야 했습니다. 민지는 핸드폰을 들었습니다. 인터넷 쇼핑몰을 검색했습니다. 중년 여성 의류 코너였습니다. 가격대를 50만 원에서 100만 원 사이로 설정했습니다. 너무 비싸도 부담스럽고, 너무 싸면 품위가 없었습니다. 적당한 것들을 골랐습니다. 베이지색 재킷, 검은색 슬랙스, 흰색 블라우스. 무난하고 단정한 스타일이었습니다. 장바구니에 담았습니다. 결제는 아직 하지 않았습니다. 다음 만남 때 시어머니와 함께 고르는 척하면서 선물해줄 생각이었습니다. '이런 옷이 어머니한테 잘 어울릴 것 같아요'라고 말하면서. 시어머니는 고마워할 것이었습니다. 며느리가 자신을 생각해서 옷을 골라준다고 생각할 것이었습니다. 하지만 실제로는 민지가 원하는 이미지로 만드는 작업이었습니다. 통제였습니다. 민지는 만족스러운 표정으로 와인 잔을 비웠습니다. 모든 것이 계획대로 흘러가고 있었습니다."
+    },
+    {
+      "scene_id": "scene_04_main",
+      "scene_name": "시어머니의 진짜 정체 - 과거",
+      "time_period": "과거 - 30년 전",
+      "location": "작은 공장",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "introspective",
+      "symbolic_object": "작업복",
+      "image_prompt": "Photorealistic professional photograph, Korean dramatic scene cinematography, realistic photography style, DSLR camera, high resolution, natural skin texture, middle-aged woman 40s determined strong expression, small factory interior machinery background workers visible, wearing work uniform modest, mid-shot eye-level, natural fluorescent lighting harsh industrial, desaturated blue-grey tones + warm skin accent, introspective atmosphere quiet strength, NO TEXT",
+      "narration": "30년 전, 경숙은 작은 섬유 공장에서 일했습니다. 새벽 5시에 출근해서 밤 10시에 퇴근했습니다. 손은 항상 거칠었습니다. 재봉틀 기름 냄새가 옷에 배어 있었습니다. 하지만 경숙은 불평하지 않았습니다. 일곱 살 아들 준호를 키워야 했습니다. 남편은 교통사고로 세상을 떠났습니다. 보험금도 없었습니다. 빚만 남았습니다. 경숙은 악착같이 일했습니다. 새벽 시장에서 채소를 팔았습니다. 낮에는 공장에서 일했습니다. 밤에는 식당 설거지를 했습니다. 하루에 3시간만 잤습니다. 준호는 착한 아이였습니다. 엄마가 힘들다는 걸 알았습니다. 혼자 밥을 먹고 혼자 숙제를 했습니다. 엄마에게 떼를 쓰지 않았습니다. 10년이 흘렀습니다. 경숙은 작은 돈을 모았습니다. 공장 동료가 제안했습니다. '언니, 같이 작은 공장이라도 차려보는 게 어때요?' 경숙은 고민했습니다. 실패하면 모든 걸 잃을 수 있었습니다. 하지만 평생 남의 밑에서 일할 수는 없었습니다. 준호에게 더 나은 삶을 주고 싶었습니다. 경숙은 결심했습니다. 은행 대출을 받았습니다. 작은 섬유 공장을 차렸습니다. 직원은 다섯 명이었습니다. 처음에는 힘들었습니다. 납품처를 찾기 어려웠습니다. 큰 회사들은 작은 공장을 거들떠보지도 않았습니다. 경숙은 포기하지 않았습니다. 발로 뛰었습니다. 백 군데를 찾아가면 한 군데는 기회를 주었습니다. 품질로 승부했습니다. 납기를 정확히 지켰습니다. 밤을 새워서라도 주문을 완성했습니다. 입소문이 났습니다. 주문이 늘어났습니다. 직원을 더 고용했습니다. 공장을 확장했습니다. 5년 후 경숙의 공장은 중견 기업이 되었습니다. 직원이 50명으로 늘었습니다. 매출도 크게 올랐습니다. 하지만 경숙은 변하지 않았습니다. 여전히 작업복을 입었습니다. 여전히 현장에서 일했습니다. 직원들과 함께 밥을 먹었습니다. 사장실에 앉아 있는 시간보다 공장 바닥에 있는 시간이 더 많았습니다. 10년 후 경숙의 회사는 업계에서 유명해졌습니다. 해외 바이어들이 찾아왔습니다. 대기업에서 협력 제안을 했습니다. 경숙은 신중하게 사업을 확장했습니다. 무리하지 않았습니다. 빚을 지지 않았습니다. 직원들을 잘 대우했습니다. 회사는 안정적으로 성장했습니다. 15년이 더 흘렀습니다. 경숙의 회사는 코스닥에 상장되었습니다. 시가총액 1000억 원이었습니다. 경숙은 대주주였습니다. 개인 자산만 600억 원이 넘었습니다. 하지만 아무도 몰랐습니다. 경숙은 조용히 살았습니다. 화려한 것을 좋아하지 않았습니다. 여전히 작은 아파트에서 살았습니다. 여전히 작업복을 입었습니다. 여전히 현장을 지켰습니다. 준호에게도 자세한 얘기를 하지 않았습니다. 그저 '회사 다닌다'고만 했습니다. 준호는 엄마가 직원으로 일한다고 생각했습니다. 경숙은 그렇게 믿게 내버려뒀습니다. 아들이 자신의 힘으로 성장하기를 바랐습니다. 엄마의 돈에 기대지 않기를 바랐습니다. 준호는 훌륭하게 자랐습니다. 장학금으로 의대에 갔습니다. 레지던트가 되었습니다. 경숙은 자랑스러웠습니다. 하지만 여전히 진실을 말하지 않았습니다. 때가 되면 알려주려고 생각했습니다. 결혼할 때쯤이면 말해줄 수 있을 거라고 생각했습니다. 그런데 오늘 그 며느리를 만났습니다. 작업복 때문에 쫓겨났습니다. 경숙은 아무 말도 하지 않았습니다. 그저 조용히 돌아섰습니다."
+    },
+    {
+      "scene_id": "scene_05_main",
+      "scene_name": "우연한 발각",
+      "time_period": "현재 - 3일 후",
+      "location": "민지 아버지 사무실",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "traumatic",
+      "symbolic_object": "명함",
+      "image_prompt": "Photorealistic professional photograph, Korean dramatic scene cinematography, realistic photography style, DSLR camera, high resolution, natural skin texture, young woman 30s frozen shocked pale expression, luxury office interior mahogany desk, standing rigid posture hands trembling, close-up slightly low angle, afternoon harsh window light creating stark shadows, desaturated cold tones + paper white accent, traumatic atmosphere revelation moment, NO TEXT",
+      "narration": "민지는 아버지 사무실에 들렀습니다. 새로운 빌딩 투자 건에 대해 상의하려고 했습니다. 아버지는 전화 통화 중이었습니다. 민지는 소파에 앉아 기다렸습니다. 책상 위에 서류들이 쌓여 있었습니다. 그중 하나가 눈에 들어왔습니다. '대성섬유 협력 제안서'라는 제목이 보였습니다. 민지는 무심코 서류를 집어 들었습니다. 대성섬유는 코스닥 상장사였습니다. 업계에서 유명한 중견기업이었습니다. 아버지가 협력 사업을 검토하고 있는 것 같았습니다. 서류를 넘기다가 민지의 손이 멈췄습니다. 대표이사 이름이 적혀 있었습니다. '이경숙'. 생년월일도 적혀 있었습니다. 민지는 심장이 빨리 뛰는 것을 느꼈습니다. 설마 하는 생각이 들었습니다. 다음 장을 넘겼습니다. 대표이사 프로필 사진이 있었습니다. 작업복을 입고 공장에서 찍은 사진이었습니다. 민지의 얼굴이 하얗게 질렸습니다. 그 얼굴이었습니다. 3일 전 레스토랑에서 쫓아낸 바로 그 여자였습니다. 준호의 어머니였습니다. 민지는 서류를 떨어뜨렸습니다. 종이들이 바닥에 흩어졌습니다. 아버지가 전화를 끊고 돌아봤습니다. '민지야, 왜 그래? 얼굴이 왜 그래?' 민지는 입술이 떨렸습니다. 말이 나오지 않았습니다. 아버지가 다가와 어깨를 잡았습니다. '무슨 일이야? 어디 아파?' '아빠... 이 사람... 이경숙 대표님...' 민지가 가까스로 말했습니다. 아버지가 서류를 주워 들었습니다. '아, 대성섬유? 아주 훌륭한 분이지. 자수성가한 사업가야. 업계에서 존경받는 분이고.' 민지는 무너지는 기분이었습니다. 다리에 힘이 풀렸습니다. 소파에 주저앉았습니다. '이 분이... 준호 어머니야...' 민지의 목소리는 떨렸습니다. 아버지의 표정이 굳었습니다. '뭐? 준호 어머니가 이경숙 대표라고?' '응... 3일 전에 만났어... 근데...' 민지는 말을 잇지 못했습니다. 작업복을 입고 왔다고, 쫓아냈다고 말할 수 없었습니다. 아버지가 눈을 크게 떴습니다. '민지야, 이경숙 대표는 자산이 600억이 넘어. 대성섬유는 업계 1위야. 너 정말 몰랐어?' 민지는 고개를 저었습니다. 눈물이 났습니다. 수치심과 공포가 동시에 밀려왔습니다. '준호가... 아무 말도 안 했어... 엄마가 그냥 회사 다닌다고만...' '이경숙 대표는 원래 조용히 사시는 분이야. 언론 인터뷰도 거의 안 하시고. 현장에서 직원들이랑 일하시는 걸 좋아하신대.' 아버지의 말이 민지의 귀에 멀리서 들렸습니다. 머릿속이 하얗게 변했습니다. 3일 전 장면이 생생하게 떠올랐습니다. '드레스 코드가 있거든요.' '집에 가서 옷 좀 갈아입고 오세요.' '우리 시어머니니까.' 자신이 한 말들이 되살아났습니다. 그 오만한 태도, 그 무례한 시선, 그 모욕적인 미소. 민지는 구역질이 났습니다. 화장실로 뛰어갔습니다. 토할 것 같았습니다. 거울에 비친 자신의 얼굴을 봤습니다. 창백하고 식은땀이 흘렀습니다. 손이 떨렸습니다. 핸드폰을 꺼냈습니다. 준호에게 전화를 걸려다 멈췄습니다. 뭐라고 말해야 할까요. 미안하다고? 몰랐다고? 변명이 될까요. 민지는 주저앉았습니다. 차가운 화장실 바닥에 앉아서 울었습니다. 자신의 어리석음에, 자신의 오만함에, 자신의 무례함에 울었습니다. 그리고 이제 돌이킬 수 없다는 사실에 울었습니다."
+    },
+    {
+      "scene_id": "scene_06_main",
+      "scene_name": "민지의 필사적 사과",
+      "time_period": "현재 - 그날 저녁",
+      "location": "경숙의 집 앞",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "haunting",
+      "symbolic_object": "보석함",
+      "image_prompt": "Photorealistic professional photograph, Korean dramatic scene cinematography, realistic photography style, DSLR camera, high resolution, natural skin texture, young woman 30s desperate pleading expression tears, modest apartment entrance exterior, kneeling on ground hands clasped begging posture, mid-shot eye-level, evening dim streetlight orange glow + apartment window light cold, desaturated tones + tear reflection accents, haunting atmosphere desperation visible, NO TEXT",
+      "narration": "민지는 경숙의 아파트 앞에 섰습니다. 낡은 5층짜리 건물이었습니다. 엘리베이터도 없었습니다. 계단을 올라갔습니다. 숨이 찼습니다. 긴장 때문이었습니다. 301호 앞에 도착했습니다. 초인종을 눌렀습니다. 한참을 기다렸습니다. 문이 열렸습니다. 경숙이 나타났습니다. 편한 옷차림이었습니다. 민지를 보자 표정이 굳었습니다. '어머님...' 민지가 떨리는 목소리로 말했습니다. 경숙은 대답하지 않았습니다. 그저 민지를 바라봤습니다. 감정을 알 수 없는 눈빛이었습니다. '죄송합니다. 정말 죄송합니다.' 민지는 고개를 숙였습니다. 90도로 깊게 숙였습니다. 눈물이 흘러내렸습니다. 경숙은 여전히 침묵했습니다. '제가... 제가 정말 잘못했어요. 어머님이 누구신지 몰랐어요. 아니, 그게 변명이 되면 안 되는데...' 민지의 목소리가 떨렸습니다. '제가 너무 오만했어요. 제가 너무 무례했어요. 용서해주세요.' 경숙이 입을 열었습니다. 차분한 목소리였습니다. '들어오세요.' 민지는 고개를 들었습니다. 경숙은 이미 안으로 들어가고 있었습니다. 민지는 황급히 신발을 벗고 따라 들어갔습니다. 집은 작았습니다. 투룸이었습니다. 가구는 오래되었습니다. 하지만 깨끗했습니다. 정갈했습니다. 벽에는 준호의 사진들이 걸려 있었습니다. 어렸을 때부터 지금까지의 사진들이었습니다. 경숙은 소파에 앉았습니다. 민지에게 앉으라는 손짓을 했습니다. 민지는 조심스럽게 앉았습니다. 경숙은 물 한 잔을 건넸습니다. 민지는 받지 못했습니다. 손이 너무 떨렸습니다. '어머님... 정말 죄송해요... 제가...' '민지씨.' 경숙이 민지의 말을 끊었습니다. '저는 화가 나지 않아요.' 민지는 고개를 들었습니다. 이해할 수 없다는 표정이었습니다. '제가 작업복을 입고 간 게 잘못이에요. 민지씨 말이 맞아요. 그런 고급 레스토랑에는 그에 맞는 복장이 필요하죠.' 경숙의 목소리는 담담했습니다. '아니에요. 제가 잘못했어요. 제가 너무 심했어요.' 민지가 울먹였습니다. 경숙은 고개를 저었습니다. '민지씨는 자신이 알던 기준에 따라 행동한 거예요. 그게 잘못은 아니에요.' '하지만...' '민지씨.' 경숙이 다시 말을 끊었습니다. '저는 민지씨를 이해해요. 민지씨가 자란 환경, 민지씨가 배운 가치관을 이해해요.' 민지는 더 울었습니다. 경숙의 차분한 태도가 오히려 더 가슴을 아프게 했습니다. 화를 내주는 게 차라리 나았을 것 같았습니다. '하지만 한 가지만 알아주세요.' 경숙의 목소리가 조금 낮아졌습니다. '사람의 가치는 옷이나 돈으로 정해지지 않아요.' 민지는 고개를 끄덕였습니다. 눈물이 멈추지 않았습니다. '제가 작업복을 입은 건 제 선택이에요. 저는 현장에서 일하는 게 좋아요. 직원들이랑 함께 있는 게 좋아요. 그게 제 자리예요.' 경숙의 눈빛이 단호했습니다. '민지씨가 저를 어떻게 봤는지 알아요. 무시했다는 것도 알아요. 하지만 저는 그게 제 문제가 아니라 민지씨 문제라고 생각해요.' 민지는 얼굴을 손으로 가렸습니다. 부끄러웠습니다. 수치스러웠습니다. '준호와의 결혼은 민지씨가 결정하세요.' 경숙이 말했습니다. '제가 반대하지는 않을 거예요. 준호가 민지씨를 사랑하니까요. 하지만 민지씨도 생각해봐야 해요. 정말 우리 가족이 될 수 있을지.' 민지는 대답하지 못했습니다. 경숙은 일어섰습니다. '이제 돌아가세요. 늦었어요.' 민지도 일어섰습니다. 문 앞까지 따라갔습니다. 신발을 신으며 다시 고개를 숙였습니다. '어머님... 정말 죄송합니다.' 경숙은 고개를 끄덕였습니다. 그리고 문을 닫았습니다. 민지는 계단을 내려갔습니다. 한 걸음 한 걸음이 무거웠습니다. 밖으로 나왔습니다. 차가운 바람이 얼굴을 스쳤습니다. 민지는 하늘을 올려다봤습니다. 별이 보이지 않았습니다. 서울의 밤하늘은 항상 흐렸습니다."
+    },
+    {
+      "scene_id": "scene_07_main",
+      "scene_name": "결말 - 파혼",
+      "time_period": "현재 - 1주일 후",
+      "location": "카페",
+      "duration_seconds": 45,
+      "word_count": 1750,
+      "key_emotion": "retributive",
+      "symbolic_object": "명함",
+      "image_prompt": "Photorealistic professional photograph, Korean dramatic scene cinematography, realistic photography style, DSLR camera, high resolution, natural skin texture, young woman 30s defeated hollow expression, cafe interior window seat, engagement ring on table removed, close-up high angle looking down, afternoon harsh window light creating division, cold desaturated tones shift to warm acceptance, retributive atmosphere justice served, NO TEXT",
+      "narration": "민지는 카페에 앉아 있었습니다. 창가 자리였습니다. 밖으로 사람들이 지나갔습니다. 모두 바빠 보였습니다. 각자의 삶을 살고 있었습니다. 민지의 앞에는 커피 잔이 있었습니다. 식어서 김이 나지 않았습니다. 한 모금도 마시지 않았습니다. 핸드폰이 울렸습니다. 준호였습니다. 민지는 전화를 받지 않았습니다. 이미 준호와는 어젯밤에 얘기를 나눴습니다. 긴 대화였습니다. 준호는 어머니에게 들었다고 했습니다. 민지가 찾아와서 사과했다고. 준호는 민지를 이해한다고 했습니다. 괜찮다고 했습니다. 하지만 민지는 알았습니다. 준호의 목소리에서 무언가 변한 것을. 신뢰가 깨진 것을. 민지는 생각했습니다. 지난 일주일 동안 계속 생각했습니다. 자신이 정말 준호와 결혼할 수 있을지. 경숙을 시어머니로 받아들일 수 있을지. 솔직히 자신이 없었습니다. 경숙은 훌륭한 사람이었습니다. 성공한 사업가였습니다. 존경받는 인물이었습니다. 하지만 민지가 상상했던 시어머니의 모습은 아니었습니다. 민지는 화려한 시어머니를 원했습니다. 백화점에서 쇼핑하고, 고급 레스토랑에서 식사하고, 사교 모임에서 자랑할 수 있는 시어머니를. 경숙은 그런 사람이 아니었습니다. 작업복을 입고 공장에서 일했습니다. 직원들과 함께 밥을 먹었습니다. 소박한 아파트에서 살았습니다. 돈은 많았지만 쓰지 않았습니다. 민지는 그런 삶을 이해할 수 없었습니다. 존중할 수 없었습니다. 그것이 문제였습니다. 민지는 손가락의 약혼반지를 내려다봤습니다. 5캐럿짜리 다이아몬드 반지였습니다. 빛이 영롱하게 반사되었습니다. 천천히 반지를 빼냈습니다. 테이블 위에 놓았습니다. 작은 소리가 났습니다. 똑, 하는 소리였습니다. 준호에게 문자를 보냈습니다. '미안해. 나는 준비가 안 된 것 같아. 우리 결혼은 무리인 것 같아.' 전송 버튼을 눌렀습니다. 답장이 오지 않았습니다. 민지는 일어섰습니다. 반지를 두고 나왔습니다. 카페 문을 나서자 햇빛이 눈부셨습니다. 손으로 눈을 가렸습니다. 거리를 걸었습니다. 목적지 없이 걸었습니다. 사람들이 스쳐 지나갔습니다. 누군가 어깨를 부딪쳤습니다. 사과도 하지 않고 지나갔습니다. 민지는 멈춰 섰습니다. 주변을 둘러봤습니다. 높은 빌딩들이 보였습니다. 명품 가게들이 보였습니다. 비싼 차들이 지나갔습니다. 이것이 민지가 아는 세상이었습니다. 이것이 민지가 중요하다고 생각하는 것들이었습니다. 하지만 지금은 공허했습니다. 의미가 없어 보였습니다. 민지는 펜트하우스로 돌아갔습니다. 집은 조용했습니다. 너무 조용했습니다. 침대에 누웠습니다. 천장을 바라봤습니다. 눈물이 흘렀습니다. 후회 때문이었을까요. 아니면 안도감 때문이었을까요. 민지는 알 수 없었습니다. 핸드폰이 다시 울렸습니다. 이번에는 아버지였습니다. 받았습니다. '민지야, 대성섬유랑 계약 무산됐다.' 아버지의 목소리가 무거웠습니다. '왜요?' 민지가 물었습니다. '이경숙 대표가 거절하셨어. 개인적인 이유라고 하시던데.' 민지는 아무 말도 할 수 없었습니다. 전화를 끊었습니다. 경숙은 복수한 것이었습니다. 조용하게, 우아하게 복수한 것이었습니다. 민지의 아버지 사업에 타격을 주었습니다. 말 한마디 없이, 감정 표현 없이 그렇게 했습니다. 민지는 웃었습니다. 쓴웃음이었습니다. 자신이 얼마나 어리석었는지 깨달았습니다. 작업복을 입은 여자를 무시했습니다. 하지만 그 여자는 민지보다 훨씬 강했습니다. 훨씬 현명했습니다. 훨씬 높은 곳에 있었습니다. 민지는 패배했습니다. 완전히 패배했습니다. 그리고 그것이 당연하다는 것을 알았습니다. 창밖을 내다봤습니다. 서울 야경이 펼쳐졌습니다. 여전히 화려했습니다. 여전히 빛났습니다. 하지만 이제는 다르게 보였습니다. 차갑게 보였습니다. 민지는 커튼을 쳤습니다. 어둠 속에 앉아 있었습니다."
+    }
+  ],
+  "quality_check": {
+    "hook_score": 9,
+    "hook_score_breakdown": {
+      "strong_verb": 1,
+      "body_part": 1,
+      "numbers": 1,
+      "evidence": 1,
+      "witness": 1,
+      "immediacy": 1,
+      "title_connection": 1,
+      "bonus_shock": 1,
+      "bonus_irony": 0,
+      "bonus_contrast": 1
+    },
+    "hook_rewrites_count": 0,
+    "scene_memory_pass": true,
+    "max_consecutive_content_words_matched": 2,
+    "similar_action_patterns_found": 0,
+    "all_resolved": true,
+    "resolution_method": "자연스러운 변주 적용",
+    "title_click_rating": 5,
+    "hook_effectiveness": "strong",
+    "imagefx_prompts_validated": true,
+    "emotion_keywords_from_list": true
+  },
+  "quality_evaluation": {
+    "hook_strength": 9,
+    "emotional_arc": 9,
+    "three_act_structure": 10,
+    "retention_points": 9,
+    "pacing": 9,
+    "visual_variety": 10,
+    "total_score": 56,
+    "grade": "S",
+    "comments": "완벽한 계급 갈등 서사. 씬 0의 후킹이 매우 강력하고, 씬 4의 과거 플래시백이 반전을 극대화함. 경숙의 조용한 복수가 카타르시스를 제공하며, 민지의 패배가 자연스럽고 설득력 있음. 시각적 다양성과 감정 곡선 모두 완벽.",
+    "improvements": []
+  }
+}

@@ -102,6 +102,7 @@ class ResponseAggregator:
     def save_to_file(self, filename: str = "ai_responses.txt"):
         """Save all responses to a file"""
         import os
+        import json
         from pathlib import Path
 
         # Get the project root directory (where main.py is executed)
@@ -114,12 +115,45 @@ class ResponseAggregator:
         # Full path to save file
         full_path = scripts_dir / filename
 
-        with open(full_path, 'w', encoding='utf-8') as f:
-            # Just write the raw response, nothing else
-            for agent_name, response in self.responses.items():
-                f.write(response)
+        # Find the first valid JSON response
+        valid_json = None
+        for agent_name, response in self.responses.items():
+            if response and not response.startswith("Error:"):
+                # Try to extract JSON from the response
+                cleaned = response.strip()
+                # Remove code fences if present
+                cleaned = cleaned.replace('```json', '').replace('```', '').strip()
 
-        print(f"\n{Fore.GREEN}[OK] Responses saved to {full_path}{Style.RESET_ALL}")
+                # Find JSON boundaries
+                json_start = cleaned.find('{')
+                json_end = cleaned.rfind('}')
+
+                if json_start != -1 and json_end != -1:
+                    json_str = cleaned[json_start:json_end+1]
+                    try:
+                        # Validate it's proper JSON
+                        parsed = json.loads(json_str)
+                        valid_json = json_str
+                        print(f"{Fore.GREEN}[OK] Valid JSON response found from {agent_name}{Style.RESET_ALL}")
+                        break
+                    except json.JSONDecodeError:
+                        print(f"{Fore.YELLOW}[WARN] Invalid JSON from {agent_name}, trying next agent...{Style.RESET_ALL}")
+                        continue
+
+        if valid_json:
+            with open(full_path, 'w', encoding='utf-8') as f:
+                f.write(valid_json)
+            print(f"\n{Fore.GREEN}[OK] Valid JSON response saved to {full_path}{Style.RESET_ALL}")
+        else:
+            # Fallback: save first non-error response
+            for agent_name, response in self.responses.items():
+                if response and not response.startswith("Error:"):
+                    with open(full_path, 'w', encoding='utf-8') as f:
+                        f.write(response)
+                    print(f"\n{Fore.YELLOW}[WARN] No valid JSON found, saved raw response from {agent_name} to {full_path}{Style.RESET_ALL}")
+                    break
+            else:
+                print(f"\n{Fore.RED}[ERROR] No valid responses to save{Style.RESET_ALL}")
 
     def get_all_responses(self) -> Dict[str, str]:
         """Get all responses as a dictionary"""

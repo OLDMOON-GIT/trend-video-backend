@@ -1,0 +1,73 @@
+{
+  "title": "[광고] 테스트 상품",
+  "version": "product-1.0",
+  "product_info": {
+    "thumbnail": "https://example.com/test-thumbnail.jpg",
+    "product_link": "https://link.coupang.com/a/test123?subid=test&itemId=12345&vendorItemId=67890&partner=test",
+    "description": "이것은 테스트 상품입니다. 매우 유용한 상품입니다."
+  },
+  "youtube_description": {
+    "text": "[광고] 일상을 바꿀 특별한 아이템 🔥\\n\\n✅ 매우 유용한 기능으로 생활이 편리해집니다!\\n✅ 실용적인 디자인으로 누구나 쉽게 사용 가능해요.\\n✅ 일상 속에서 활용도가 높은 필수 아이템!\\n✅ 품질 좋은 소재로 오래 사용할 수 있어요.\\n\\n🛒 구매하기\\nhttps://link.coupang.com/a/test123?subid=test&itemId=12345&vendorItemId=67890&partner=test\\n\\n🏠 더 많은 상품보기\\nhttps://sites.google.com/view/test-automation\\n\\n#테스트상품 #유용한아이템 #생활용품 #일상템 #실용상품 #편리한생활 #필수아이템 #추천상품\\n\\n이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
+  },
+  "metadata": {
+    "genre": "상품 소개 영상",
+    "format": "9:16 vertical (portrait)",
+    "total_duration_seconds": 30,
+    "style": "cinematic product showcase",
+    "mood": "desirable, appealing, satisfying",
+    "key_techniques": ["product focus", "lifestyle context", "detail shots", "emotional connection"],
+    "target_platform": "mobile shopping",
+    "emotional_arc": "관심 → 공감 → 해결 → 구매욕구",
+    "scene_count": 4,
+    "category": "일반",
+    "scriptId": "25467684-8096-45b0-ab18-a2fa1d72c2c8"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 3초 상품 매력",
+      "duration_seconds": 3,
+      "word_count": 50,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product hero shot with human element, camera starts slightly blurred then racks focus sharply onto Korean person's hands holding sleek modern test product with premium finish, Korean person's hands centered in vertical frame examining product closely with East Asian skin tone visible, product's smooth texture and innovative design details emphasized, same Korean person throughout entire video wearing casual comfortable home clothing, hands turning to show product from multiple angles revealing craftsmanship, dramatic rim lighting with subtle shadows creating depth, slow push-in on hands and product revealing intricate details and quality materials, establishing the main Korean character who will appear in all following scenes, desirable and eye-catching mood with product glowing under perfect lighting, shot on 35mm film with anamorphic bokeh creating dreamy atmosphere, shallow depth gradually deepening to reveal cozy modern Korean home interior backdrop, warm inviting color palette with product details popping against soft background, consistent Korean character and location established from the start, camera movement leads viewer's eye naturally as hands lower preparing for transition to wider lifestyle context",
+      "narration": "일상을 바꿀 특별한 아이템을 만나보세요. 실용적이면서도 세련된 디자인이 매력적이에요."
+    },
+    {
+      "scene_id": "scene_01_problem",
+      "scene_name": "문제/필요 - 9초 공감",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic lifestyle problem scene, camera transitions from previous hands shot by pulling back to reveal full upper body of the SAME KOREAN PERSON from Scene 0 with East Asian features clearly visible struggling with daily routine without proper tools, same casual home clothing visible confirming character continuity, same Korean person now shown from waist up in vertical frame experiencing common household frustration, Korean face with East Asian facial features showing mild frustration and inconvenience during everyday task, cluttered disorganized space around them, same cozy Korean home interior established in Scene 0 now visible in wider shot showing the challenge, lighting gradually shifts from product focus to realistic everyday struggle atmosphere, slow tracking sideways with same Korean person revealing the full uncomfortable situation and inefficiency, maintaining Korean character and environmental consistency throughout, relatable and empathetic mood building connection with viewers who face similar challenges, shot on 35mm film maintaining visual continuity from previous scene with consistent grain, depth of field opens up showing same home backdrop with familiar furniture, muted realistic color palette with slightly desaturated tones contrasting with previous product warmth, same Korean person looks down searching for better solution as camera slowly drifts toward where improved product will appear",
+      "narration": "매일 같은 불편함을 겪고 계신가요? 필요한 순간마다 찾기 어렵고, 사용하기에도 번거로웠던 경험. 더 나은 방법이 필요한 시간이에요. 일상 속 작은 불편함이 쌓여 큰 스트레스가 되곤 하죠."
+    },
+    {
+      "scene_id": "scene_02_solution",
+      "scene_name": "해결/기능 - 9초 설득",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic product solution reveal, camera continues previous movement as the SAME KOREAN PERSON from previous scenes now uses the NEW test product with Korean hands clearly visible demonstrating its practical benefits, same casual home clothing confirming character continuity, same cozy Korean home location, seamless transition as same Korean person's hands with East Asian skin tone come into frame confidently using the solution product, close-up of Korean hands operating product smoothly with intuitive design working perfectly, organized and efficient workflow now visible, same vertical framing maintaining Korean character consistency throughout entire narrative, lighting transforms from problematic atmosphere to warm satisfied solution mood with natural home lighting creating premium product showcase, camera orbits 180 degrees around same Korean person's hands and product revealing all functional angles and user-friendly features while maintaining continuous story with same Korean character, convincing and satisfying mood as solution unfolds naturally in same Korean person's hands, shot on 35mm film with consistent bokeh character and filmic quality, same Korean person's satisfied expression with East Asian features gradually visible as camera pulls slightly back showing confidence, vibrant yet natural warm color palette suggesting comfort and capability, camera movement mirrors same Korean person's hand interaction building tactile connection and desire, same home interior backdrop visible confirming location continuity and realistic lifestyle context, preparing for final emotional payoff with same Korean character's complete satisfaction",
+      "narration": "이 상품은 실용성과 편리함을 동시에 제공해요. 직관적인 디자인으로 누구나 쉽게 사용할 수 있고, 일상 속에서 활용도가 높아요. 품질 좋은 소재로 오래 사용할 수 있어서 더욱 만족스러워요."
+    },
+    {
+      "scene_id": "scene_03_cta",
+      "scene_name": "행동유도 + CTA - 9초 구매욕구",
+      "duration_seconds": 9,
+      "word_count": 150,
+      "sora_prompt": "Vertical 9:16 format, portrait orientation, cinematic emotional finale, camera gracefully pulls back from previous hands-on-product moment revealing the SAME KOREAN PERSON from all previous scenes now completely satisfied with East Asian facial features clearly visible enjoying improved daily routine with product seamlessly integrated, smiling genuinely with contentment, same Korean person in full frame showing complete lifestyle transformation and happiness, vertical composition widens from hands to full upper body of same Korean character with East Asian appearance radiating satisfaction, product beautifully integrated into organized efficient home space, same casual clothing throughout entire video confirming continuity and authenticity, same cozy Korean home interior visible throughout entire video journey showing familiar comfortable environment, lighting reaches golden hour perfection with warm afternoon sunlight streaming through windows suggesting comfort capability and deep satisfaction, slow crane movement upward and back revealing same Korean person's complete happy moment in their improved daily life, same Korean character's face now fully visible with East Asian features showing genuine joy and relief with product, same home backdrop establishing consistent location throughout all 4 scenes creating cohesive narrative, desirable and rewarding mood crescendos as we see same Korean person's journey complete from product introduction to problem to solution to satisfaction, shot on 35mm film with final bokeh blooming beautifully around same Korean person creating dreamy aspirational quality, depth of field creates separation while maintaining Korean character focus as emotional anchor, premium warm color palette with golden hour tones and product details still visible and appealing, camera movement completes full narrative journey with same Korean person from initial product showcase to final lifestyle satisfaction and happiness, final frame holds on same Korean person using product with satisfied smile as emotional anchor inviting viewer to own this moment and join this transformed lifestyle journey",
+      "narration": "지금 바로 만나보세요. 매일의 일상이 더욱 편리하고 즐거워질 거예요. 작은 변화가 큰 행복을 만들어줍니다. 상품 링크는 댓글에 있습니다. 구독과 좋아요 부탁드립니다."
+    }
+  ],
+  "quality_check": {
+    "scene_count": 4,
+    "total_duration": 30,
+    "vertical_format": true,
+    "product_focused": true,
+    "cinematic_style": true,
+    "hook_effectiveness": "strong",
+    "problem_solution_clear": true,
+    "cta_compelling": true,
+    "product_link_mention_included": true,
+    "subscription_request_included": true,
+    "youtube_description_included": true,
+    "youtube_description_starts_with_ad": true
+  }
+}

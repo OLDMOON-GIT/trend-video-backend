@@ -11,6 +11,17 @@ import subprocess
 import logging
 import re
 
+# 공통 유틸리티 모듈 import
+from app.utils import (
+    get_ffmpeg_path,
+    get_video_duration,
+    get_audio_duration,
+    generate_tts_with_timestamps,
+    transcribe_audio_to_segments,
+    generate_ass_subtitle,
+    create_korean_subtitle_style,
+)
+
 # 워터마크 제거 기능
 try:
     import cv2
@@ -21,7 +32,6 @@ except ImportError:
     logging.warning("⚠️ OpenCV가 설치되지 않아 워터마크 제거 기능을 사용할 수 없습니다.")
 
 # 로깅 설정 (stderr 에러 방지)
-import sys
 logging.basicConfig(
     level=logging.INFO,
     format='%(message)s',
@@ -87,32 +97,11 @@ def remove_watermark_from_video(input_path: Path, output_path: Path, threshold: 
     return output_path
 
 
-def get_ffmpeg_path():
-    """FFmpeg 경로 확인"""
-    try:
-        result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True)
-        if result.returncode == 0:
-            return 'ffmpeg'
-    except FileNotFoundError:
-        pass
-
-    # imageio-ffmpeg 시도
-    try:
-        import imageio_ffmpeg
-        return imageio_ffmpeg.get_ffmpeg_exe()
-    except ImportError:
-        pass
-
-    return None
-
-
 def concatenate_videos(video_paths: List[Path], output_path: Path) -> Path:
     """
     FFmpeg를 사용하여 비디오 병합 (filter_complex 방식)
     """
     ffmpeg = get_ffmpeg_path()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg not found. Install FFmpeg or imageio-ffmpeg.")
 
     logger.info(f"📹 {len(video_paths)}개 비디오 병합 중...")
     logger.info(f"   비디오 목록:")
@@ -185,8 +174,6 @@ def align_videos_to_scenes(video_paths: list, scenes: list, whisper_segments: li
         output_path: 출력 비디오 경로
     """
     ffmpeg = get_ffmpeg_path()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg not found. Install FFmpeg or imageio-ffmpeg.")
 
     logger.info(f"\n🎬 scenes 배열에 맞춰 비디오 배치 중...")
     logger.info(f"   scenes: {len(scenes)}개")
@@ -306,8 +293,6 @@ def align_videos_to_segments(video_paths: list, segments: list, output_path: Pat
         output_path: 출력 비디오 경로
     """
     ffmpeg = get_ffmpeg_path()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg not found. Install FFmpeg or imageio-ffmpeg.")
 
     logger.info(f"\n🎬 세그먼트에 맞춰 비디오 배치 중...")
     logger.info(f"   세그먼트: {len(segments)}개")
@@ -393,23 +378,20 @@ def transcribe_audio_with_whisper(audio_path: Path, original_text: str) -> list:
     Whisper로 타임스탬프만 얻고, 텍스트는 원본 나레이션 사용
     """
     try:
-        import whisper
-        import re
-
         logger.info(f"🎧 Whisper로 타이밍 분석 중...")
 
-        # Whisper 모델 로드 (base 모델 사용)
-        model = whisper.load_model("base")
+        # Whisper로 세그먼트 추출 (공통 모듈 사용)
+        whisper_segments_objs = transcribe_audio_to_segments(str(audio_path), model_name="base", language="ko")
 
-        # 오디오 인식 (타임스탬프만 필요)
-        result = model.transcribe(
-            str(audio_path),
-            language="ko",
-            verbose=False
-        )
+        # SubtitleSegment 객체를 딕셔너리로 변환
+        whisper_segments = []
+        for seg in whisper_segments_objs:
+            whisper_segments.append({
+                "start": seg.start,
+                "end": seg.end,
+                "text": seg.text
+            })
 
-        # Whisper 세그먼트 타임스탬프 추출
-        whisper_segments = result["segments"]
         logger.info(f"✅ Whisper 타이밍 분석 완료: {len(whisper_segments)}개 세그먼트")
 
         # 원본 텍스트를 문장 단위로 분리
@@ -476,11 +458,6 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
     Edge TTS로 음성 생성 후 Whisper로 정확한 타임스탬프 얻기
     Returns: (audio_path, subtitle_data)
     """
-    try:
-        import edge_tts
-    except ImportError:
-        raise ImportError("edge-tts가 설치되지 않았습니다. pip install edge-tts 를 실행하세요.")
-
     logger.info(f"🎙️ TTS 생성 중: {voice}")
 
     # 텍스트 정리
@@ -488,13 +465,12 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
     if not clean_text:
         raise ValueError("나레이션 텍스트가 비어있습니다.")
 
-    # Edge TTS로 음성만 생성 (타임스탬프는 Whisper에서 얻음)
-    communicate = edge_tts.Communicate(clean_text, voice)
-
-    with open(output_path, "wb") as audio_file:
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_file.write(chunk["data"])
+    # 공통 모듈의 TTS 생성 함수 사용 (비동기)
+    word_timestamps, total_duration = await generate_tts_with_timestamps(
+        clean_text,
+        str(output_path),
+        voice=voice
+    )
 
     logger.info(f"✅ TTS 생성 완료: {output_path.name}")
 
@@ -506,15 +482,6 @@ async def generate_tts(text: str, output_path: Path, voice: str = "ko-KR-SunHiNe
         subtitle_data = []
 
     return output_path, subtitle_data
-
-
-def format_srt_time(seconds: float) -> str:
-    """초를 SRT 시간 형식으로 변환 (HH:MM:SS,mmm)"""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millisecs = int((seconds % 1) * 1000)
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millisecs:03d}"
 
 
 def format_ass_timestamp(seconds: float) -> str:
@@ -548,35 +515,23 @@ def create_ass_from_timestamps(subtitle_data: list, output_path: Path, max_chars
             duration = sub['end'] - sub['start']
             logger.info(f"   {i+1}. {sub['start']:.3f}s ~ {sub['end']:.3f}s ({duration:.3f}초): '{sub['text'][:50]}'")
 
-    # ASS 파일 작성
+    # SubtitleSegment 객체 변환
+    from app.utils import SubtitleSegment
+    segments = [SubtitleSegment(sub['start'], sub['end'], sub['text']) for sub in subtitle_data]
+
+    # ASS 파일 생성 (공통 모듈 사용)
     ass_path = output_path.with_suffix('.ass')
+    style_config = create_korean_subtitle_style()
+    style_config['Fontname'] = 'Pretendard Variable'
+    style_config['Fontsize'] = '48'
 
-    with open(ass_path, 'w', encoding='utf-8') as f:
-        # ASS 헤더
-        f.write("[Script Info]\n")
-        f.write("ScriptType: v4.00+\n")
-        f.write("PlayResX: 1920\n")
-        f.write("PlayResY: 1080\n")
-        f.write("\n")
+    success = generate_ass_subtitle(segments, str(ass_path), style_config)
 
-        # 스타일 정의
-        f.write("[V4+ Styles]\n")
-        f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
-        f.write("Style: Default,Pretendard Variable,48,&H00FFFFFF,&H000088EF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,30,30,40,1\n")
-        f.write("\n")
-
-        # 이벤트 (자막)
-        f.write("[Events]\n")
-        f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
-
-        for sub in subtitle_data:
-            start_time = format_ass_timestamp(sub["start"])
-            end_time = format_ass_timestamp(sub["end"])
-            text = sub["text"]
-            f.write(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text}\n")
-
-    logger.info(f"✅ ASS 자막 파일 생성 완료: {ass_path} ({len(subtitle_data)}개 라인)")
-    return ass_path
+    if success:
+        logger.info(f"✅ ASS 자막 파일 생성 완료: {ass_path} ({len(subtitle_data)}개 라인)")
+        return ass_path
+    else:
+        return None
 
 
 def create_ass_from_text(text: str, duration: float, output_path: Path, max_chars_per_line: int = 22) -> Path:
@@ -662,79 +617,23 @@ def create_ass_from_text(text: str, duration: float, output_path: Path, max_char
             })
             current_time = end_time
 
-    # ASS 파일 작성
+    # SubtitleSegment 객체 변환
+    from app.utils import SubtitleSegment
+    segments = [SubtitleSegment(sub['start'], sub['end'], sub['text']) for sub in subtitles]
+
+    # ASS 파일 생성 (공통 모듈 사용)
     ass_path = output_path.with_suffix('.ass')
+    style_config = create_korean_subtitle_style()
+    style_config['Fontname'] = 'NanumGothic'
+    style_config['Fontsize'] = '96'
 
-    with open(ass_path, 'w', encoding='utf-8') as f:
-        # ASS 헤더
-        f.write("[Script Info]\n")
-        f.write("ScriptType: v4.00+\n")
-        f.write("PlayResX: 1920\n")
-        f.write("PlayResY: 1080\n\n")
+    success = generate_ass_subtitle(segments, str(ass_path), style_config)
 
-        # 스타일 정의 (NanumGothic 폰트, 흰색, 검은 테두리)
-        f.write("[V4+ Styles]\n")
-        f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
-        f.write("Style: Default,NanumGothic,96,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,2,2,10,10,20,1\n\n")
-
-        # 이벤트 (자막)
-        f.write("[Events]\n")
-        f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
-
-        for sub in subtitles:
-            start = format_ass_timestamp(sub["start"])
-            end = format_ass_timestamp(sub["end"])
-            text_escaped = sub['text'].replace('\n', '\\N')
-            f.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text_escaped}\n")
-
-    logger.info(f"✅ ASS 자막 파일 생성: {ass_path.name} ({len(subtitles)}개 구간)")
-    return ass_path
-
-
-def get_video_duration(video_path: Path) -> float:
-    """FFprobe로 비디오 길이 확인"""
-    ffmpeg = get_ffmpeg_path()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg not found.")
-
-    ffprobe_path = ffmpeg.replace('ffmpeg', 'ffprobe')
-
-    try:
-        cmd = [
-            ffprobe_path,
-            '-v', 'error',
-            '-show_entries', 'format=duration',
-            '-of', 'default=noprint_wrappers=1:nokey=1',
-            str(video_path)
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        return float(result.stdout.strip())
-    except Exception as e:
-        logger.warning(f"⚠️ 비디오 길이 확인 실패: {e}")
-        return 0.0
-
-
-def get_audio_duration(audio_path: Path) -> float:
-    """FFprobe로 오디오 길이 확인"""
-    ffmpeg = get_ffmpeg_path()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg not found.")
-
-    ffprobe_path = ffmpeg.replace('ffmpeg', 'ffprobe')
-
-    try:
-        cmd = [
-            ffprobe_path,
-            '-v', 'error',
-            '-show_entries', 'format=duration',
-            '-of', 'default=noprint_wrappers=1:nokey=1',
-            str(audio_path)
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        return float(result.stdout.strip())
-    except Exception as e:
-        logger.warning(f"⚠️ 오디오 길이 확인 실패: {e}")
-        return 0.0
+    if success:
+        logger.info(f"✅ ASS 자막 파일 생성: {ass_path.name} ({len(subtitles)}개 구간)")
+        return ass_path
+    else:
+        return None
 
 
 def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, subtitle_text: str = None, add_subtitles: bool = False, subtitle_data: list = None) -> Path:
@@ -744,8 +643,6 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
     subtitle_data: TTS 타임스탬프 데이터 (있으면 정확한 동기화)
     """
     ffmpeg = get_ffmpeg_path()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg not found.")
 
     logger.info(f"🔊 비디오에 오디오 추가 중...")
 
@@ -755,13 +652,13 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
     if is_image:
         logger.info(f"📷 이미지 파일 감지: {video_path.name}")
         # 이미지는 길이가 없으므로 오디오 길이를 사용
-        audio_duration = get_audio_duration(audio_path)
+        audio_duration = get_audio_duration(str(audio_path))
         video_duration = 0  # 이미지는 길이 없음
         logger.info(f"⏱️ 오디오 길이: {audio_duration:.2f}초")
     else:
         # 비디오와 오디오 길이 확인
-        video_duration = get_video_duration(video_path)
-        audio_duration = get_audio_duration(audio_path)
+        video_duration = get_video_duration(str(video_path))
+        audio_duration = get_audio_duration(str(audio_path))
         logger.info(f"⏱️ 비디오 길이: {video_duration:.2f}초")
         logger.info(f"⏱️ 오디오 길이: {audio_duration:.2f}초")
 
@@ -811,7 +708,7 @@ def add_audio_to_video(video_path: Path, audio_path: Path, output_path: Path, su
         else:
             # 타임스탬프가 없으면 텍스트 기반 추정
             logger.info(f"⏱️ 텍스트 기반 자막 생성 (TTS 오디오 길이 기준)")
-            duration = audio_duration if audio_duration > 0 else get_video_duration(video_path)
+            duration = audio_duration if audio_duration > 0 else get_video_duration(str(video_path))
             logger.info(f"⏱️ 자막 기준 길이: {duration}초")
 
             if duration == 0:
@@ -1136,12 +1033,12 @@ async def main():
                 else:
                     # Whisper 실패 시 기존 방식 (순차 병합)
                     logger.warning(f"⚠️ 세그먼트 정보 없음, 기존 방식으로 병합")
-                merged_video = output_dir / 'merged_video.mp4'
-                concatenate_videos(processed_video_files, merged_video)
+                    merged_video = output_dir / 'merged_video.mp4'
+                    concatenate_videos(processed_video_files, merged_video)
 
-                final_with_audio = output_dir / 'final_with_narration.mp4'
-                add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles, [])
-                final_output = final_with_audio
+                    final_with_audio = output_dir / 'final_with_narration.mp4'
+                    add_audio_to_video(merged_video, tts_audio, final_with_audio, narration_text, add_subtitles, [])
+                    final_output = final_with_audio
         else:
             # 나레이션 없이 병합만 수행
             logger.info(f"\nℹ️ 나레이션 없이 병합만 수행")

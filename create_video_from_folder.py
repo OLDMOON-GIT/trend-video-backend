@@ -60,7 +60,6 @@ try:
 except ImportError:
     AWS_POLLY_AVAILABLE = False
     logger_msg = "⚠️ boto3 패키지가 없습니다. pip install boto3"
-from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, VideoFileClip
 import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -69,6 +68,14 @@ import tempfile
 from PIL import Image as PILImage
 import numpy as np
 
+# 공통 유틸리티 모듈 import
+from app.utils import (
+    get_ffmpeg_path,
+    get_video_duration,
+    get_audio_duration,
+    detect_best_encoder,
+    format_ass_time,
+)
 # OpenCV 임포트 시도 (얼굴 감지용)
 try:
     import cv2
@@ -83,6 +90,9 @@ if sys.platform == 'win32':
     import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
+# logs 폴더 생성 (없으면)
+os.makedirs('logs', exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -264,57 +274,20 @@ class VideoFromFolderCreator:
         self._whisper_model = None
 
     def _detect_best_encoder(self):
-        """사용 가능한 최고의 비디오 인코더 감지"""
-        try:
-            # ffmpeg에서 사용 가능한 인코더 목록 확인
-            result = subprocess.run(
-                ['ffmpeg', '-encoders'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            encoders = result.stdout
+        """사용 가능한 최고의 비디오 인코더 감지 (공통 모듈 사용)"""
+        encoder_name, encoder_type = detect_best_encoder()
 
-            # NVIDIA GPU 인코더 (가장 빠름)
-            if 'h264_nvenc' in encoders:
-                # 드라이버 버전 체크
-                try:
-                    driver_check = subprocess.run(
-                        ['nvidia-smi', '--query-gpu=driver_version', '--format=csv,noheader'],
-                        capture_output=True,
-                        text=True,
-                        timeout=5
-                    )
-                    driver_version = driver_check.stdout.strip()
-                    driver_major = int(driver_version.split('.')[0])
+        # preset 매핑
+        preset_map = {
+            'h264_nvenc': 'p4',
+            'h264_qsv': 'fast',
+            'h264_amf': 'speed',
+            'h264_videotoolbox': 'medium',
+            'libx264': 'ultrafast'
+        }
 
-                    if driver_major >= 570:
-                        logger.info(f"✓ NVIDIA GPU 인코더 사용 (h264_nvenc, 드라이버 {driver_version})")
-                        return 'h264_nvenc', 'p4'
-                    else:
-                        logger.warning(f"⚠️  NVIDIA 드라이버가 낮음 ({driver_version} < 570.0), CPU 인코더 사용")
-                        logger.info("   드라이버 업데이트: https://www.nvidia.com/Download/index.aspx")
-                except:
-                    # 드라이버 체크 실패 시 GPU 시도 (폴백 있음)
-                    logger.info("✓ NVIDIA GPU 인코더 감지 (h264_nvenc) - 드라이버 버전 확인 실패, 시도합니다")
-                    return 'h264_nvenc', 'p4'
-
-            # Intel QSV 인코더
-            if 'h264_qsv' in encoders:
-                logger.info("✓ Intel QSV GPU 인코더 사용 (h264_qsv)")
-                return 'h264_qsv', 'fast'
-
-            # AMD GPU 인코더
-            if 'h264_amf' in encoders:
-                logger.info("✓ AMD GPU 인코더 사용 (h264_amf)")
-                return 'h264_amf', 'speed'
-
-        except Exception as e:
-            logger.warning(f"GPU 인코더 감지 실패: {e}")
-
-        # 폴백: CPU 인코더
-        logger.info("✗ GPU 인코더 없음. CPU 인코더 사용 (libx264)")
-        return 'libx264', 'ultrafast'
+        preset = preset_map.get(encoder_name, 'medium')
+        return encoder_name, preset
 
     def _load_story_json(self) -> Dict:
         """story로 시작하는 JSON 파일 로드"""
@@ -1619,13 +1592,10 @@ Return ONLY the refined prompt without any explanation or additional text."""
         with open(output_path, "wb") as f:
             f.write(audio_data)
 
-        # 오디오 길이 가져오기
-        try:
-            audio_clip = AudioFileClip(str(output_path))
-            duration = audio_clip.duration
-            audio_clip.close()
-        except Exception as e:
-            logger.warning(f"오디오 길이 측정 실패, 기본값 1초 사용: {e}")
+        # 오디오 길이 가져오기 (ffprobe 사용)
+        duration = self._get_audio_duration(output_path)
+        if duration == 0.0:
+            logger.warning(f"오디오 길이 측정 실패, 기본값 1초 사용")
             duration = 1.0
 
         if word_timings:
@@ -1703,13 +1673,10 @@ Return ONLY the refined prompt without any explanation or additional text."""
             with open(temp_path, "wb") as f:
                 f.write(audio_data)
 
-            # 오디오 길이 측정
-            try:
-                audio_clip = AudioFileClip(str(temp_path))
-                chunk_duration = audio_clip.duration
-                audio_clip.close()
-            except Exception as e:
-                logger.warning(f"청크 {idx} 길이 측정 실패: {e}")
+            # 오디오 길이 측정 (ffprobe 사용)
+            chunk_duration = self._get_audio_duration(temp_path)
+            if chunk_duration == 0.0:
+                logger.warning(f"청크 {idx} 길이 측정 실패")
                 chunk_duration = 1.0
 
             all_audio_data.append(audio_data)
@@ -1761,13 +1728,10 @@ Return ONLY the refined prompt without any explanation or additional text."""
         except:
             pass
 
-        # 최종 오디오 길이 측정
-        try:
-            audio_clip = AudioFileClip(str(output_path))
-            total_duration = audio_clip.duration
-            audio_clip.close()
-        except Exception as e:
-            logger.warning(f"최종 오디오 길이 측정 실패: {e}")
+        # 최종 오디오 길이 측정 (ffprobe 사용)
+        total_duration = self._get_audio_duration(output_path)
+        if total_duration == 0.0:
+            logger.warning(f"최종 오디오 길이 측정 실패")
             total_duration = cumulative_time
 
         logger.info(f"[CHUNKED TTS] 전체 완료: {total_duration:.2f}초, 총 단어 {len(all_word_timings)}개")
@@ -1946,20 +1910,12 @@ Return ONLY the refined prompt without any explanation or additional text."""
             return await self._generate_edge_tts(text, output_path)
 
     def _get_video_duration(self, video_path: Path) -> float:
-        """FFprobe로 비디오 길이 확인"""
-        try:
-            cmd = [
-                'ffprobe',
-                '-v', 'error',
-                '-show_entries', 'format=duration',
-                '-of', 'default=noprint_wrappers=1:nokey=1',
-                str(video_path.resolve())
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            return float(result.stdout.strip())
-        except Exception as e:
-            logger.warning(f"⚠️ 비디오 길이 확인 실패: {e}")
-            return 0.0
+        """FFprobe로 비디오 길이 확인 (공통 모듈 사용)"""
+        return get_video_duration(str(video_path))
+
+    def _get_audio_duration(self, audio_path: Path) -> float:
+        """FFprobe로 오디오 길이 확인 (공통 모듈 사용)"""
+        return get_audio_duration(str(audio_path))
 
     def _combine_video_audio(self, scene_num: int, video_path: Path,
                             audio_path: Path, output_path: Path) -> Optional[Path]:
@@ -2015,6 +1971,9 @@ Return ONLY the refined prompt without any explanation or additional text."""
             # 비디오와 오디오 길이 비교하여 필터 준비 (영상병합 방식)
             video_filter_parts = []
             audio_filter = None
+
+            # FPS 통일 (25fps)
+            video_filter_parts.append("fps=25")
 
             if video_duration < audio_duration:
                 # 비디오가 짧으면: 마지막 프레임을 freeze하여 오디오 길이에 맞춤
@@ -2161,7 +2120,7 @@ Return ONLY the refined prompt without any explanation or additional text."""
                 '-loop', '1',  # 이미지 반복
                 '-i', str(image_path.resolve()),  # 입력 이미지 (절대 경로)
                 '-i', str(audio_path.resolve()),  # 입력 오디오 (절대 경로)
-                '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black",  # 리스케일 + 레터박스
+                '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=increase,crop={self.width}:{self.height},fps=25",  # 리스케일 + 크롭 + FPS 통일
                 '-c:v', self.video_codec,  # GPU 가속 코덱
                 '-preset', self.codec_preset,  # 프리셋
                 '-c:a', 'aac',  # 오디오 코덱
@@ -2188,7 +2147,7 @@ Return ONLY the refined prompt without any explanation or additional text."""
                     '-loop', '1',
                     '-i', str(image_path.resolve()),
                     '-i', str(audio_path.resolve()),
-                    '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black",
+                    '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=increase,crop={self.width}:{self.height},fps=25",
                     '-c:v', 'libx264',  # CPU 인코더
                     '-preset', 'ultrafast',
                     '-c:a', 'aac',
@@ -2234,7 +2193,7 @@ Return ONLY the refined prompt without any explanation or additional text."""
                 '-loop', '1',
                 '-i', str(image_path.resolve()),
                 '-i', str(audio_path.resolve()),
-                '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black,ass={ass_filename}",
+                '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=increase,crop={self.width}:{self.height},fps=25,ass={ass_filename}",
                 '-c:v', self.video_codec,
                 '-preset', self.codec_preset,
                 '-c:a', 'aac',
@@ -2267,7 +2226,7 @@ Return ONLY the refined prompt without any explanation or additional text."""
                     '-loop', '1',
                     '-i', str(image_path.resolve()),
                     '-i', str(audio_path.resolve()),
-                    '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2:black,ass={ass_filename}",
+                    '-vf', f"scale={self.width}:{self.height}:force_original_aspect_ratio=increase,crop={self.width}:{self.height},fps=25,ass={ass_filename}",
                     '-c:v', 'libx264',
                     '-preset', 'ultrafast',
                     '-c:a', 'aac',
@@ -2293,68 +2252,8 @@ Return ONLY the refined prompt without any explanation or additional text."""
             logger.error(f"씬 {scene_num} 비디오 + 자막 생성 실패: {e}")
             return None
 
-    def _create_scene_video_old_moviepy(self, scene_num: int, image_path: Path,
-                           audio_path: Path, output_path: Path) -> Optional[Path]:
-        """씬 비디오 생성 (이미지 + 오디오) - MoviePy 버전 (느림, 백업용)"""
-        try:
-            logger.info(f"씬 {scene_num} 비디오 생성 중...")
-
-            # 오디오 클립 생성 및 길이 가져오기
-            audio_clip = AudioFileClip(str(audio_path))
-            duration = audio_clip.duration
-
-            # 이미지 클립 생성
-            img_clip = ImageClip(str(image_path), duration=duration)
-
-            # 원본 이미지 크기
-            orig_w, orig_h = img_clip.size
-            logger.info(f"원본 이미지 크기: {orig_w}x{orig_h}, 목표 크기: {self.width}x{self.height}")
-
-            # 비율 유지하면서 화면에 맞추기 (크롭 없이, 레터박스로)
-            target_ratio = self.width / self.height
-            img_ratio = orig_w / orig_h
-
-            if img_ratio > target_ratio:
-                # 이미지가 더 넓음 - 너비를 화면에 맞추고 위아래 검은 여백
-                img_clip = img_clip.resize(width=self.width)
-            else:
-                # 이미지가 더 높음 - 높이를 화면에 맞추고 좌우 검은 여백
-                img_clip = img_clip.resize(height=self.height)
-
-            # 중앙 정렬 (검은 배경에 이미지 배치)
-            from moviepy.editor import ColorClip, CompositeVideoClip
-            bg = ColorClip(size=(self.width, self.height), color=(0, 0, 0), duration=duration)
-            img_clip = CompositeVideoClip([bg, img_clip.set_position('center')], size=(self.width, self.height))
-
-            # 비디오 + 오디오 결합
-            video = img_clip.set_audio(audio_clip)
-
-            # 저장 (GPU 가속 인코딩)
-            video.write_videofile(
-                str(output_path),
-                fps=24,
-                codec=self.video_codec,  # GPU 인코더 또는 CPU
-                audio_codec='aac',
-                preset=self.codec_preset,  # 인코더에 맞는 프리셋
-                threads=4,  # 멀티스레딩 활성화
-                logger=None
-            )
-
-            # 메모리 정리
-            img_clip.close()
-            audio_clip.close()
-            video.close()
-
-            logger.info(f"씬 {scene_num} 비디오 생성 완료: {output_path}")
-            return output_path
-
-        except Exception as e:
-            logger.error(f"씬 {scene_num} 비디오 생성 실패: {e}")
-            return None
-
     def _combine_videos(self, video_paths: List[Path], output_path: Path, start_time: float) -> Optional[Path]:
-        """여러 씬 비디오를 하나로 결합 - FFmpeg concat demuxer 사용"""
-        import tempfile
+        """여러 씬 비디오를 하나로 결합 - FFmpeg filter_complex 사용 (FPS/해상도 통일)"""
 
         # generated_videos 폴더에서 씬 비디오 찾기
         video_folder = output_path.parent / "generated_videos"
@@ -2369,28 +2268,38 @@ Return ONLY the refined prompt without any explanation or additional text."""
 
         logger.info(f"발견된 씬 비디오: {len(scene_videos)}개")
 
-        # concat list 파일 생성 (임시 파일)
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-            concat_file = f.name
-            for video in scene_videos:
-                # FFmpeg concat demuxer 형식: file 'path'
-                # Windows 경로를 위해 forward slash로 변환하고 이스케이프
-                video_path_str = str(video.absolute()).replace('\\', '/')
-                f.write(f"file '{video_path_str}'\n")
-
         try:
-            # FFmpeg concat demuxer로 병합
+            # 입력 파일 인자 생성
+            input_args = []
+            for video in scene_videos:
+                input_args.extend(['-i', str(video)])
+
+            # filter_complex로 FPS/해상도 통일 후 concat
+            scale_filters = []
+            concat_inputs = []
+            for i in range(len(scene_videos)):
+                # 모든 비디오를 지정된 해상도(self.width x self.height), 25fps, SAR 1:1로 통일
+                scale_filters.append(f"[{i}:v]scale={self.width}:{self.height}:force_original_aspect_ratio=decrease,pad={self.width}:{self.height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=25[v{i}]")
+                concat_inputs.append(f"[v{i}][{i}:a]")
+
+            filter_str = ";".join(scale_filters) + ";" + "".join(concat_inputs) + f"concat=n={len(scene_videos)}:v=1:a=1[outv][outa]"
+
             cmd = [
                 'ffmpeg',
-                '-f', 'concat',
-                '-safe', '0',
-                '-i', concat_file,
-                '-c', 'copy',  # 재인코딩 없이 복사
-                '-y',  # 덮어쓰기
+                '-y',
+                *input_args,
+                '-filter_complex', filter_str,
+                '-map', '[outv]',
+                '-map', '[outa]',
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', '18',
+                '-c:a', 'aac',
+                '-b:a', '192k',
                 str(output_path)
             ]
 
-            logger.info(f"FFmpeg 실행: {' '.join(cmd)}")
+            logger.info(f"FFmpeg filter_complex 병합 실행 중...")
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -2402,7 +2311,7 @@ Return ONLY the refined prompt without any explanation or additional text."""
             if result.returncode != 0:
                 logger.error(f"FFmpeg 실패 (종료 코드: {result.returncode})")
                 if result.stderr:
-                    logger.error(f"에러 메시지:\n{result.stderr}")
+                    logger.error(f"에러 메시지:\n{result.stderr[-1000:]}")
                 return None
 
             if not output_path.exists():
@@ -2418,12 +2327,9 @@ Return ONLY the refined prompt without any explanation or additional text."""
 
             return output_path
 
-        finally:
-            # 임시 concat 파일 삭제
-            try:
-                Path(concat_file).unlink()
-            except Exception as e:
-                logger.warning(f"임시 파일 삭제 실패: {e}")
+        except Exception as e:
+            logger.error(f"비디오 결합 중 오류: {e}")
+            return None
 
     def _backup_previous_videos(self):
         """기존 generated_videos 폴더를 backup으로 이동 (파일 사용 중이면 건너뛰기)"""
@@ -3322,12 +3228,8 @@ Return ONLY the refined prompt without any explanation or additional text."""
         return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
     def _format_ass_timestamp(self, seconds: float) -> str:
-        """초를 ASS 타임스탬프 형식으로 변환 (0:00:00.00)"""
-        hours = int(seconds // 3600)
-        minutes = int((seconds % 3600) // 60)
-        secs = int(seconds % 60)
-        centisecs = int((seconds % 1) * 100)
-        return f"{hours}:{minutes:02d}:{secs:02d}.{centisecs:02d}"
+        """초를 ASS 타임스탬프 형식으로 변환 (공통 모듈 사용)"""
+        return format_ass_time(seconds)
 
     def _add_subtitles_with_segments(self, video_path: Path, audio_path: Path, output_path: Path, word_segments: list):
         """미리 분석된 Whisper 타임스탬프로 자막 추가 (병렬 처리용)"""
@@ -3422,19 +3324,19 @@ def main():
                        help="이미지 생성 제공자 (기본: openai - DALL-E 3, imagen3 - Google Imagen 3)")
     parser.add_argument("--is-admin", action="store_true",
                        help="관리자 모드 (비용 로그 표시)")
-    parser.add_argument("--job-id", default=None,
-                       help="Job ID (추적용)")
+    parser.add_argument("--job-id", "--task-id", default=None, dest="task_id",
+                       help="Task ID (추적용)")
 
     args = parser.parse_args()
 
-    # DB 로깅 설정 (JOB_ID가 있으면)
-    job_id = args.job_id or os.environ.get('JOB_ID')
-    if job_id:
+    # DB 로깅 설정 (TASK_ID가 있으면)
+    task_id = args.task_id or os.environ.get('TASK_ID') or os.environ.get('JOB_ID')
+    if task_id:
         try:
             from src.utils import auto_setup_db_logging
             global logger
             logger = auto_setup_db_logging()
-            logger.info(f"DB 로깅 활성화됨 - Job ID: {job_id}")
+            logger.info(f"DB 로깅 활성화됨 - Task ID: {task_id}")
         except Exception as e:
             logger.warning(f"DB 로깅 설정 실패: {e}")
 
@@ -3444,8 +3346,8 @@ def main():
     print("=" * 70)
     print("VideoFromFolder Creator")
     print("=" * 70)
-    if args.job_id:
-        print(f"🆔 Job ID: {args.job_id}")
+    if args.task_id:
+        print(f"🆔 Task ID: {args.task_id}")
     print(f"폴더: {args.folder}")
     print(f"음성: {args.voice}")
     print(f"비율: {args.aspect_ratio}")
@@ -3471,14 +3373,14 @@ def main():
         print("=" * 70)
         print("✓ 성공!")
         print("=" * 70)
-        if args.job_id:
-            print(f"🆔 Job ID: {args.job_id}")
+        if args.task_id:
+            print(f"🆔 Task ID: {args.task_id}")
         print(f"출력: {result}")
         print("=" * 70)
     else:
         print("✗ 실패!")
-        if args.job_id:
-            print(f"🆔 Job ID: {args.job_id}")
+        if args.task_id:
+            print(f"🆔 Task ID: {args.task_id}")
         sys.exit(1)
 
 

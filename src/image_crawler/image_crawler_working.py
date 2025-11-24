@@ -1187,17 +1187,19 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             product_thumbnail = product_info.get('thumbnail', '')
 
             # format 필드에서 비율 결정
-            # 원칙: longform만 16:9, 나머지는 모두 9:16
-            if format_type:
-                # 1. longform이거나 format에 '16:9'가 명시되어 있으면 16:9
-                if format_type == 'longform' or '16:9' in str(format_type):
-                    aspect_ratio = '16:9'
-                # 2. 나머지는 모두 9:16 (shortform, product, sora2 등)
+            # 원칙: metadata.aspect_ratio가 있으면 그것을 우선, 없으면 format 기반으로 결정
+            # longform만 16:9, 나머지는 모두 9:16
+            if not aspect_ratio:  # ✅ metadata에서 aspect_ratio가 없을 때만 format으로 결정
+                if format_type:
+                    # 1. longform이거나 format에 '16:9'가 명시되어 있으면 16:9
+                    if format_type == 'longform' or '16:9' in str(format_type):
+                        aspect_ratio = '16:9'
+                    # 2. 나머지는 모두 9:16 (shortform, product, sora2 등)
+                    else:
+                        aspect_ratio = '9:16'
                 else:
-                    aspect_ratio = '9:16'
-            # format_type이 없으면 aspect_ratio 그대로 사용하거나 기본값 9:16
-            elif not aspect_ratio:
-                aspect_ratio = '9:16'  # 기본값
+                    aspect_ratio = '9:16'  # 기본값
+            # ✅ aspect_ratio가 이미 metadata에서 설정되었으면, 그대로 사용
 
             print(f"📐 비디오 형식: {format_type or 'unknown'}, 비율: {aspect_ratio or 'default'}", flush=True)
             if product_thumbnail:
@@ -1804,26 +1806,80 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         except Exception as e:
             print(f"⚠️ 임시 파일 삭제 실패: {e}", flush=True)
 
-        # ✅ 완료 마커 파일 생성 (scheduler가 상태 확인용)
-        try:
-            import datetime
-            completion_marker = os.path.join(output_folder, '.crawl_complete')
-            with open(completion_marker, 'w') as f:
-                f.write(f"Completed at: {datetime.datetime.now().isoformat()}\n")
-            print(f"✅ 완료 마커 파일 생성: {completion_marker}", flush=True)
-        except Exception as e:
-            print(f"⚠️ 마커 파일 생성 실패: {e}", flush=True)
+        # NOTE: .crawl_complete 파일 대신 queue_tasks DB 상태 업데이트로 대체됨
+        # 상태 업데이트는 main() 종료 후 __main__에서 처리
 
         if driver:
             print("\n✅ 작업 완료. 브라우저를 닫습니다.", flush=True)
             driver.quit()
+
+def update_queue_task_status(queue_db_path, task_id, status, error=None):
+    """queue_tasks 테이블의 작업 상태를 업데이트합니다."""
+    if not queue_db_path or not task_id:
+        print(f"⚠️ queue_db_path 또는 task_id가 없어 상태 업데이트 생략", flush=True)
+        return False
+
+    try:
+        import sqlite3
+        import datetime
+
+        conn = sqlite3.connect(queue_db_path)
+        cursor = conn.cursor()
+
+        if status == 'completed':
+            cursor.execute("""
+                UPDATE queue_tasks
+                SET status = ?, completed_at = ?
+                WHERE id = ?
+            """, (status, datetime.datetime.now().isoformat(), task_id))
+        elif status == 'failed':
+            cursor.execute("""
+                UPDATE queue_tasks
+                SET status = ?, error = ?, completed_at = ?
+                WHERE id = ?
+            """, (status, error or 'Unknown error', datetime.datetime.now().isoformat(), task_id))
+        else:
+            cursor.execute("""
+                UPDATE queue_tasks
+                SET status = ?
+                WHERE id = ?
+            """, (status, task_id))
+
+        # 락 해제
+        cursor.execute("""
+            UPDATE queue_locks
+            SET locked_by = NULL, locked_at = NULL
+            WHERE task_type = 'image'
+        """)
+
+        conn.commit()
+        conn.close()
+
+        print(f"✅ 큐 작업 상태 업데이트: {task_id} → {status}", flush=True)
+        return True
+    except Exception as e:
+        print(f"❌ 큐 상태 업데이트 실패: {e}", flush=True)
+        return False
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='이미지 크롤링 자동화')
     parser.add_argument('scenes_file', help='씬 데이터 JSON 파일')
     parser.add_argument('--use-imagefx', action='store_true', help='ImageFX로 첫 이미지 생성')
     parser.add_argument('--output-dir', help='이미지를 저장할 기본 디렉토리 (지정하지 않으면 scenes_file 경로 기준)')
+    parser.add_argument('--queue-task-id', help='큐 작업 ID (완료 시 상태 업데이트용)')
+    parser.add_argument('--queue-db-path', help='큐 DB 경로')
 
     args = parser.parse_args()
     print(f"--- ARGS: {args} ---", flush=True)
-    sys.exit(main(args.scenes_file, use_imagefx=args.use_imagefx, output_dir=args.output_dir))
+
+    exit_code = main(args.scenes_file, use_imagefx=args.use_imagefx, output_dir=args.output_dir)
+
+    # 큐 상태 업데이트
+    if args.queue_task_id and args.queue_db_path:
+        if exit_code == 0:
+            update_queue_task_status(args.queue_db_path, args.queue_task_id, 'completed')
+        else:
+            update_queue_task_status(args.queue_db_path, args.queue_task_id, 'failed', f'Exit code: {exit_code}')
+
+    sys.exit(exit_code)

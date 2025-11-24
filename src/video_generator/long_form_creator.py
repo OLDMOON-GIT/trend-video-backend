@@ -13,6 +13,14 @@ from PIL import Image, ImageOps
 import io
 from tqdm import tqdm
 import time
+n# 공통 유틸리티 모듈 import
+from app.utils import (
+    get_ffmpeg_path,
+    get_video_duration,
+    get_audio_duration,
+    detect_best_encoder,
+    format_ass_time,
+)
 
 
 class LongFormStoryCreator:
@@ -3223,13 +3231,10 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
             return self._combine_scenes_moviepy(scene_videos, output_path)
 
     def _get_video_duration_ffmpeg(self, video_path: Path) -> float:
-        """Get video duration using FFmpeg."""
-        import subprocess
-        import json
-
-        ffmpeg_path, ffprobe_path = self._get_ffmpeg_path()
-
-        if not ffprobe_path:
+        """Get video duration using FFmpeg (공통 모듈 사용)."""
+        try:
+            return get_video_duration(str(video_path))
+        except:
             # Fallback: try to get duration from moviepy
             try:
                 from moviepy.editor import VideoFileClip
@@ -3239,21 +3244,6 @@ Style: Cinematic, high quality, natural lighting, professional Korean drama aest
                 return duration
             except:
                 return 0.0
-
-        try:
-            cmd = [
-                ffprobe_path,
-                '-v', 'quiet',
-                '-print_format', 'json',
-                '-show_format',
-                str(video_path)
-            ]
-
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            data = json.loads(result.stdout)
-            return float(data['format']['duration'])
-        except:
-            return 0.0
 
     def _combine_scenes_moviepy(self, scene_videos: List[Path], output_path: Path) -> Path:
         """Fallback method using MoviePy (slow but reliable)."""
