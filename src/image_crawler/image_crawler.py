@@ -1204,7 +1204,7 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
         print(f"❌ 입력 오류: {e}", flush=True)
         return False
 
-def main(scenes_json_file, use_imagefx=False):
+def main(scenes_json_file, use_imagefx=False, output_dir=None, images_per_prompt=2):
     """메인 실행 함수"""
     print("=" * 80, flush=True)
     if use_imagefx:
@@ -1395,9 +1395,13 @@ def main(scenes_json_file, use_imagefx=False):
         print("📥 이미지 다운로드", flush=True)
         print("="*80, flush=True)
 
-        # scenes_json_file 경로에서 폴더 찾기
-        json_dir = os.path.dirname(os.path.abspath(scenes_json_file))
-        output_folder = os.path.join(json_dir, 'images')
+        # 출력 폴더 설정 (--output-dir이 지정되면 그것을 사용, 아니면 기본 경로)
+        if output_dir:
+            output_folder = os.path.abspath(output_dir)
+        else:
+            json_dir = os.path.dirname(os.path.abspath(scenes_json_file))
+            output_folder = os.path.join(json_dir, 'images')
+
         os.makedirs(output_folder, exist_ok=True)
         print(f"📁 저장 폴더: {output_folder}", flush=True)
 
@@ -1498,6 +1502,25 @@ def main(scenes_json_file, use_imagefx=False):
         print(f"\n✅ 다운로드 완료: {len(downloaded)}/{len(scenes)}", flush=True)
         print(f"📁 저장 위치: {output_folder}", flush=True)
 
+        # ⭐ 이미지 파일 검증 - 최소 1개 이상 필요
+        if len(downloaded) == 0:
+            print(f"\n❌ 오류: 다운로드된 이미지가 없습니다!", flush=True)
+            raise Exception("이미지 다운로드 실패 - 저장된 파일이 없습니다")
+
+        # 실제로 파일이 존재하는지 확인
+        existing_files = []
+        for file_path in downloaded:
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                existing_files.append(file_path)
+            else:
+                print(f"⚠️ 파일 누락 또는 비어있음: {file_path}", flush=True)
+
+        if len(existing_files) == 0:
+            print(f"\n❌ 오류: 실제로 존재하는 이미지 파일이 없습니다!", flush=True)
+            raise Exception("이미지 파일 검증 실패 - 모든 파일이 누락되었거나 비어있습니다")
+
+        print(f"\n✅ 파일 검증 완료: {len(existing_files)}개 파일 확인됨", flush=True)
+
         print(f"\n{'='*80}", flush=True)
         print("🎉 전체 워크플로우 완료!", flush=True)
         print(f"{'='*80}", flush=True)
@@ -1521,7 +1544,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='이미지 크롤링 자동화')
     parser.add_argument('scenes_file', help='씬 데이터 JSON 파일')
     parser.add_argument('--use-imagefx', action='store_true', help='ImageFX로 첫 이미지 생성')
+    parser.add_argument('--output-dir', help='이미지 저장 폴더 경로')
+    parser.add_argument('--images-per-prompt', type=int, default=2, help='프롬프트당 생성할 이미지 개수 (기본: 2)')
 
     args = parser.parse_args()
 
-    sys.exit(main(args.scenes_file, use_imagefx=args.use_imagefx))
+    sys.exit(main(
+        args.scenes_file,
+        use_imagefx=args.use_imagefx,
+        output_dir=args.output_dir,
+        images_per_prompt=args.images_per_prompt
+    ))

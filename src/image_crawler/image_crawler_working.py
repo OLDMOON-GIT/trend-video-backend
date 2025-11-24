@@ -1264,15 +1264,18 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
     print("✅ change 이벤트 발생 완료", flush=True)
     time.sleep(3)
 
-    # 업로드 확인 (최대 10초 대기)
+    # 업로드 확인 (최대 15초 대기)
     upload_success = False
-    for i in range(10):
+    initial_img_count = driver.execute_script("return document.querySelectorAll('img').length;")
+
+    for i in range(15):
         uploaded = driver.execute_script("""
             // 업로드된 이미지 확인
             const imgs = Array.from(document.querySelectorAll('img'));
+            const initialCount = arguments[0];
 
-            // 피사체 영역의 이미지 찾기
-            const subjectImg = imgs.find(img => {
+            // 새로 추가된 이미지 찾기
+            const newImages = imgs.filter(img => {
                 const src = img.src || '';
                 // blob URL이나 새로운 이미지
                 if (!src.startsWith('blob:') && !src.includes('googleusercontent')) {
@@ -1280,7 +1283,7 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
                 }
 
                 // 크기가 충분히 큰 이미지 (썸네일이 아닌)
-                if (img.offsetWidth < 50 || img.offsetHeight < 50) {
+                if (img.offsetWidth < 30 || img.offsetHeight < 30) {
                     return false;
                 }
 
@@ -1288,14 +1291,15 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
             });
 
             return {
-                hasImage: !!subjectImg,
+                hasImage: imgs.length > initialCount || newImages.length > 0,
                 imageCount: imgs.length,
-                imageSrc: subjectImg ? subjectImg.src.substring(0, 80) : '',
-                imageSize: subjectImg ? `${subjectImg.offsetWidth}x${subjectImg.offsetHeight}` : ''
+                newImageCount: newImages.length,
+                imageSrc: newImages.length > 0 ? newImages[0].src.substring(0, 80) : '',
+                imageSize: newImages.length > 0 ? `${newImages[0].offsetWidth}x${newImages[0].offsetHeight}` : ''
             };
-        """)
+        """, initial_img_count)
 
-        if uploaded.get('hasImage'):
+        if uploaded.get('hasImage') or uploaded.get('newImageCount', 0) > 0:
             print(f"✅ 이미지 업로드 확인 완료!", flush=True)
             print(f"   이미지: {uploaded.get('imageSrc')}...", flush=True)
             print(f"   크기: {uploaded.get('imageSize')}", flush=True)
@@ -1350,10 +1354,31 @@ def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=Fals
                 continue
 
         if not input_box:
-            # 입력창을 못 찾으면 body를 클릭
-            print("⚠️ 입력창을 찾지 못함, 페이지 클릭 시도", flush=True)
-            body = driver.find_element(By.TAG_NAME, 'body')
-            body.click()
+            # 입력창을 못 찾으면 페이지 중앙 근처를 클릭 (URL 창 피하기)
+            print("⚠️ 입력창을 찾지 못함, 페이지 하단 클릭 시도", flush=True)
+            # 페이지 하단 클릭 (URL 창 피하고 입력 영역 활성화)
+            import pyautogui
+            screen_width, screen_height = pyautogui.size()
+            # 화면 하단 75% 지점 클릭 (URL 창 피하기)
+            pyautogui.click(screen_width // 2, int(screen_height * 0.75))
+            time.sleep(1)  # 충분한 대기 시간
+
+            # 다시 한번 입력창 찾기 시도
+            for selector in selectors:
+                try:
+                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                    for element in elements:
+                        # 가시적이고 사용 가능한 요소만 선택
+                        if element.is_displayed() and element.is_enabled():
+                            input_box = element
+                            print(f"✅ 재시도: 입력창 발견: {selector}", flush=True)
+                            input_box.click()
+                            time.sleep(0.3)
+                            break
+                    if input_box:
+                        break
+                except:
+                    continue
         else:
             # 입력창 클릭
             input_box.click()
@@ -1486,16 +1511,21 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             scenes = data
             aspect_ratio = None  # 배열 형식에는 metadata 없음
             product_thumbnail = None  # 배열 형식에는 product_info 없음
+            is_product = False  # 배열 형식에는 category 정보 없음
         elif isinstance(data, dict) and 'scenes' in data:
             scenes = data['scenes']
-            # metadata에서 aspect_ratio 추출
+            # metadata에서 aspect_ratio 및 category 추출
             metadata = data.get('metadata', {})
             aspect_ratio = metadata.get('aspect_ratio')
             format_type = metadata.get('format')
+            category = metadata.get('category', '')  # 카테고리 확인
 
             # product_info에서 썸네일 추출 (상품 영상인 경우)
             product_info = data.get('product_info', {})
             product_thumbnail = product_info.get('thumbnail', '')
+
+            # 카테고리가 "상품"이거나 product_info가 있으면 상품으로 판단
+            is_product = (category == '상품' or bool(product_info.get('thumbnail')))
 
             # format 필드에서 비율 결정
             # 원칙: metadata.aspect_ratio가 있으면 그것을 우선, 없으면 format 기반으로 결정
@@ -1513,8 +1543,14 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             # ✅ aspect_ratio가 이미 metadata에서 설정되었으면, 그대로 사용
 
             print(f"📐 비디오 형식: {format_type or 'unknown'}, 비율: {aspect_ratio or 'default'}", flush=True)
-            if product_thumbnail:
-                print(f"🛒 상품 썸네일: {product_thumbnail[:80]}...", flush=True)
+            print(f"📂 카테고리: {category or 'unknown'}", flush=True)
+
+            if is_product:
+                print(f"🛒 상품 비디오 감지됨", flush=True)
+                if product_thumbnail:
+                    print(f"   썸네일: {product_thumbnail[:80]}...", flush=True)
+                else:
+                    print(f"   ⚠️ 상품 카테고리지만 썸네일이 없습니다", flush=True)
         else:
             print(f"❌ JSON 형식 오류: scenes 배열을 찾을 수 없습니다", flush=True)
             print(f"   JSON 키들: {list(data.keys()) if isinstance(data, dict) else 'list'}", flush=True)
@@ -1754,9 +1790,9 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                     print(f"⚠️ 비율 버튼을 찾지 못함: {aspect_ratio}", flush=True)
                     print(f"   페이지 요소 개수: {aspect_ratio_result.get('totalElements', 0)}", flush=True)
 
-        # 상품 썸네일이 있으면 Whisk에 먼저 업로드
+        # 상품 카테고리면 Whisk에 썸네일 업로드
         product_thumbnail_path = None
-        if product_thumbnail:
+        if is_product and product_thumbnail:
             print("\n" + "="*80, flush=True)
             print("🛒 상품 썸네일 다운로드 및 업로드", flush=True)
             print("="*80, flush=True)
@@ -1786,17 +1822,23 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                     # Whisk 전용 모드일 때만 썸네일을 업로드
                     # ImageFX+Whisk 모드에서는 ImageFX 이미지만 사용
                     if not args.use_imagefx:
-                        # 롱폼(16:9)은 피사체 박스(0번), 나머지는 스타일 박스(2번)
-                        if aspect_ratio == '16:9':
-                            # 롱폼: 상품 썸네일을 피사체 박스(0번)에 업로드
-                            upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
-                                                  box_index=0, box_name="피사체(상품 썸네일-롱폼)")
-                            print(f"✅ 상품 썸네일 Whisk 피사체 박스 업로드 완료 (롱폼 16:9)", flush=True)
-                        else:
-                            # 숏폼/상품: 상품 썸네일을 스타일 박스(2번)에 업로드
+                        # 상품 카테고리는 항상 스타일 박스(2번)에 업로드
+                        # 상품이 아닌 경우에만 롱폼/숏폼 구분
+                        if is_product:
+                            # 상품: 항상 스타일 박스(2번)에 업로드
                             upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
                                                   box_index=2, box_name="스타일(상품 썸네일)")
-                            print(f"✅ 상품 썸네일 Whisk 스타일 박스 업로드 완료 (9:16)", flush=True)
+                            print(f"✅ 상품 썸네일 Whisk 스타일 박스 업로드 완료 (카테고리: 상품)", flush=True)
+                        elif aspect_ratio == '16:9':
+                            # 롱폼: 상품 썸네일을 피사체 박스(0번)에 업로드
+                            upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
+                                                  box_index=0, box_name="피사체(썸네일-롱폼)")
+                            print(f"✅ 썸네일 Whisk 피사체 박스 업로드 완료 (롱폼 16:9)", flush=True)
+                        else:
+                            # 숏폼: 상품 썸네일을 스타일 박스(2번)에 업로드
+                            upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
+                                                  box_index=2, box_name="스타일(썸네일)")
+                            print(f"✅ 썸네일 Whisk 스타일 박스 업로드 완료 (9:16)", flush=True)
                     else:
                         print(f"ℹ️ ImageFX+Whisk 모드: 상품 썸네일 업로드 생략 (ImageFX 이미지 사용)", flush=True)
                 else:
@@ -1830,28 +1872,19 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             print(f"   마지막 50자: ...{prompt[-50:]}", flush=True)
 
             max_retries = 3  # 정책 위반 재시도 포함하여 3회로 증가
-            safe_prompt = prompt  # 첫 시도는 원본 사용
-            aggressive_sanitize = False
+            current_prompt = prompt  # 현재 시도할 프롬프트
 
             for attempt in range(max_retries):
                 print(f"\n{'-'*80}", flush=True)
                 print(f"📌 {scene_number} 입력 중 (시도 {attempt + 1}/{max_retries})...", flush=True)
                 print(f"{'-'*80}", flush=True)
 
-                # 2번째 시도부터 점진적으로 강한 필터링 적용
-                if attempt == 1:
-                    print(f"🔄 프롬프트 안전화 적용 (기본 모드)", flush=True)
-                    safe_prompt = sanitize_prompt_for_google(prompt, aggressive=False)
-                elif attempt == 2:
-                    print(f"🔄 프롬프트 안전화 적용 (강화 모드)", flush=True)
-                    safe_prompt = sanitize_prompt_for_google(prompt, aggressive=True)
-
                 prompt_source = 'image_prompt' if scene.get('image_prompt') else 'sora_prompt'
                 print(f"   프롬프트 출처: {prompt_source}", flush=True)
-                print(f"   내용: {safe_prompt[:80]}{'...' if len(safe_prompt) > 80 else ''}", flush=True)
+                print(f"   내용: {current_prompt[:80]}{'...' if len(current_prompt) > 80 else ''}", flush=True)
 
                 # 프롬프트 입력
-                success = input_prompt_to_whisk(driver, safe_prompt, is_first=(i == 0 and attempt == 0))
+                success = input_prompt_to_whisk(driver, current_prompt, is_first=(i == 0 and attempt == 0))
 
                 if not success:
                     print(f"⚠️ {scene_number} 입력 실패", flush=True)
@@ -1876,6 +1909,10 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
 
                     if attempt < max_retries - 1:
                         print(f"🔄 프롬프트를 수정하여 재시도합니다...", flush=True)
+                        # 프롬프트를 실제로 수정 (aggressive 모드는 2번째 시도부터)
+                        safe_prompt = sanitize_prompt_for_google(prompt, aggressive=(attempt > 0))
+                        current_prompt = safe_prompt  # 수정된 프롬프트로 교체
+                        print(f"   📝 프롬프트 수정됨 (aggressive={attempt > 0})", flush=True)
                         time.sleep(3)
                         continue
                     else:
