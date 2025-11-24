@@ -13,6 +13,7 @@ import io
 import os
 import glob
 import argparse
+import pyautogui
 
 # Windows 인코딩 문제 해결
 if sys.platform == 'win32':
@@ -321,14 +322,24 @@ def setup_chrome_driver():
 
     return driver
 
-def generate_image_with_imagefx(driver, prompt):
+def generate_image_with_imagefx(driver, prompt, aspect_ratio=None):
     """ImageFX로 이미지 생성 및 다운로드"""
     print("\n" + "="*80, flush=True)
     print("1️⃣ ImageFX - 첫 이미지 생성", flush=True)
     print("="*80, flush=True)
     print(f"📝 프롬프트 길이: {len(prompt)}자", flush=True)
     print(f"📝 프롬프트 내용: {prompt}", flush=True)
+    if aspect_ratio:
+        print(f"📐 목표 비율: {aspect_ratio}", flush=True)
     print("="*80, flush=True)
+
+    # 창 크기 최대화 (입력창이 보이도록)
+    try:
+        driver.maximize_window()
+        print("📐 창 크기 최대화 완료", flush=True)
+    except:
+        driver.set_window_size(1920, 1080)
+        print("📐 창 크기 1920x1080 설정", flush=True)
 
     driver.get('https://labs.google/fx/ko/tools/image-fx')
     print("⏳ ImageFX 페이지 로딩...", flush=True)
@@ -394,30 +405,167 @@ def generate_image_with_imagefx(driver, prompt):
         pass
 
     # 페이지 중앙 클릭하여 입력창 활성화 시도
-    print("🖱️ 페이지 클릭하여 입력창 활성화 시도...", flush=True)
-    driver.execute_script("""
-        // 페이지 중앙 클릭
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        const centerX = width / 2;
-        const centerY = height / 2;
+    print("🖱️ 입력창 찾아서 활성화 시도...", flush=True)
 
-        // 중앙 요소 찾아서 클릭
-        const elem = document.elementFromPoint(centerX, centerY);
-        if (elem) {
-            elem.click();
+    # 비율 설정이 필요한 경우 가로/세로 모드 선택
+    if aspect_ratio:
+        print(f"⚙️ 비율 설정: {aspect_ratio}", flush=True)
+
+        # Step 1: 가로/세로 모드 버튼 찾기 및 클릭
+        mode_button_clicked = driver.execute_script("""
+            // 가로/세로 모드 버튼 찾기 (보통 아이콘이나 텍스트로 표시)
+            const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+
+            for (const btn of buttons) {
+                const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+                const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+
+                // 가로/세로, aspect ratio, orientation 등의 키워드 찾기
+                if (text.includes('가로') || text.includes('세로') ||
+                    text.includes('aspect') || text.includes('ratio') ||
+                    text.includes('orientation') || text.includes('mode') ||
+                    ariaLabel.includes('aspect') || ariaLabel.includes('ratio')) {
+
+                    btn.click();
+                    console.log('Clicked mode button:', text || ariaLabel);
+                    return {success: true, text: text, ariaLabel: ariaLabel};
+                }
+
+                // 아이콘 기반 버튼 (보통 crop 아이콘)
+                const icon = btn.querySelector('svg, i, span[class*="icon"]');
+                if (icon) {
+                    const classes = btn.className + ' ' + (icon.className || '');
+                    if (classes.includes('crop') || classes.includes('aspect') ||
+                        classes.includes('ratio') || classes.includes('orientation')) {
+                        btn.click();
+                        console.log('Clicked icon button');
+                        return {success: true, type: 'icon'};
+                    }
+                }
+            }
+
+            return {success: false};
+        """)
+
+        if mode_button_clicked.get('success'):
+            print(f"✅ 가로/세로 모드 버튼 클릭", flush=True)
+            time.sleep(1)
+
+            # Step 2: 셀렉트박스에서 비율 선택
+            ratio_text = "세로 모드(9:16)" if aspect_ratio == "9:16" else "가로 모드(16:9)"
+            ratio_value = aspect_ratio  # 9:16 또는 16:9
+
+            ratio_selected = driver.execute_script("""
+                const targetRatio = arguments[0];
+                const ratioValue = arguments[1];
+
+                // 드롭다운 옵션들 찾기
+                const options = Array.from(document.querySelectorAll(
+                    '[role="option"], [role="menuitem"], option, li[role="option"], button[role="option"]'
+                ));
+
+                console.log('Found options:', options.length);
+
+                for (const opt of options) {
+                    const text = (opt.innerText || opt.textContent || '').trim();
+                    const value = opt.value || opt.getAttribute('data-value') || '';
+
+                    console.log('Checking option:', text, 'value:', value);
+
+                    // 9:16, 16:9 또는 세로/가로 텍스트 매칭
+                    if (text.includes(ratioValue) || value.includes(ratioValue) ||
+                        (ratioValue === '9:16' && (text.includes('세로') || text.includes('Portrait') || text.includes('Vertical'))) ||
+                        (ratioValue === '16:9' && (text.includes('가로') || text.includes('Landscape') || text.includes('Horizontal')))) {
+
+                        opt.click();
+                        console.log('Selected ratio:', text);
+                        return {success: true, text: text};
+                    }
+                }
+
+                // 못 찾으면 모든 옵션 텍스트 반환 (디버깅용)
+                const allTexts = options.slice(0, 10).map(o => (o.innerText || o.textContent || '').trim());
+                return {success: false, options: allTexts};
+            """, ratio_text, ratio_value)
+
+            if ratio_selected.get('success'):
+                print(f"✅ 비율 {aspect_ratio} 선택 완료: {ratio_selected.get('text')}", flush=True)
+            else:
+                print(f"⚠️ 비율 선택 실패. 발견된 옵션들: {ratio_selected.get('options', [])}", flush=True)
+                print("   기본 비율로 진행합니다.", flush=True)
+        else:
+            print("⚠️ 가로/세로 모드 버튼을 찾지 못했습니다. 기본 비율로 진행합니다.", flush=True)
+
+        time.sleep(1)
+
+    # "입력" 탭 클릭 (프롬프트 입력을 위해)
+    driver.execute_script("""
+        const tabs = document.querySelectorAll('button, [role="tab"]');
+        for (const tab of tabs) {
+            const text = (tab.innerText || '').trim();
+            if (text === '입력' || text === 'Input') {
+                tab.click();
+                console.log('Clicked 입력 tab');
+                break;
+            }
         }
     """)
-    time.sleep(2)
+    time.sleep(1)
 
-    # 입력창을 찾는 대신, 클립보드를 이용한 직접 입력 시도
+    # 입력창(contenteditable div) 찾아서 클릭 및 포커스
+    input_focused = driver.execute_script("""
+        // contenteditable 요소 찾기
+        const editables = document.querySelectorAll('[contenteditable="true"]');
+        let targetInput = null;
+
+        for (const el of editables) {
+            // 보이는 요소만 선택
+            if (el.offsetParent !== null && el.offsetWidth > 100) {
+                targetInput = el;
+                break;
+            }
+        }
+
+        if (targetInput) {
+            // 포커스 및 전체 선택
+            targetInput.focus();
+            targetInput.click();
+
+            // 전체 선택 (기존 내용 대체용)
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(targetInput);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            return {success: true, tag: targetInput.tagName, classes: targetInput.className, hadContent: targetInput.innerText.length > 0};
+        }
+
+        // fallback: 일반 텍스트 입력창
+        const textareas = document.querySelectorAll('textarea, input[type="text"]');
+        for (const el of textareas) {
+            if (el.offsetParent !== null) {
+                el.focus();
+                el.select();
+                return {success: true, tag: el.tagName, type: 'fallback'};
+            }
+        }
+
+        return {success: false};
+    """)
+
+    if input_focused and input_focused.get('success'):
+        print(f"✅ 입력창 포커스 완료: {input_focused}", flush=True)
+    else:
+        print("⚠️ 입력창을 찾지 못했습니다. 클릭으로 대체...", flush=True)
+        driver.execute_script("document.body.click();")
+
+    time.sleep(1)
+
+    # 클립보드를 이용한 직접 입력 시도
     try:
         print("📋 프롬프트를 클립보드에 복사하고 붙여넣기 시도...", flush=True)
         pyperclip.copy(prompt)
-        time.sleep(0.5)
-
-        # 페이지 중앙 클릭하여 포커스
-        driver.execute_script("document.body.click();")
         time.sleep(0.5)
 
         # Ctrl+V 붙여넣기
@@ -425,6 +573,71 @@ def generate_image_with_imagefx(driver, prompt):
         actions.key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
         time.sleep(1)
         print("✅ Ctrl+V 붙여넣기 완료", flush=True)
+
+        # 붙여넣기 확인
+        paste_check = driver.execute_script("""
+            const editables = document.querySelectorAll('[contenteditable="true"]');
+            for (const el of editables) {
+                if (el.offsetParent !== null && el.innerText) {
+                    return {success: true, length: el.innerText.length, preview: el.innerText.substring(0, 100)};
+                }
+            }
+            return {success: false};
+        """)
+
+        # 프롬프트 길이 확인하고 부족하면 재입력
+        expected_length = len(prompt)
+        actual_length = paste_check.get('length', 0) if paste_check else 0
+
+        if actual_length < expected_length * 0.9:  # 90% 미만이면 재입력
+            print(f"⚠️ 프롬프트 입력 부족 (예상: {expected_length}자, 실제: {actual_length}자)", flush=True)
+            print("   JavaScript로 직접 입력 시도...", flush=True)
+
+            # 기존 텍스트 삭제하고 다시 입력
+            driver.execute_script("""
+                const prompt = arguments[0];
+                const editables = document.querySelectorAll('[contenteditable="true"]');
+
+                for (const el of editables) {
+                    if (el.offsetParent !== null && el.offsetWidth > 100) {
+                        // 기존 내용 완전 삭제
+                        el.innerText = '';
+                        el.innerHTML = '';
+
+                        // 포커스
+                        el.focus();
+                        el.click();
+
+                        // 새 텍스트 설정
+                        el.innerText = prompt;
+
+                        // 여러 이벤트 발생
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                        el.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));
+
+                        console.log('Prompt set directly:', prompt.length, 'chars');
+                        return {success: true, length: el.innerText.length};
+                    }
+                }
+                return {success: false};
+            """, prompt)
+            time.sleep(1)
+
+            # 재확인
+            final_check = driver.execute_script("""
+                const editables = document.querySelectorAll('[contenteditable="true"]');
+                for (const el of editables) {
+                    if (el.offsetParent !== null && el.innerText) {
+                        return {length: el.innerText.length};
+                    }
+                }
+                return {length: 0};
+            """)
+
+            print(f"✅ JavaScript 직접 입력 완료: {final_check.get('length')}자", flush=True)
+        else:
+            print(f"✅ 프롬프트 입력 확인: {actual_length}자", flush=True)
 
         # 엔터 키 입력하여 생성 시작
         actions = ActionChains(driver)
@@ -529,13 +742,21 @@ def generate_image_with_imagefx(driver, prompt):
     files_before = [f for f in files_before if not f.endswith('.crdownload') and not f.endswith('.tmp')]
 
     # 다운로드 시도 (여러 방법)
-    print("\n📥 이미지 다운로드 시도 중...", flush=True)
+    # 생성된 4개 이미지 중 랜덤으로 1개 선택하여 다운로드
+    print("\n📥 이미지 다운로드 시도 중 (4개 중 랜덤 선택)...", flush=True)
     download_success = False
 
-    # 방법 1: 다양한 선택자로 다운로드 버튼 찾기
+    # 랜덤으로 이미지 인덱스 선택 (0~3)
+    import random
+    selected_index = random.randint(0, 3)
+    print(f"   선택된 이미지 번호: {selected_index + 1}/4", flush=True)
+
+    # 방법 1: 선택된 인덱스의 다운로드 버튼 찾기
     try:
         btn_info = driver.execute_script("""
-            // 선택자 리스트
+            const selectedIndex = arguments[0];
+
+            // 모든 다운로드 버튼 찾기
             const selectors = [
                 'button[aria-label*="Download"]',
                 'button[aria-label*="다운로드"]',
@@ -545,39 +766,41 @@ def generate_image_with_imagefx(driver, prompt):
                 'button[title*="다운로드"]'
             ];
 
+            let downloadButtons = [];
+
+            // 각 셀렉터로 버튼 수집
             for (const sel of selectors) {
-                const btn = document.querySelector(sel);
-                if (btn && btn.offsetParent !== null) {
-                    btn.click();
-                    return {success: true, method: 'selector', selector: sel};
+                const btns = document.querySelectorAll(sel);
+                btns.forEach(btn => {
+                    if (btn.offsetParent !== null && !downloadButtons.includes(btn)) {
+                        downloadButtons.push(btn);
+                    }
+                });
+            }
+
+            // 텍스트 기반으로도 찾기
+            const allButtons = Array.from(document.querySelectorAll('button'));
+            allButtons.forEach(btn => {
+                const text = (btn.textContent || '').toLowerCase();
+                const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+                if ((text.includes('download') || text.includes('다운로드') ||
+                     ariaLabel.includes('download') || ariaLabel.includes('다운로드')) &&
+                    btn.offsetParent !== null && !downloadButtons.includes(btn)) {
+                    downloadButtons.push(btn);
                 }
-            }
-
-            // 텍스트로 버튼 찾기
-            const buttons = Array.from(document.querySelectorAll('button'));
-            const downloadBtn = buttons.find(btn => {
-                const text = btn.textContent.toLowerCase();
-                return text.includes('download') || text.includes('다운로드');
             });
 
-            if (downloadBtn && downloadBtn.offsetParent !== null) {
-                downloadBtn.click();
-                return {success: true, method: 'text'};
-            }
+            console.log('Found download buttons:', downloadButtons.length);
 
-            // 아이콘으로 버튼 찾기 (svg with download icon)
-            const svgButtons = buttons.filter(btn => {
-                const svg = btn.querySelector('svg');
-                return svg && (
-                    svg.innerHTML.includes('download') ||
-                    btn.getAttribute('aria-label')?.includes('download') ||
-                    btn.getAttribute('aria-label')?.includes('Download')
-                );
-            });
-
-            if (svgButtons.length > 0 && svgButtons[0].offsetParent !== null) {
-                svgButtons[0].click();
-                return {success: true, method: 'svg'};
+            // 선택된 인덱스의 버튼 클릭
+            if (downloadButtons.length > selectedIndex) {
+                downloadButtons[selectedIndex].click();
+                return {success: true, index: selectedIndex, total: downloadButtons.length};
+            } else if (downloadButtons.length > 0) {
+                // 인덱스가 범위를 벗어나면 랜덤 선택
+                const randomIndex = Math.floor(Math.random() * downloadButtons.length);
+                downloadButtons[randomIndex].click();
+                return {success: true, index: randomIndex, total: downloadButtons.length, random: true};
             }
 
             return {success: false};
@@ -641,15 +864,43 @@ def generate_image_with_imagefx(driver, prompt):
     else:
         raise Exception("❌ 다운로드된 이미지 파일을 찾을 수 없습니다 - Downloads 폴더에 새 파일이 없습니다")
 
-def upload_image_to_whisk(driver, image_path, aspect_ratio=None):
-    """Whisk에 이미지 업로드 (피사체 영역)"""
+def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, box_name="피사체"):
+    """
+    Whisk에 이미지 업로드
+
+    Args:
+        driver: 웹드라이버
+        image_path: 업로드할 이미지 경로
+        aspect_ratio: 비율 설정 (16:9 또는 9:16)
+        box_index: 업로드할 박스 인덱스 (0: 사람/캐릭터, 1: 상품/장소, 2: 스타일)
+        box_name: 박스 이름 (로그용)
+    """
     print("\n" + "="*80, flush=True)
-    print("2️⃣ Whisk - 피사체 이미지 업로드", flush=True)
+    print(f"2️⃣ Whisk - {box_name} 이미지 업로드 (박스 {box_index + 1})", flush=True)
     print("="*80, flush=True)
 
     driver.get('https://labs.google/fx/ko/tools/whisk/project')
     print("⏳ Whisk 페이지 로딩...", flush=True)
     time.sleep(5)
+
+    # "도구 열기" 버튼이 있으면 클릭
+    tool_open_clicked = driver.execute_script("""
+        const buttons = Array.from(document.querySelectorAll('button'));
+        for (const btn of buttons) {
+            const text = (btn.innerText || btn.textContent || '').trim();
+            if (text.includes('도구 열기') || text.includes('도구') || text.includes('열기') ||
+                text.includes('Open tool') || text.includes('Open')) {
+                btn.click();
+                console.log('Clicked 도구 열기 button');
+                return {success: true, text: text};
+            }
+        }
+        return {success: false};
+    """)
+
+    if tool_open_clicked.get('success'):
+        print(f"✅ 도구 열기 버튼 클릭: {tool_open_clicked.get('text')}", flush=True)
+        time.sleep(3)
 
     # 비율 선택 (16:9 또는 9:16)
     if aspect_ratio:
@@ -759,86 +1010,114 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None):
     abs_path = os.path.abspath(image_path)
     print(f"🔍 파일 업로드 시도: {os.path.basename(abs_path)}", flush=True)
 
-    # 방법 1: 왼쪽 사이드바 피사체 영역 찾기 (한글 텍스트로 식별)
-    print("🔍 피사체 업로드 영역 찾는 중...", flush=True)
+    # 먼저 메인 화면의 "이미지 추가" 버튼 클릭
+    print("🔍 이미지 추가 버튼 찾는 중...", flush=True)
+    add_image_clicked = driver.execute_script("""
+        // "이미지 추가" 버튼 찾기
+        const buttons = Array.from(document.querySelectorAll('button'));
 
-    # 피사체 영역을 정확하게 찾아서 클릭
-    subject_clicked = driver.execute_script("""
-        // Method 1: Find area containing upload or generation text
-        const allElements = Array.from(document.querySelectorAll('div, button'));
-
-        // Subject-related keywords
-        const subjectKeywords = ['이미지를 업로드', '이미지를 생성', '파일 공유', '피사체'];
-        let targetElement = null;
-
-        for (const elem of allElements) {
-            const text = elem.textContent || '';
-            const hasKeyword = subjectKeywords.some(keyword => text.includes(keyword));
-
-            if (hasKeyword) {
-                const rect = elem.getBoundingClientRect();
-                // Left sidebar area (x < 250px) with appropriate size
-                if (rect.left < 250 && rect.width > 50 && rect.height > 50) {
-                    targetElement = elem;
-
-                    // Click button if exists inside
-                    const innerButton = elem.querySelector('button');
-                    if (innerButton && innerButton.offsetParent !== null) {
-                        innerButton.click();
-                        return {
-                            success: true,
-                            method: 'korean-text-inner-button',
-                            text: text.substring(0, 50),
-                            rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
-                        };
-                    }
-
-                    // 버튼 없으면 해당 요소 직접 클릭
-                    elem.click();
-                    return {
-                        success: true,
-                        method: 'korean-text-element',
-                        text: text.substring(0, 50),
-                        rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
-                    };
-                }
+        for (const btn of buttons) {
+            const text = (btn.innerText || btn.textContent || '').trim();
+            if (text.includes('이미지 추가') || text.includes('이미지')) {
+                btn.click();
+                console.log('Clicked 이미지 추가 button');
+                return {success: true, text: text};
             }
         }
 
-        // 방법 2: 점선 박스 찾기 (fallback)
-        const dashedDivs = Array.from(document.querySelectorAll('div, button')).filter(elem => {
-            const style = window.getComputedStyle(elem);
+        // aria-label로도 찾기
+        for (const btn of buttons) {
+            const ariaLabel = btn.getAttribute('aria-label') || '';
+            if (ariaLabel.includes('이미지') || ariaLabel.includes('추가')) {
+                btn.click();
+                return {success: true, ariaLabel: ariaLabel};
+            }
+        }
+
+        return {success: false};
+    """)
+
+    if add_image_clicked.get('success'):
+        print(f"✅ 이미지 추가 버튼 클릭: {add_image_clicked}", flush=True)
+        time.sleep(2)  # 메뉴가 열릴 때까지 대기
+
+    # 피사체 업로드 영역 찾기
+    print("🔍 피사체 업로드 영역 찾는 중...", flush=True)
+
+    # 피사체 영역을 정확하게 찾아서 클릭 (이미지 추가 메뉴가 열린 후)
+    subject_clicked = driver.execute_script("""
+        const boxIndex = arguments[0];  // 박스 인덱스 받기
+
+        // 방법 1: 왼쪽 사이드바의 지정된 아이콘/박스 클릭
+        const leftSideElements = Array.from(document.querySelectorAll('div, button, [role="button"]')).filter(elem => {
             const rect = elem.getBoundingClientRect();
-            // border-style에 dashed가 포함되고, 왼쪽 사이드바 영역 (x < 250px)이며, 너무 작지 않은 요소
-            return (style.borderStyle === 'dashed' || style.borderStyle.includes('dashed')) &&
-                   rect.left < 250 && rect.width > 50 && rect.height > 50;
+            // 왼쪽 사이드바 영역 (x < 100px)
+            return rect.left < 100 && rect.left >= 0 && rect.width > 30 && rect.height > 30;
         });
 
-        if (dashedDivs.length > 0) {
-            const firstDashed = dashedDivs[0];
-            const rect = firstDashed.getBoundingClientRect();
+        console.log('Left sidebar elements found:', leftSideElements.length);
+        console.log('Target box index:', boxIndex);
 
-            // 내부 버튼 찾기
-            const innerButton = firstDashed.querySelector('button');
-            if (innerButton && innerButton.offsetParent !== null) {
-                innerButton.click();
+        if (leftSideElements.length > boxIndex) {
+            // 지정된 인덱스의 요소 클릭
+            const targetElement = leftSideElements[boxIndex];
+            const rect = targetElement.getBoundingClientRect();
+
+            // 클릭 가능한 요소인지 확인
+            if (targetElement.tagName === 'BUTTON' || targetElement.getAttribute('role') === 'button') {
+                targetElement.click();
                 return {
                     success: true,
-                    method: 'dashed-box-inner-button',
-                    rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
+                    method: `box-${boxIndex}-element`,
+                    rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
+                    boxIndex: boxIndex
                 };
             }
 
-            firstDashed.click();
+            // 내부 버튼 찾기
+            const innerButton = targetElement.querySelector('button, [role="button"]');
+            if (innerButton) {
+                innerButton.click();
+                return {
+                    success: true,
+                    method: `box-${boxIndex}-inner-button`,
+                    rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
+                    boxIndex: boxIndex
+                };
+            }
+
+            // 직접 클릭
+            targetElement.click();
             return {
                 success: true,
-                method: 'dashed-box-click',
+                method: `box-${boxIndex}-direct-click`,
+                rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
+                boxIndex: boxIndex
+            };
+        }
+
+        // 방법 2: 점선 박스나 업로드 관련 텍스트 찾기
+        const uploadElements = Array.from(document.querySelectorAll('div, button')).filter(elem => {
+            const text = (elem.textContent || '').toLowerCase();
+            const style = window.getComputedStyle(elem);
+            return (text.includes('업로드') || text.includes('upload') ||
+                    text.includes('피사체') || text.includes('subject') ||
+                    style.borderStyle.includes('dashed'));
+        });
+
+        if (uploadElements.length > 0) {
+            const elem = uploadElements[0];
+            const rect = elem.getBoundingClientRect();
+            elem.click();
+            return {
+                success: true,
+                method: 'upload-text-element',
                 rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
             };
         }
 
         return {success: false, method: 'none'};
-    """)
+    """, box_index)
 
     if subject_clicked.get('success'):
         print(f"✅ 피사체 영역 클릭 성공: {subject_clicked.get('method')}", flush=True)
@@ -846,6 +1125,37 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None):
             print(f"   텍스트: {subject_clicked.get('text')}", flush=True)
         if subject_clicked.get('rect'):
             print(f"   위치: {subject_clicked.get('rect')}", flush=True)
+
+        # pyautogui를 사용하여 실제 클릭 시도
+        rect = subject_clicked.get('rect')
+        if rect:
+            try:
+                # 브라우저 창 활성화
+                driver.switch_to.window(driver.current_window_handle)
+                time.sleep(1)
+
+                # 피사체 영역 중앙 클릭
+                center_x = rect['left'] + rect['width'] / 2
+                center_y = rect['top'] + rect['height'] / 2
+
+                print(f"🖱️ pyautogui로 실제 클릭: ({center_x}, {center_y})", flush=True)
+                pyautogui.click(center_x, center_y)
+                time.sleep(2)
+
+                # 파일 다이얼로그가 열렸는지 확인하고 파일 경로 입력
+                print(f"📝 파일 경로 입력: {abs_path}", flush=True)
+                pyautogui.typewrite(abs_path)
+                time.sleep(1)
+
+                # Enter 키로 파일 선택
+                print("⏎ Enter 키로 파일 선택", flush=True)
+                pyautogui.press('enter')
+                time.sleep(3)
+
+                print("✅ pyautogui를 통한 업로드 시도 완료", flush=True)
+            except Exception as e:
+                print(f"⚠️ pyautogui 사용 실패: {e}", flush=True)
+                print("   기존 방식으로 계속 진행...", flush=True)
     else:
         print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
         # 디버그: 왼쪽 사이드바 구조 출력
@@ -922,6 +1232,7 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None):
         print(f"   JavaScript 결과: {upload_result}", flush=True)
 
         # 다시 file input 찾기
+        from selenium.webdriver.common.by import By
         try:
             file_input = driver.find_element(By.CSS_SELECTOR, 'input[type="file"]')
             print("✅ JavaScript로 file input 생성/발견", flush=True)
@@ -1230,6 +1541,43 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
 
         # ImageFX 사용 시 첫 이미지 생성 및 업로드
         if use_imagefx:
+            # 백업 처리 (ImageFX+Whisk 모드, 이미지 생성 전에 실행)
+            backup_folder = os.path.join(output_folder, 'backup')
+            backup_files = []
+
+            # 백업 대상: 이미지 파일 (scene_*.jpg, scene_*.jpeg, scene_*.png, scene_*.webp)
+            # 백업 대상: 영상 파일 (*.mp4, *.avi, *.mov)
+            backup_patterns = [
+                'scene_*.jpg', 'scene_*.jpeg', 'scene_*.png', 'scene_*.webp',
+                '*.mp4', '*.avi', '*.mov'
+            ]
+
+            for pattern in backup_patterns:
+                files = glob.glob(os.path.join(output_folder, pattern))
+                backup_files.extend(files)
+
+            if backup_files:
+                os.makedirs(backup_folder, exist_ok=True)
+                print(f"\n📦 기존 파일 백업 중... ({len(backup_files)}개)", flush=True)
+                import shutil
+                from datetime import datetime
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+                for file_path in backup_files:
+                    filename = os.path.basename(file_path)
+                    # 타임스탬프 추가하여 백업
+                    name, ext = os.path.splitext(filename)
+                    backup_filename = f"{name}_{timestamp}{ext}"
+                    backup_path = os.path.join(backup_folder, backup_filename)
+
+                    try:
+                        shutil.move(file_path, backup_path)
+                        print(f"   ✅ {filename} → backup/{backup_filename}", flush=True)
+                    except Exception as e:
+                        print(f"   ⚠️ {filename} 백업 실패: {e}", flush=True)
+
+                print(f"✅ 백업 완료: {backup_folder}\n", flush=True)
+
             # 첫 번째 씬 정보 확인
             first_scene = scenes[0]
             print(f"\n📋 첫 번째 씬 데이터:", flush=True)
@@ -1250,13 +1598,50 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             print(f"✅ 프롬프트 읽기 성공 (출처: {prompt_source})", flush=True)
             print(f"   내용: {first_prompt[:100]}{'...' if len(first_prompt) > 100 else ''}\n", flush=True)
 
-            # ImageFX로 첫 이미지 생성
-            image_path = generate_image_with_imagefx(driver, first_prompt)
+            # ImageFX로 첫 이미지 생성 (aspect_ratio 전달)
+            image_path = generate_image_with_imagefx(driver, first_prompt, aspect_ratio)
 
             # Whisk에 업로드 (aspect_ratio 전달)
             upload_image_to_whisk(driver, image_path, aspect_ratio)
 
         else:
+            # 백업 처리 (Whisk만 사용하는 경우, 이미지 생성 전에 실행)
+            backup_folder = os.path.join(output_folder, 'backup')
+            backup_files = []
+
+            # 백업 대상: 이미지 파일 (scene_*.jpg, scene_*.jpeg, scene_*.png, scene_*.webp)
+            # 백업 대상: 영상 파일 (*.mp4, *.avi, *.mov)
+            backup_patterns = [
+                'scene_*.jpg', 'scene_*.jpeg', 'scene_*.png', 'scene_*.webp',
+                '*.mp4', '*.avi', '*.mov'
+            ]
+
+            for pattern in backup_patterns:
+                files = glob.glob(os.path.join(output_folder, pattern))
+                backup_files.extend(files)
+
+            if backup_files:
+                os.makedirs(backup_folder, exist_ok=True)
+                print(f"\n📦 기존 파일 백업 중... ({len(backup_files)}개)", flush=True)
+                import shutil
+                from datetime import datetime
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+                for file_path in backup_files:
+                    filename = os.path.basename(file_path)
+                    # 타임스탬프 추가하여 백업
+                    name, ext = os.path.splitext(filename)
+                    backup_filename = f"{name}_{timestamp}{ext}"
+                    backup_path = os.path.join(backup_folder, backup_filename)
+
+                    try:
+                        shutil.move(file_path, backup_path)
+                        print(f"   ✅ {filename} → backup/{backup_filename}", flush=True)
+                    except Exception as e:
+                        print(f"   ⚠️ {filename} 백업 실패: {e}", flush=True)
+
+                print(f"✅ 백업 완료: {backup_folder}\n", flush=True)
+
             # Whisk만 사용
             print(f"\n{'='*80}", flush=True)
             print(f"📌 Whisk 시작", flush=True)
@@ -1398,9 +1783,22 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
 
                     print(f"✅ 썸네일 다운로드 완료: {os.path.basename(product_thumbnail_path)}", flush=True)
 
-                    # Whisk에 썸네일 업로드
-                    upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio)
-                    print(f"✅ 상품 썸네일 Whisk 업로드 완료", flush=True)
+                    # Whisk 전용 모드일 때만 썸네일을 업로드
+                    # ImageFX+Whisk 모드에서는 ImageFX 이미지만 사용
+                    if not args.use_imagefx:
+                        # 롱폼(16:9)은 피사체 박스(0번), 나머지는 스타일 박스(2번)
+                        if aspect_ratio == '16:9':
+                            # 롱폼: 상품 썸네일을 피사체 박스(0번)에 업로드
+                            upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
+                                                  box_index=0, box_name="피사체(상품 썸네일-롱폼)")
+                            print(f"✅ 상품 썸네일 Whisk 피사체 박스 업로드 완료 (롱폼 16:9)", flush=True)
+                        else:
+                            # 숏폼/상품: 상품 썸네일을 스타일 박스(2번)에 업로드
+                            upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
+                                                  box_index=2, box_name="스타일(상품 썸네일)")
+                            print(f"✅ 상품 썸네일 Whisk 스타일 박스 업로드 완료 (9:16)", flush=True)
+                    else:
+                        print(f"ℹ️ ImageFX+Whisk 모드: 상품 썸네일 업로드 생략 (ImageFX 이미지 사용)", flush=True)
                 else:
                     print(f"⚠️ 썸네일 다운로드 실패: HTTP {response.status_code}", flush=True)
             except Exception as e:
@@ -1529,20 +1927,36 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                         return sizeB - sizeA;
                     });
 
-                    // 첫 번째 이미지와 모든 variation src 반환
+                    // 이미지가 2개 이상이면 랜덤으로 1개 선택, 1개면 해당 이미지 선택
                     if (sorted.length > 0) {
-                        const img = sorted[0];
+                        let selectedImg;
+                        let selectedIndex;
+
+                        if (sorted.length >= 2) {
+                            // 2개 이상: 랜덤으로 선택
+                            selectedIndex = Math.floor(Math.random() * Math.min(sorted.length, 2)); // 상위 2개 중 랜덤
+                            selectedImg = sorted[selectedIndex];
+                            console.log(`Randomly selected image ${selectedIndex + 1} of ${sorted.length}`);
+                        } else {
+                            // 1개: 해당 이미지 선택
+                            selectedImg = sorted[0];
+                            selectedIndex = 0;
+                            console.log('Only one image, selecting it');
+                        }
+
                         // Whisk의 모든 variation src 수집 (중복 방지용)
                         const allVariationSrcs = sorted.map(img => img.src);
                         return {
-                            src: img.src,
-                            width: img.offsetWidth,
-                            height: img.offsetHeight,
-                            isBlob: img.src.startsWith('blob:'),
+                            src: selectedImg.src,
+                            width: selectedImg.offsetWidth,
+                            height: selectedImg.offsetHeight,
+                            isBlob: selectedImg.src.startsWith('blob:'),
                             allSrcs: allVariationSrcs,  // 모든 variation src 배열
                             totalImages: imgs.length,
                             excludedCount: excludedCount,
-                            candidateCount: validImgs.length
+                            candidateCount: validImgs.length,
+                            selectedIndex: selectedIndex,
+                            imageCount: sorted.length
                         };
                     }
                     return {
@@ -1558,7 +1972,15 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                       f"후보 {scene_image.get('candidateCount', 0)}개", flush=True)
 
                 if scene_image and scene_image.get('src'):
-                    print(f"   ✅ 이미지 발견: {scene_image['width']}x{scene_image['height']}", flush=True)
+                    image_count = scene_image.get('imageCount', 1)
+                    selected_index = scene_image.get('selectedIndex', 0)
+
+                    if image_count >= 2:
+                        print(f"   🎲 {image_count}개 이미지 중 랜덤 선택: #{selected_index + 1}", flush=True)
+                    elif image_count == 1:
+                        print(f"   ✅ 1개 이미지 발견 (정책 일부 위반)", flush=True)
+
+                    print(f"   📐 크기: {scene_image['width']}x{scene_image['height']}", flush=True)
                     # 이미지 즉시 다운로드
                     import requests
                     import base64
@@ -1741,45 +2163,6 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
 
         # 출력 폴더 확인 (이미 앞에서 정의됨)
         print(f"📁 출력 폴더: {output_folder}", flush=True)
-
-        # 기존 이미지/영상 파일을 backup 폴더로 이동
-        backup_folder = os.path.join(output_folder, 'backup')
-        backup_files = []
-
-        # 백업 대상: 이미지 파일 (scene_*.jpg, scene_*.jpeg, scene_*.png, scene_*.webp)
-        # 백업 대상: 영상 파일 (*.mp4, *.avi, *.mov)
-        backup_patterns = [
-            'scene_*.jpg', 'scene_*.jpeg', 'scene_*.png', 'scene_*.webp',
-            '*.mp4', '*.avi', '*.mov'
-        ]
-
-        for pattern in backup_patterns:
-            files = glob.glob(os.path.join(output_folder, pattern))
-            backup_files.extend(files)
-
-        if backup_files:
-            os.makedirs(backup_folder, exist_ok=True)
-            print(f"\n📦 기존 파일 백업 중... ({len(backup_files)}개)", flush=True)
-            import shutil
-            from datetime import datetime
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-
-            for file_path in backup_files:
-                filename = os.path.basename(file_path)
-                # 타임스탬프 추가하여 백업
-                name, ext = os.path.splitext(filename)
-                backup_filename = f"{name}_{timestamp}{ext}"
-                backup_path = os.path.join(backup_folder, backup_filename)
-
-                try:
-                    shutil.move(file_path, backup_path)
-                    print(f"   ✅ {filename} → backup/{backup_filename}", flush=True)
-                except Exception as e:
-                    print(f"   ⚠️ {filename} 백업 실패: {e}", flush=True)
-
-            print(f"✅ 백업 완료: {backup_folder}\n", flush=True)
-        else:
-            print("ℹ️ 백업할 기존 파일 없음\n", flush=True)
         
         # ✅ 이미지 수집은 이미 각 씬마다 수행됨 (라인 1533-1618)
         # 여기서는 추가 정보만 출력
