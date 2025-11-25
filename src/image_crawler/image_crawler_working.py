@@ -35,6 +35,11 @@ def detect_policy_violation(driver):
     """
     페이지에서 Google 정책 위반 메시지를 감지합니다.
 
+    개선된 감지 로직:
+    1. 더 많은 정책 위반 패턴 지원 (한글/영문)
+    2. 일반적인 에러 메시지도 감지
+    3. 전체 페이지 텍스트에서도 검색 (UI 요소 외)
+
     Returns:
         dict: {
             'violation_detected': bool,
@@ -44,8 +49,7 @@ def detect_policy_violation(driver):
     """
     try:
         result = driver.execute_script("""
-            // 🔴 1단계: 에러/경고 UI 요소 찾기 (오탐 방지 핵심!)
-            // 실제 정책 위반 메시지는 특정 UI 컴포넌트 안에만 표시됨
+            // 🔴 1단계: 에러/경고 UI 요소 찾기
             const errorSelectors = [
                 '[role="alert"]',
                 '[role="status"]',
@@ -56,7 +60,12 @@ def detect_policy_violation(driver):
                 'div[class*="warning"]',
                 'div[class*="alert"]',
                 'span[class*="error"]',
-                'p[class*="error"]'
+                'p[class*="error"]',
+                // Whisk/ImageFX 특정 요소
+                '[class*="snackbar"]',
+                '[class*="toast"]',
+                '[class*="notification"]',
+                '[class*="banner"]'
             ];
 
             let errorElements = [];
@@ -66,50 +75,137 @@ def detect_policy_violation(driver):
             }
 
             // 추가: 에러 메시지 같은 텍스트 길이를 가진 요소들도 검사
-            // (Whisk는 동적으로 생성되는 에러 메시지용 div 사용)
             const allDivs = Array.from(document.querySelectorAll('div, span, p'));
             for (const elem of allDivs) {
                 const text = elem.textContent || '';
-                // 길이가 30~300자 정도의 텍스트만 에러 메시지 후보로 간주
-                if (text.length > 30 && text.length < 300) {
+                // 길이가 15~500자 정도의 텍스트만 에러 메시지 후보로 간주 (범위 확장)
+                if (text.length > 15 && text.length < 500) {
                     errorElements.push(elem);
                 }
             }
 
-            // 🔴 2단계: 에러 요소 내부에서만 정책 위반 패턴 검색
+            // 🔴 2단계: 정책 위반 패턴 정의 (확장됨)
             const specificViolationPatterns = [
-                // 한글 Google 정책 위반 메시지 (구체적인 문구)
-                '유명인.*동영상.*생성.*google.*정책',
-                '유명인.*google.*정책.*위반',
-                'google.*정책.*위반.*유명인',
+                // === 한글 정책 위반 메시지 ===
+                // 구체적인 문구
+                '유명인.*동영상.*생성.*Google.*정책',
+                '유명인.*Google.*정책.*위반',
+                'Google.*정책.*위반',
+                '이 프롬프트는.*정책을 위반',
+                '정책을 위반할 가능성',
+                '다른 프롬프트를.*사용해 보거나',
+                '정책.*위반',
+                '위반.*정책',
 
-                // 영문 Google 정책 위반 메시지
+                // 일반적인 에러 메시지 (한글)
+                '이미지를 생성할 수 없',
+                '생성할 수 없습니다',
+                '생성에 실패',
+                '요청을 처리할 수 없',
+                '처리할 수 없습니다',
+                '유해한 콘텐츠',
+                '부적절한 콘텐츠',
+                '안전하지 않은',
+                '문제가 발생',
+                '다시 시도해',
+                '콘텐츠.*생성.*불가',
+                '이미지.*생성.*불가',
+                '프롬프트를.*수정',
+                '다른.*프롬프트',
+
+                // === 영문 정책 위반 메시지 ===
                 'celebrity.*video.*google.*policy',
-                'violates.*google.*policy.*celebrity',
-                'google.*policy.*violation.*celebrity'
+                'violates.*google.*policy',
+                'google.*policy.*violation',
+                'this prompt.*violates.*policy',
+                'may violate.*policy',
+                'policy violation',
+                'violates.*policy',
+
+                // 일반적인 에러 메시지 (영문)
+                'unable to generate',
+                'cannot generate',
+                'can\\'t generate',
+                'failed to generate',
+                'generation failed',
+                'could not create',
+                'cannot create',
+                'unsafe content',
+                'harmful content',
+                'inappropriate content',
+                'try a different prompt',
+                'modify your prompt',
+                'something went wrong',
+                'error occurred',
+                'request failed',
+                'content policy',
+                'safety filter',
+                'blocked by',
+                'not allowed'
             ];
 
             let violationDetected = false;
             let errorMessage = '';
             let matchedPatterns = [];
+            let violationType = null;
 
-            // 에러 요소들 중에서만 패턴 검색
+            // 에러 요소들 중에서 패턴 검색
             for (const elem of errorElements) {
                 const text = elem.textContent || '';
                 const lowerText = text.toLowerCase();
 
                 for (const pattern of specificViolationPatterns) {
-                    const regex = new RegExp(pattern, 'i');
-                    if (regex.test(lowerText)) {
-                        violationDetected = true;
-                        matchedPatterns.push(pattern);
-                        errorMessage = text.trim();
-                        break;  // 첫 매칭에서 종료
+                    try {
+                        const regex = new RegExp(pattern, 'i');
+                        if (regex.test(lowerText) || regex.test(text)) {
+                            violationDetected = true;
+                            matchedPatterns.push(pattern);
+                            errorMessage = text.trim();
+
+                            // 위반 유형 분류
+                            if (pattern.includes('policy') || pattern.includes('정책')) {
+                                violationType = 'policy';
+                            } else if (pattern.includes('unsafe') || pattern.includes('harmful') || pattern.includes('유해')) {
+                                violationType = 'safety';
+                            } else {
+                                violationType = 'error';
+                            }
+                            break;
+                        }
+                    } catch (e) {
+                        // 정규식 오류 무시
                     }
                 }
 
                 if (violationDetected) {
-                    break;  // 정책 위반 발견 시 즉시 종료
+                    break;
+                }
+            }
+
+            // 🔴 3단계: 전체 페이지 텍스트에서도 검색 (백업)
+            if (!violationDetected) {
+                const bodyText = document.body.innerText || '';
+                const criticalPatterns = [
+                    '정책.*위반',
+                    'policy.*violation',
+                    '생성할 수 없',
+                    'unable to generate',
+                    'cannot generate',
+                    '이미지를 생성할 수 없',
+                    'failed to generate'
+                ];
+
+                for (const pattern of criticalPatterns) {
+                    try {
+                        const regex = new RegExp(pattern, 'i');
+                        if (regex.test(bodyText)) {
+                            violationDetected = true;
+                            matchedPatterns.push(pattern + ' (page-level)');
+                            errorMessage = '페이지에서 정책 위반/에러 메시지 감지됨';
+                            violationType = 'page-level';
+                            break;
+                        }
+                    } catch (e) {}
                 }
             }
 
@@ -118,7 +214,8 @@ def detect_policy_violation(driver):
                     violation_detected: true,
                     matched_keywords: matchedPatterns,
                     message: errorMessage || '정책 위반 메시지 감지됨',
-                    match_count: matchedPatterns.length
+                    match_count: matchedPatterns.length,
+                    type: violationType
                 };
             }
 
@@ -126,7 +223,8 @@ def detect_policy_violation(driver):
                 violation_detected: false,
                 matched_keywords: [],
                 message: null,
-                match_count: 0
+                match_count: 0,
+                type: null
             };
         """)
 
@@ -136,96 +234,161 @@ def detect_policy_violation(driver):
         return {
             'violation_detected': False,
             'message': None,
-            'match_count': 0
+            'match_count': 0,
+            'type': None
         }
 
 def sanitize_prompt_for_google(prompt, aggressive=False):
     """
     Google 이미지 정책 위반을 방지하기 위해 프롬프트를 안전하게 변환합니다.
 
-    Google/Whisk/ImageFX 정책에서 금지하는 내용:
-    - 폭력, 성인 콘텐츠, 혐오 발언
-    - 실제 인물, 브랜드, 로고
-    - 위험한 활동
-    - 저작권 침해
-
-    Args:
-        prompt: 원본 프롬프트
-        aggressive: True이면 더 강력한 필터링 적용
+    개선된 전략:
+    1. 단순 삭제 대신 안전한 동의어로 대체
+    2. 안전한 컨텍스트 추가로 의도 명확화
+    3. 상품 중심의 객관적 묘사로 전환
     """
     if not prompt or not isinstance(prompt, str):
         return prompt
 
     sanitized = prompt
 
-    # 금지된 키워드 필터링 (대소문자 구분 없음)
-    blocked_keywords = [
-        # 브랜드/로고
-        r'\b(nike|adidas|apple|samsung|sony|disney|marvel|coca-cola|pepsi|mcdonald|starbucks|amazon|google|microsoft)\b',
-        # 실제 인물
-        r'\b(celebrity|famous\s+person|politician|president|actor|actress|singer|athlete)\b',
-        # 폭력적 표현
-        r'\b(blood|gore|weapon|gun|knife|fight|combat|violence|war|explosion)\b',
-        # 성인/선정적 표현
-        r'\b(sexy|nude|naked|intimate|romantic|bedroom|bathroom)\b',
-        # 위험한 활동
-        r'\b(drunk|alcohol|smoking|drug|dangerous|reckless)\b',
-    ]
+    # 1. 위험 키워드를 안전한 대체어로 변경 (삭제하지 않고 대체)
+    safe_replacements = {
+        # 인물/유명인 관련
+        r'\bKorean\s+person\b': 'model',
+        r'\bKorean\s+man\b': 'male model',
+        r'\bKorean\s+woman\b': 'female model',
+        r'\bAsian\s+person\b': 'model',
+        r'\bEast\s+Asian\b': 'modern',
+        r'\bcelebrity\b': 'professional model',
+        r'\bfamous\s+person\b': 'professional',
+        r'\bpolitician\b': 'business person',
+        r'\bactor\b': 'model',
+        r'\bactress\b': 'model',
+        r'\bsinger\b': 'performer',
+        r'\bathlete\b': 'sports person',
+        r'유명인': '모델',
 
-    for pattern in blocked_keywords:
-        sanitized = re.sub(pattern, '', sanitized, flags=re.IGNORECASE)
+        # 신체/의료 관련
+        r'\bskin\s+tone\b': 'appearance',
+        r'\bface\b': 'expression',
+        r'\bfacial\s+features\b': 'appearance',
+        r'\bbody\b': 'figure',
+        r'\bskinny\b': 'slim',
+        r'\bfat\b': 'full-figured',
+        r'\bwrinkle\b': 'texture',
+        r'\baging\b': 'mature',
+        r'\bdisease\b': 'condition',
+        r'\bmedical\b': 'health-related',
+        r'\btreatment\b': 'care',
+        r'\bpain\b': 'discomfort',
 
-    # 특정 유해 단어 제거
-    harmful_words = {
-        'violent': 'dynamic',
-        'aggressive': 'energetic',
-        'sexy': 'elegant',
-        'hot': 'warm',
-        'kill': 'stop',
-        'destroy': 'change',
-        'attack': 'approach',
-        'fight': 'interact',
-        'blood': 'red liquid',
-        'weapon': 'tool',
-        'gun': 'device',
+        # 효과/과장 표현
+        r'\bamazing\b': 'quality',
+        r'\bmiraculous\b': 'effective',
+        r'\bshocking\b': 'notable',
+        r'\bincredible\b': 'impressive',
+        r'\binstant\b': 'quick',
+        r'\bguaranteed\b': 'reliable',
+        r'\b100%\b': 'high quality',
+        r'\bperfect\b': 'excellent',
+
+        # 다이어트/건강 관련
+        r'\bweight\s+loss\b': 'wellness',
+        r'\bdiet\b': 'nutrition',
+        r'\blose\s+weight\b': 'healthy lifestyle',
+        r'\bburn\s+fat\b': 'active lifestyle',
+        r'\bcalories\b': 'energy',
+        r'다이어트': '웰빙',
+        r'살빠지는': '건강한',
+        r'뱃살': '복부',
+
+        # 브랜드명 (추가)
+        r'\bnike\b': 'sports brand',
+        r'\badidas\b': 'athletic brand',
+        r'\bapple\b': 'tech brand',
+        r'\bsamsung\b': 'electronics brand',
+        r'\bcoca-cola\b': 'beverage',
+        r'\bstarbucks\b': 'coffee shop',
     }
 
-    for harmful, safe in harmful_words.items():
-        sanitized = re.sub(rf'\b{harmful}\b', safe, sanitized, flags=re.IGNORECASE)
+    for pattern, replacement in safe_replacements.items():
+        sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
 
-    # 브랜드/로고 멘션 제거
-    brand_replacements = {
-        r'nike\s+': 'athletic ',
-        r'adidas\s+': 'sports ',
-        r'iphone': 'smartphone',
-        r'samsung\s+galaxy': 'modern smartphone',
-        r'macbook': 'laptop computer',
-        r'coca-cola': 'soft drink',
-        r'pepsi': 'carbonated beverage',
+    # 2. 문맥상 위험한 구문을 안전한 표현으로 전환
+    phrase_replacements = {
+        r'before\s+and\s+after': 'product showcase',
+        r'비포\s*애프터': '제품 소개',
+        r'dramatic\s+change': 'product benefits',
+        r'life-changing': 'beneficial',
+        r'must-have': 'recommended',
+        r'exclusive\s+offer': 'special product',
+        r'limited\s+time': 'available now',
     }
 
-    for brand_pattern, generic in brand_replacements.items():
-        sanitized = re.sub(brand_pattern, generic, sanitized, flags=re.IGNORECASE)
+    for pattern, replacement in phrase_replacements.items():
+        sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
 
-    # Aggressive 모드: 안전 프리픽스 추가
+    # 3. 안전한 컨텍스트 래퍼 추가
     if aggressive:
-        safe_prefix = "professional, safe for work, family-friendly, "
-        if not any(keyword in sanitized.lower() for keyword in ['safe', 'professional', 'family-friendly']):
-            sanitized = safe_prefix + sanitized
+        # 시작 부분에 안전한 컨텍스트 추가
+        safe_context_prefix = "Product advertisement image, professional photography, commercial setting, "
 
+        # 끝 부분에 안전 지시어 추가
+        safe_context_suffix = " Focus on product design and features, safe for all audiences, no people prominently featured."
+
+        # 이미 안전 컨텍스트가 없으면 추가
+        if not any(keyword in sanitized.lower() for keyword in ['advertisement', 'commercial', 'product showcase']):
+            sanitized = safe_context_prefix + sanitized
+
+        if not any(keyword in sanitized.lower() for keyword in ['safe for all', 'family friendly']):
+            sanitized = sanitized + safe_context_suffix
+
+    # 4. 상품 중심 표현 강화 (사람보다 제품에 초점)
+    product_focus_patterns = {
+        r'person\s+holding': 'product displayed with',
+        r'person\s+using': 'product in use',
+        r'person\s+wearing': 'product being worn',
+        r'person\s+eating': 'product being consumed',
+        r'person\s+drinking': 'beverage being enjoyed',
+    }
+
+    for pattern, replacement in product_focus_patterns.items():
+        sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+
+    # 5. 최종 정리
     # 중복 공백 제거
     sanitized = re.sub(r'\s+', ' ', sanitized).strip()
 
-    # 길이 제한
-    max_length = 450
-    if len(sanitized) > max_length:
-        sanitized = sanitized[:max_length].rsplit(' ', 1)[0] + '...'
+    # 중복 단어 제거
+    words = sanitized.split()
+    seen = set()
+    result = []
+    for word in words:
+        word_lower = word.lower()
+        if word_lower not in seen or word_lower in ['the', 'a', 'an', 'and', 'or', 'with', 'in', 'on', 'at']:
+            seen.add(word_lower)
+            result.append(word)
+    sanitized = ' '.join(result)
 
-    # 변경사항이 있으면 로그 출력
+    # 길이 제한 (Google 제한에 맞춤)
+    max_length = 400
+    if len(sanitized) > max_length:
+        sanitized = sanitized[:max_length].rsplit(' ', 1)[0]
+
+    # 변경사항 로그
     if sanitized != prompt:
-        print(f"🔒 프롬프트 안전화 적용됨 (aggressive={aggressive})", flush=True)
-        print(f"   원본: {prompt[:80]}{'...' if len(prompt) > 80 else ''}", flush=True)
-        print(f"   안전: {sanitized[:80]}{'...' if len(sanitized) > 80 else ''}", flush=True)
+        print(f"🔒 프롬프트 안전화 적용 (aggressive={aggressive})", flush=True)
+        changes = []
+        if 'Korean person' in prompt and 'Korean person' not in sanitized:
+            changes.append("인물 표현 중립화")
+        if 'diet' in prompt.lower() and 'diet' not in sanitized.lower():
+            changes.append("건강 표현 순화")
+        if 'advertisement' in sanitized and 'advertisement' not in prompt:
+            changes.append("안전 컨텍스트 추가")
+        if changes:
+            print(f"   변경사항: {', '.join(changes)}", flush=True)
+        print(f"   글자수: {len(prompt)} → {len(sanitized)}", flush=True)
 
     return sanitized
 
@@ -1041,86 +1204,144 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
         print(f"✅ 이미지 추가 버튼 클릭: {add_image_clicked}", flush=True)
         time.sleep(2)  # 메뉴가 열릴 때까지 대기
 
-    # 피사체 업로드 영역 찾기
-    print("🔍 피사체 업로드 영역 찾는 중...", flush=True)
+    # 업로드 박스 영역 찾기 (0: 피사체, 1: 장면, 2: 스타일)
+    box_names = ['피사체', '장면', '스타일']
+    target_box_name = box_names[box_index] if box_index < len(box_names) else f'박스{box_index}'
+    print(f"🔍 {target_box_name} 업로드 영역 찾는 중... (box_index={box_index})", flush=True)
 
-    # 피사체 영역을 정확하게 찾아서 클릭 (이미지 추가 메뉴가 열린 후)
+    # 점선 테두리가 있는 업로드 박스를 정확히 찾아서 클릭
     subject_clicked = driver.execute_script("""
-        const boxIndex = arguments[0];  // 박스 인덱스 받기
+        const boxIndex = arguments[0];  // 박스 인덱스 받기 (0: 피사체, 1: 장면, 2: 스타일)
+        const boxNames = ['피사체', '장면', '스타일'];
 
-        // 방법 1: 왼쪽 사이드바의 지정된 아이콘/박스 클릭
-        const leftSideElements = Array.from(document.querySelectorAll('div, button, [role="button"]')).filter(elem => {
+        // 방법 1: 점선 테두리가 있는 업로드 박스 찾기 (가장 정확한 방법)
+        const allElements = Array.from(document.querySelectorAll('*'));
+        const dashedBoxes = allElements.filter(elem => {
+            const style = window.getComputedStyle(elem);
             const rect = elem.getBoundingClientRect();
-            // 왼쪽 사이드바 영역 (x < 100px)
-            return rect.left < 100 && rect.left >= 0 && rect.width > 30 && rect.height > 30;
+            // 점선 테두리, 적절한 크기, 왼쪽 사이드바 영역
+            return style.borderStyle.includes('dashed') &&
+                   rect.width > 100 && rect.width < 300 &&
+                   rect.height > 100 && rect.height < 300 &&
+                   rect.left < 150;
         });
 
-        console.log('Left sidebar elements found:', leftSideElements.length);
-        console.log('Target box index:', boxIndex);
+        console.log('Dashed boxes found:', dashedBoxes.length);
 
-        if (leftSideElements.length > boxIndex) {
-            // 지정된 인덱스의 요소 클릭
-            const targetElement = leftSideElements[boxIndex];
-            const rect = targetElement.getBoundingClientRect();
+        // top 순서로 정렬 (피사체 → 장면 → 스타일)
+        dashedBoxes.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
 
-            // 클릭 가능한 요소인지 확인
-            if (targetElement.tagName === 'BUTTON' || targetElement.getAttribute('role') === 'button') {
-                targetElement.click();
+        if (dashedBoxes.length > boxIndex) {
+            const targetBox = dashedBoxes[boxIndex];
+            const rect = targetBox.getBoundingClientRect();
+            console.log('Target box rect:', rect.top, rect.left);
+
+            // 해당 박스 내의 "이미지 업로드" 버튼 정확히 찾기
+            // (텍스트 입력 버튼이 아닌 이미지 업로드 버튼을 찾아야 함)
+            const allButtons = targetBox.querySelectorAll('button');
+            let uploadButton = null;
+
+            for (const btn of allButtons) {
+                const btnText = btn.textContent || '';
+                // "이미지 업로드" 또는 "image" 텍스트가 포함된 버튼 찾기
+                if (btnText.includes('이미지 업로드') || btnText.includes('image') ||
+                    btnText.toLowerCase().includes('upload')) {
+                    uploadButton = btn;
+                    console.log('Found image upload button:', btnText);
+                    break;
+                }
+            }
+
+            // "이미지 업로드" 버튼을 못 찾으면 마지막 버튼 사용 (보통 업로드 버튼이 마지막)
+            if (!uploadButton && allButtons.length > 0) {
+                uploadButton = allButtons[allButtons.length - 1];
+                console.log('Using last button as upload button');
+            }
+
+            if (uploadButton) {
+                const btnRect = uploadButton.getBoundingClientRect();
+                uploadButton.click();
+                console.log('Clicked upload button in dashed box');
                 return {
                     success: true,
-                    method: `box-${boxIndex}-element`,
-                    rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
-                    boxIndex: boxIndex
+                    method: 'dashed-box-button',
+                    rect: {left: btnRect.left, top: btnRect.top, width: btnRect.width, height: btnRect.height},
+                    boxIndex: boxIndex,
+                    boxName: boxNames[boxIndex] || 'unknown',
+                    buttonText: uploadButton.textContent.substring(0, 30)
                 };
             }
 
-            // 내부 버튼 찾기
-            const innerButton = targetElement.querySelector('button, [role="button"]');
-            if (innerButton) {
-                innerButton.click();
-                return {
-                    success: true,
-                    method: `box-${boxIndex}-inner-button`,
-                    rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
-                    boxIndex: boxIndex
-                };
-            }
-
-            // 직접 클릭
-            targetElement.click();
+            // 버튼이 없으면 박스 직접 클릭
+            targetBox.click();
             return {
                 success: true,
-                method: `box-${boxIndex}-direct-click`,
+                method: 'dashed-box-direct',
+                rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
+                boxIndex: boxIndex,
+                boxName: boxNames[boxIndex] || 'unknown'
+            };
+        }
+
+        // 방법 2: 박스 이름으로 찾기 (피사체/장면/스타일 텍스트)
+        const targetName = boxNames[boxIndex];
+        if (targetName) {
+            const textElements = Array.from(document.querySelectorAll('div')).filter(elem => {
+                const text = elem.textContent || '';
+                return text.startsWith(targetName) || text.includes(targetName + 'ifl');
+            });
+
+            // top 기준으로 정렬 후 적절한 크기의 요소 찾기
+            textElements.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+
+            for (const elem of textElements) {
+                const rect = elem.getBoundingClientRect();
+                if (rect.width > 100 && rect.height > 100) {
+                    // 해당 영역 내 업로드 버튼 찾기
+                    const btn = elem.querySelector('button');
+                    if (btn) {
+                        btn.click();
+                        return {
+                            success: true,
+                            method: 'text-element-button',
+                            rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
+                            boxIndex: boxIndex,
+                            boxName: targetName
+                        };
+                    }
+                }
+            }
+        }
+
+        // 방법 3: 모든 "이미지 업로드" 버튼을 top 순서로 정렬해서 선택
+        const uploadButtons = Array.from(document.querySelectorAll('button')).filter(btn => {
+            const text = btn.textContent || '';
+            const rect = btn.getBoundingClientRect();
+            return (text.includes('이미지') || text.includes('업로드')) && rect.left < 150;
+        });
+
+        uploadButtons.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+        console.log('Upload buttons found:', uploadButtons.length);
+
+        if (uploadButtons.length > boxIndex) {
+            const targetBtn = uploadButtons[boxIndex];
+            const rect = targetBtn.getBoundingClientRect();
+            targetBtn.click();
+            return {
+                success: true,
+                method: 'upload-button-sorted',
                 rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
                 boxIndex: boxIndex
             };
         }
 
-        // 방법 2: 점선 박스나 업로드 관련 텍스트 찾기
-        const uploadElements = Array.from(document.querySelectorAll('div, button')).filter(elem => {
-            const text = (elem.textContent || '').toLowerCase();
-            const style = window.getComputedStyle(elem);
-            return (text.includes('업로드') || text.includes('upload') ||
-                    text.includes('피사체') || text.includes('subject') ||
-                    style.borderStyle.includes('dashed'));
-        });
-
-        if (uploadElements.length > 0) {
-            const elem = uploadElements[0];
-            const rect = elem.getBoundingClientRect();
-            elem.click();
-            return {
-                success: true,
-                method: 'upload-text-element',
-                rect: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}
-            };
-        }
-
-        return {success: false, method: 'none'};
+        return {success: false, method: 'none', dashedBoxCount: dashedBoxes.length, uploadButtonCount: uploadButtons.length};
     """, box_index)
 
     if subject_clicked.get('success'):
-        print(f"✅ 피사체 영역 클릭 성공: {subject_clicked.get('method')}", flush=True)
+        clicked_box_name = subject_clicked.get('boxName', target_box_name)
+        print(f"✅ {clicked_box_name} 영역 클릭 성공: {subject_clicked.get('method')}", flush=True)
+        print(f"   박스 인덱스: {subject_clicked.get('boxIndex')}", flush=True)
         if subject_clicked.get('text'):
             print(f"   텍스트: {subject_clicked.get('text')}", flush=True)
         if subject_clicked.get('rect'):
@@ -1142,17 +1363,12 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
                 pyautogui.click(center_x, center_y)
                 time.sleep(2)
 
-                # 파일 다이얼로그가 열렸는지 확인하고 파일 경로 입력
-                print(f"📝 파일 경로 입력: {abs_path}", flush=True)
-                pyautogui.typewrite(abs_path)
+                # 파일 다이얼로그가 열렸으면 ESC로 닫기 (file input 방식 사용)
+                print("🔒 파일 다이얼로그 닫기 (ESC) - file input 방식으로 업로드 예정", flush=True)
+                pyautogui.press('escape')
                 time.sleep(1)
 
-                # Enter 키로 파일 선택
-                print("⏎ Enter 키로 파일 선택", flush=True)
-                pyautogui.press('enter')
-                time.sleep(3)
-
-                print("✅ pyautogui를 통한 업로드 시도 완료", flush=True)
+                print("✅ pyautogui 클릭 완료 (file input으로 업로드 진행)", flush=True)
             except Exception as e:
                 print(f"⚠️ pyautogui 사용 실패: {e}", flush=True)
                 print("   기존 방식으로 계속 진행...", flush=True)
@@ -1326,6 +1542,44 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
 def input_prompt_to_whisk(driver, prompt, wait_time=WebDriverWait, is_first=False):
     """Whisk 입력창에 프롬프트 입력 (클립보드 + Ctrl+V 방식)"""
     try:
+        # 🔴 재시도 시 오버레이/다이얼로그 닫기 (ESC 키)
+        try:
+            # 오버레이가 있는지 확인하고 닫기
+            overlay_closed = driver.execute_script("""
+                // 오버레이/다이얼로그 찾기 및 닫기
+                const overlays = document.querySelectorAll('[data-state="open"], [class*="overlay"], [class*="modal"], [class*="dialog"]');
+                let closed = 0;
+                for (const overlay of overlays) {
+                    // backdrop-filter가 있거나 pointer-events: auto인 오버레이
+                    const style = window.getComputedStyle(overlay);
+                    if (style.backdropFilter !== 'none' || style.pointerEvents === 'auto') {
+                        // 닫기 버튼 찾기
+                        const closeBtn = overlay.querySelector('[aria-label*="close"], [aria-label*="닫기"], button[class*="close"]');
+                        if (closeBtn) {
+                            closeBtn.click();
+                            closed++;
+                        } else {
+                            // 닫기 버튼이 없으면 오버레이 자체를 클릭 시도
+                            overlay.click();
+                            closed++;
+                        }
+                    }
+                }
+                return closed;
+            """)
+
+            if overlay_closed > 0:
+                print(f"🔄 오버레이 {overlay_closed}개 닫음", flush=True)
+                time.sleep(1)
+
+            # ESC 키로 추가 다이얼로그 닫기
+            actions = ActionChains(driver)
+            actions.send_keys(Keys.ESCAPE).perform()
+            time.sleep(0.5)
+
+        except Exception as e:
+            pass  # 오버레이 닫기 실패해도 계속 진행
+
         # 클립보드에 프롬프트 복사
         pyperclip.copy(prompt)
         print(f"📋 클립보드에 복사: {prompt[:50]}...", flush=True)
@@ -1637,8 +1891,9 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             # ImageFX로 첫 이미지 생성 (aspect_ratio 전달)
             image_path = generate_image_with_imagefx(driver, first_prompt, aspect_ratio)
 
-            # Whisk에 업로드 (aspect_ratio 전달)
-            upload_image_to_whisk(driver, image_path, aspect_ratio)
+            # Whisk에 업로드 - ImageFX 이미지는 피사체 박스(index=0)에 업로드
+            print(f"\n📤 ImageFX 이미지를 Whisk 피사체 박스에 업로드...", flush=True)
+            upload_image_to_whisk(driver, image_path, aspect_ratio, box_index=0, box_name="피사체(ImageFX)")
 
         else:
             # 백업 처리 (Whisk만 사용하는 경우, 이미지 생성 전에 실행)
@@ -1799,31 +2054,38 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
 
             try:
                 import requests
-                import tempfile
 
-                # 임시 파일에 썸네일 다운로드
-                response = requests.get(product_thumbnail, timeout=30)
-                if response.status_code == 200:
-                    # 확장자 결정
-                    ext = '.jpg'
-                    if 'png' in product_thumbnail.lower():
-                        ext = '.png'
-                    elif 'webp' in product_thumbnail.lower():
-                        ext = '.webp'
+                # 확장자 결정
+                ext = '.jpg'
+                if 'png' in product_thumbnail.lower():
+                    ext = '.png'
+                elif 'webp' in product_thumbnail.lower():
+                    ext = '.webp'
 
-                    # 임시 파일 저장
-                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
-                    temp_file.write(response.content)
-                    temp_file.close()
-                    product_thumbnail_path = temp_file.name
+                # task 폴더에 썸네일 저장 (안정적인 경로)
+                product_thumbnail_path = os.path.join(output_folder, f'product_thumbnail{ext}')
 
-                    print(f"✅ 썸네일 다운로드 완료: {os.path.basename(product_thumbnail_path)}", flush=True)
+                # 이미 존재하면 재사용
+                if os.path.exists(product_thumbnail_path) and os.path.getsize(product_thumbnail_path) > 1000:
+                    print(f"✅ 기존 썸네일 사용: {product_thumbnail_path}", flush=True)
+                else:
+                    # 썸네일 다운로드
+                    print(f"📥 썸네일 다운로드 중: {product_thumbnail[:80]}...", flush=True)
+                    response = requests.get(product_thumbnail, timeout=30)
+                    if response.status_code == 200:
+                        with open(product_thumbnail_path, 'wb') as f:
+                            f.write(response.content)
+                        print(f"✅ 썸네일 저장 완료: {product_thumbnail_path}", flush=True)
+                        print(f"   파일 크기: {os.path.getsize(product_thumbnail_path)} bytes", flush=True)
+                    else:
+                        print(f"⚠️ 썸네일 다운로드 실패: HTTP {response.status_code}", flush=True)
+                        product_thumbnail_path = None
 
+                if product_thumbnail_path and os.path.exists(product_thumbnail_path):
                     # Whisk 전용 모드일 때만 썸네일을 업로드
                     # ImageFX+Whisk 모드에서는 ImageFX 이미지만 사용
                     if not args.use_imagefx:
                         # 상품 카테고리는 항상 스타일 박스(2번)에 업로드
-                        # 상품이 아닌 경우에만 롱폼/숏폼 구분
                         if is_product:
                             # 상품: 항상 스타일 박스(2번)에 업로드
                             upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
@@ -1842,9 +2104,11 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                     else:
                         print(f"ℹ️ ImageFX+Whisk 모드: 상품 썸네일 업로드 생략 (ImageFX 이미지 사용)", flush=True)
                 else:
-                    print(f"⚠️ 썸네일 다운로드 실패: HTTP {response.status_code}", flush=True)
+                    print(f"⚠️ 썸네일 파일이 존재하지 않음: {product_thumbnail_path}", flush=True)
             except Exception as e:
                 print(f"⚠️ 썸네일 처리 실패: {e}", flush=True)
+                import traceback
+                traceback.print_exc()
 
         # Whisk 프롬프트 입력
         print("\n" + "="*80, flush=True)
@@ -1919,19 +2183,18 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                         print(f"   ❌ 최대 재시도 횟수 초과, 다음 씬으로 이동", flush=True)
                         break
 
-                # 입력 성공 및 정책 위반 없음
+                # 입력 성공 및 정책 위반 없음 - 이미지 생성 및 수집으로 진행
                 print(f"✅ {scene_number} 입력 완료 (정책 위반 없음)", flush=True)
-                break  # 성공하면 재시도 루프 탈출
 
-            # Whisk가 이미지를 생성할 시간 대기 (씬당 최소 30초)
-            generation_wait = 30
-            print(f"\n⏳ 이미지 생성 대기 중... ({generation_wait}초)", flush=True)
-            time.sleep(generation_wait)
+                # 🔴 이미지 생성 대기 및 수집을 재시도 루프 안에서 처리
+                # Whisk가 이미지를 생성할 시간 대기 (씬당 최소 30초)
+                generation_wait = 30
+                print(f"\n⏳ 이미지 생성 대기 중... ({generation_wait}초)", flush=True)
+                time.sleep(generation_wait)
 
-            # 🔴 각 씬의 이미지를 즉시 수집 (모든 씬 처리 후가 아니라 각 씬마다)
-            # 이렇게 해야 씬 00의 이미지가 반복되지 않음
-            print(f"\n📥 {scene_number}의 이미지 수집 중...", flush=True)
-            try:
+                # 이미지 수집
+                print(f"\n📥 {scene_number}의 이미지 수집 중...", flush=True)
+
                 # 🔴 중요: 이미 다운로드한 src 목록을 JavaScript로 전달
                 already_downloaded = list(downloaded_image_srcs)
 
@@ -2008,75 +2271,111 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                       f"제외 {scene_image.get('excludedCount', 0)}개, "
                       f"후보 {scene_image.get('candidateCount', 0)}개", flush=True)
 
-                if scene_image and scene_image.get('src'):
-                    image_count = scene_image.get('imageCount', 1)
-                    selected_index = scene_image.get('selectedIndex', 0)
+                # 🔴 이미지 0개 체크 - 정책 위반/생성 실패로 간주하고 재시도
+                if not scene_image or not scene_image.get('src') or scene_image.get('candidateCount', 0) == 0:
+                    print(f"   ⚠️ 이미지를 찾을 수 없습니다 - 정책 위반 가능성", flush=True)
 
-                    if image_count >= 2:
-                        print(f"   🎲 {image_count}개 이미지 중 랜덤 선택: #{selected_index + 1}", flush=True)
-                    elif image_count == 1:
-                        print(f"   ✅ 1개 이미지 발견 (정책 일부 위반)", flush=True)
+                    # 추가 정책 위반 체크
+                    violation_after = detect_policy_violation(driver)
+                    if violation_after.get('violation_detected'):
+                        print(f"   🔍 정책 위반 확인: {violation_after.get('matched_keywords', [])}", flush=True)
 
-                    print(f"   📐 크기: {scene_image['width']}x{scene_image['height']}", flush=True)
-                    # 이미지 즉시 다운로드
-                    import requests
-                    import base64
+                    if attempt < max_retries - 1:
+                        print(f"   🔄 이미지 0개/정책 위반 - 프롬프트 수정 후 재시도 ({attempt + 2}/{max_retries})", flush=True)
+                        # aggressive 모드로 프롬프트 강력하게 수정
+                        current_prompt = sanitize_prompt_for_google(prompt, aggressive=True)
+                        print(f"   📝 프롬프트 수정됨 (aggressive=True)", flush=True)
+                        time.sleep(5)
+                        continue  # 재시도 루프의 다음 반복으로
+                    else:
+                        print(f"   ❌ 최대 재시도 횟수({max_retries}회) 초과 - 이 씬은 건너뜁니다", flush=True)
+                        print(f"   💡 팁: 프롬프트에서 'Korean person', '유명인' 관련 단어를 제거해보세요", flush=True)
+                        break  # 재시도 루프 탈출, 다음 씬으로
 
-                    try:
-                        download_success = False
+                # 이미지 발견됨 - 다운로드 진행
+                image_count = scene_image.get('imageCount', 1)
+                selected_index = scene_image.get('selectedIndex', 0)
 
-                        if scene_image.get('isBlob'):
-                            base64_data = driver.execute_script("""
-                                const url = arguments[0];
-                                return new Promise((resolve, reject) => {
-                                    fetch(url)
-                                        .then(res => res.blob())
-                                        .then(blob => {
-                                            const reader = new FileReader();
-                                            reader.onloadend = () => resolve(reader.result);
-                                            reader.onerror = reject;
-                                            reader.readAsDataURL(blob);
-                                        });
-                                });
-                            """, scene_image['src'])
+                if image_count >= 2:
+                    print(f"   🎲 {image_count}개 이미지 중 랜덤 선택: #{selected_index + 1}", flush=True)
+                elif image_count == 1:
+                    print(f"   ✅ 1개 이미지 발견", flush=True)
 
-                            if base64_data and base64_data.startswith('data:image'):
-                                header, base64_str = base64_data.split(',', 1)
-                                ext = '.' + header.split(';')[0].split('/')[-1] if 'image' in header else '.png'
-                                output_path = os.path.join(output_folder, f"{scene_number}{ext}")
+                print(f"   📐 크기: {scene_image['width']}x{scene_image['height']}", flush=True)
 
-                                image_bytes = base64.b64decode(base64_str)
-                                with open(output_path, 'wb') as f:
-                                    f.write(image_bytes)
-                                print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
-                                download_success = True
+                # 이미지 다운로드
+                import requests
+                import base64
+                download_success = False
 
-                        elif scene_image['src'].startswith('http'):
-                            ext = '.jpg'
-                            if 'png' in scene_image['src'].lower(): ext = '.png'
-                            elif 'webp' in scene_image['src'].lower(): ext = '.webp'
+                try:
+                    if scene_image.get('isBlob'):
+                        base64_data = driver.execute_script("""
+                            const url = arguments[0];
+                            return new Promise((resolve, reject) => {
+                                fetch(url)
+                                    .then(res => res.blob())
+                                    .then(blob => {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => resolve(reader.result);
+                                        reader.onerror = reject;
+                                        reader.readAsDataURL(blob);
+                                    });
+                            });
+                        """, scene_image['src'])
+
+                        if base64_data and base64_data.startswith('data:image'):
+                            header, base64_str = base64_data.split(',', 1)
+                            ext = '.' + header.split(';')[0].split('/')[-1] if 'image' in header else '.png'
                             output_path = os.path.join(output_folder, f"{scene_number}{ext}")
 
-                            response = requests.get(scene_image['src'], timeout=30, headers={'Referer': 'https://labs.google/'})
-                            if response.status_code == 200:
-                                with open(output_path, 'wb') as f:
-                                    f.write(response.content)
-                                print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
-                                download_success = True
+                            image_bytes = base64.b64decode(base64_str)
+                            with open(output_path, 'wb') as f:
+                                f.write(image_bytes)
+                            print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
+                            download_success = True
 
-                        # 🔴 중복 방지: 다운로드 성공 시 모든 variation src 기록
-                        if download_success:
-                            all_srcs = scene_image.get('allSrcs', [scene_image['src']])
-                            for src in all_srcs:
-                                downloaded_image_srcs.add(src)
-                            print(f"   📝 이미지 src 기록됨: {len(all_srcs)}개 variations (총 {len(downloaded_image_srcs)}개 기록)", flush=True)
+                    elif scene_image['src'].startswith('http'):
+                        ext = '.jpg'
+                        if 'png' in scene_image['src'].lower(): ext = '.png'
+                        elif 'webp' in scene_image['src'].lower(): ext = '.webp'
+                        output_path = os.path.join(output_folder, f"{scene_number}{ext}")
 
-                    except Exception as e:
-                        print(f"   ❌ 다운로드 실패: {e}", flush=True)
-                else:
-                    print(f"   ⚠️ 이미지를 찾을 수 없습니다", flush=True)
-            except Exception as e:
-                print(f"   ❌ 이미지 수집 실패: {e}", flush=True)
+                        response = requests.get(scene_image['src'], timeout=30, headers={'Referer': 'https://labs.google/'})
+                        if response.status_code == 200:
+                            with open(output_path, 'wb') as f:
+                                f.write(response.content)
+                            print(f"   ✅ 저장 완료: {os.path.basename(output_path)}", flush=True)
+                            download_success = True
+
+                    # 🔴 중복 방지: 다운로드 성공 시 모든 variation src 기록
+                    if download_success:
+                        all_srcs = scene_image.get('allSrcs', [scene_image['src']])
+                        for src in all_srcs:
+                            downloaded_image_srcs.add(src)
+                        print(f"   📝 이미지 src 기록됨: {len(all_srcs)}개 variations (총 {len(downloaded_image_srcs)}개 기록)", flush=True)
+                        break  # 성공! 재시도 루프 탈출
+                    else:
+                        # 다운로드 실패 시 재시도
+                        if attempt < max_retries - 1:
+                            print(f"   ⚠️ 다운로드 실패 - 재시도 ({attempt + 2}/{max_retries})", flush=True)
+                            current_prompt = sanitize_prompt_for_google(prompt, aggressive=True)
+                            time.sleep(5)
+                            continue
+                        else:
+                            print(f"   ❌ 다운로드 실패 - 최대 재시도 횟수 초과", flush=True)
+                            break
+
+                except Exception as e:
+                    print(f"   ❌ 다운로드 중 오류: {e}", flush=True)
+                    if attempt < max_retries - 1:
+                        print(f"   🔄 재시도 중... ({attempt + 2}/{max_retries})", flush=True)
+                        current_prompt = sanitize_prompt_for_google(prompt, aggressive=True)
+                        time.sleep(5)
+                        continue
+                    else:
+                        print(f"   ❌ 최대 재시도 횟수 초과", flush=True)
+                        break
 
             # 타이밍 제어 - 각 프롬프트 제출 후 충분한 대기 시간 확보
             if i < len(scenes) - 1:  # 마지막 씬이 아니면
