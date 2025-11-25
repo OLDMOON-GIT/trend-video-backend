@@ -1023,6 +1023,33 @@ def generate_image_with_imagefx(driver, prompt, aspect_ratio=None):
     if new_files:
         latest_file = max(new_files, key=os.path.getctime)
         print(f"✅ 이미지 다운로드 확인: {os.path.basename(latest_file)}", flush=True)
+
+        # 🔴 ImageFX 종료 전 열려있는 모달/팝업 닫기
+        try:
+            driver.execute_script("""
+                // ESC 키로 모달 닫기
+                document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', keyCode: 27, bubbles: true}));
+
+                // 닫기 버튼 클릭
+                const closeSelectors = [
+                    'button[aria-label*="close"]', 'button[aria-label*="닫기"]',
+                    '[class*="close-button"]', '[class*="modal-close"]'
+                ];
+                closeSelectors.forEach(sel => {
+                    document.querySelectorAll(sel).forEach(btn => {
+                        try { btn.click(); } catch(e) {}
+                    });
+                });
+
+                // 오버레이 클릭
+                document.querySelectorAll('.cdk-overlay-backdrop, .mdc-dialog__scrim').forEach(el => {
+                    try { el.click(); } catch(e) {}
+                });
+            """)
+            print("🔄 ImageFX 종료 전 모달 닫기 완료", flush=True)
+        except:
+            pass
+
         return latest_file
     else:
         raise Exception("❌ 다운로드된 이미지 파일을 찾을 수 없습니다 - Downloads 폴더에 새 파일이 없습니다")
@@ -1041,6 +1068,52 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
     print("\n" + "="*80, flush=True)
     print(f"2️⃣ Whisk - {box_name} 이미지 업로드 (박스 {box_index + 1})", flush=True)
     print("="*80, flush=True)
+
+    # 🔴 Whisk로 이동 전 열려있는 모달/팝업 닫기
+    try:
+        closed_count = driver.execute_script("""
+            let closedCount = 0;
+
+            // ESC 키로 모달 닫기 시도
+            document.body.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', keyCode: 27, bubbles: true}));
+
+            // 닫기 버튼 클릭
+            const closeSelectors = [
+                'button[aria-label*="close"]', 'button[aria-label*="Close"]',
+                'button[aria-label*="닫기"]', 'button[aria-label*="취소"]',
+                '[class*="close-button"]', '[class*="closeButton"]',
+                '[class*="dialog-close"]', '[class*="modal-close"]',
+                'mat-dialog-container button[mat-icon-button]',
+                '.mdc-dialog button.mdc-icon-button'
+            ];
+
+            for (const sel of closeSelectors) {
+                const btns = document.querySelectorAll(sel);
+                btns.forEach(btn => {
+                    try { btn.click(); closedCount++; } catch(e) {}
+                });
+            }
+
+            // 오버레이/백드롭 클릭
+            const overlaySelectors = [
+                '.cdk-overlay-backdrop', '.mdc-dialog__scrim',
+                '[class*="overlay"]', '[class*="backdrop"]'
+            ];
+
+            for (const sel of overlaySelectors) {
+                const overlays = document.querySelectorAll(sel);
+                overlays.forEach(overlay => {
+                    try { overlay.click(); closedCount++; } catch(e) {}
+                });
+            }
+
+            return closedCount;
+        """)
+        if closed_count > 0:
+            print(f"🔄 Whisk 이동 전 {closed_count}개 모달/팝업 닫기 시도", flush=True)
+            time.sleep(0.5)
+    except Exception as e:
+        print(f"⚠️ 모달 닫기 중 오류 (무시): {e}", flush=True)
 
     driver.get('https://labs.google/fx/ko/tools/whisk/project')
     print("⏳ Whisk 페이지 로딩...", flush=True)
@@ -1770,9 +1843,24 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             scenes = data['scenes']
             # metadata에서 aspect_ratio 및 category 추출
             metadata = data.get('metadata', {})
-            aspect_ratio = metadata.get('aspect_ratio')
-            format_type = metadata.get('format')
+            aspect_ratio_raw = metadata.get('aspect_ratio', '')
+            format_type = metadata.get('format', '')
             category = metadata.get('category', '')  # 카테고리 확인
+
+            # aspect_ratio 정규화: "9:16 (portrait)" -> "9:16", "16:9 horizontal" -> "16:9"
+            aspect_ratio = None
+            if aspect_ratio_raw:
+                if '9:16' in str(aspect_ratio_raw):
+                    aspect_ratio = '9:16'
+                elif '16:9' in str(aspect_ratio_raw):
+                    aspect_ratio = '16:9'
+
+            # format_type에서도 비율 추출 시도: "세로형 9:16" -> 9:16
+            if not aspect_ratio and format_type:
+                if '9:16' in str(format_type) or 'shortform' in str(format_type).lower() or '세로' in str(format_type):
+                    aspect_ratio = '9:16'
+                elif '16:9' in str(format_type) or 'longform' in str(format_type).lower() or '가로' in str(format_type):
+                    aspect_ratio = '16:9'
 
             # product_info에서 썸네일 추출 (상품 영상인 경우)
             product_info = data.get('product_info', {})
@@ -1781,22 +1869,11 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             # 카테고리가 "상품"이거나 product_info가 있으면 상품으로 판단
             is_product = (category == '상품' or bool(product_info.get('thumbnail')))
 
-            # format 필드에서 비율 결정
-            # 원칙: metadata.aspect_ratio가 있으면 그것을 우선, 없으면 format 기반으로 결정
-            # longform만 16:9, 나머지는 모두 9:16
-            if not aspect_ratio:  # ✅ metadata에서 aspect_ratio가 없을 때만 format으로 결정
-                if format_type:
-                    # 1. longform이거나 format에 '16:9'가 명시되어 있으면 16:9
-                    if format_type == 'longform' or '16:9' in str(format_type):
-                        aspect_ratio = '16:9'
-                    # 2. 나머지는 모두 9:16 (shortform, product, sora2 등)
-                    else:
-                        aspect_ratio = '9:16'
-                else:
-                    aspect_ratio = '9:16'  # 기본값
-            # ✅ aspect_ratio가 이미 metadata에서 설정되었으면, 그대로 사용
+            # 최종 기본값 설정 (위에서 결정되지 않은 경우)
+            if not aspect_ratio:
+                aspect_ratio = '9:16'  # 기본값은 세로형
 
-            print(f"📐 비디오 형식: {format_type or 'unknown'}, 비율: {aspect_ratio or 'default'}", flush=True)
+            print(f"📐 비디오 형식: {format_type or 'unknown'}, 비율: {aspect_ratio}", flush=True)
             print(f"📂 카테고리: {category or 'unknown'}", flush=True)
 
             if is_product:
@@ -1824,6 +1901,11 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         output_folder = os.path.abspath(output_dir)
     else:
         output_folder = os.path.dirname(os.path.abspath(scenes_json_file))
+
+    # 🔴 출력 폴더가 없으면 생성
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder, exist_ok=True)
+        print(f"📁 출력 폴더 생성: {output_folder}", flush=True)
 
     driver = None
     try:
@@ -2203,17 +2285,67 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                     const imgs = Array.from(document.querySelectorAll('img'));
                     const alreadyDownloaded = arguments[0];  // Python에서 전달받은 이미 다운로드한 src 목록
 
+                    // 🔴 디버그: 모든 이미지 정보 수집
+                    const debugInfo = imgs.map(img => ({
+                        src: (img.src || '').substring(0, 80),
+                        width: img.offsetWidth,
+                        height: img.offsetHeight,
+                        naturalWidth: img.naturalWidth,
+                        naturalHeight: img.naturalHeight,
+                        classList: Array.from(img.classList).join(' '),
+                        parentClass: img.parentElement ? Array.from(img.parentElement.classList).join(' ') : ''
+                    }));
+
                     // 가장 최근에 생성된 큰 이미지 찾기
                     let excludedCount = 0;
-                    const validImgs = imgs.filter(img => {
-                        if (img.offsetWidth < 100 || img.offsetHeight < 100) return false;
-                        const src = img.src || '';
-                        if (src.startsWith('data:')) return false;
-                        if (!src.startsWith('http') && !src.startsWith('blob:')) return false;
+                    let filterReasons = [];
 
-                        // 🔴 핵심: 이미 다운로드한 이미지는 제외!
+                    const validImgs = imgs.filter(img => {
+                        const src = img.src || '';
+
+                        // 🔴 개선된 필터링 조건 (더 관대하게)
+                        // 1. 크기 체크: 50x50 이상 (기존 100x100에서 완화)
+                        //    또는 naturalWidth/Height가 큰 경우 (아직 렌더링 안됨)
+                        const displaySize = img.offsetWidth * img.offsetHeight;
+                        const naturalSize = img.naturalWidth * img.naturalHeight;
+                        if (displaySize < 2500 && naturalSize < 10000) {
+                            filterReasons.push({src: src.substring(0, 50), reason: 'size_too_small', displaySize, naturalSize});
+                            return false;
+                        }
+
+                        // 2. data URL은 여전히 제외 (인라인 아이콘 등)
+                        if (src.startsWith('data:')) {
+                            filterReasons.push({src: src.substring(0, 50), reason: 'data_url'});
+                            return false;
+                        }
+
+                        // 3. 🔴 개선: http, https, blob 외에도 상대 경로(/로 시작) 허용
+                        if (!src.startsWith('http') && !src.startsWith('blob:') && !src.startsWith('/')) {
+                            filterReasons.push({src: src.substring(0, 50), reason: 'invalid_protocol'});
+                            return false;
+                        }
+
+                        // 4. 🔴 Whisk 결과 이미지 특성: 특정 클래스나 부모 확인
+                        //    Whisk 생성 이미지는 보통 특정 컨테이너 안에 있음
+                        const parentClass = img.parentElement ? img.parentElement.className : '';
+                        const grandParentClass = img.parentElement?.parentElement ? img.parentElement.parentElement.className : '';
+
+                        // 5. 이미 다운로드한 이미지는 제외
                         if (alreadyDownloaded.includes(src)) {
                             excludedCount++;
+                            return false;
+                        }
+
+                        // 6. 🔴 추가: 아바타/프로필 이미지 제외 (보통 작고 동그람)
+                        if (src.includes('avatar') || src.includes('profile') ||
+                            parentClass.includes('avatar') || parentClass.includes('profile')) {
+                            filterReasons.push({src: src.substring(0, 50), reason: 'avatar_image'});
+                            return false;
+                        }
+
+                        // 7. 🔴 추가: 로고/아이콘 이미지 제외
+                        if (src.includes('logo') || src.includes('icon') || src.includes('favicon')) {
+                            filterReasons.push({src: src.substring(0, 50), reason: 'logo_icon'});
                             return false;
                         }
 
@@ -2256,14 +2388,18 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                             excludedCount: excludedCount,
                             candidateCount: validImgs.length,
                             selectedIndex: selectedIndex,
-                            imageCount: sorted.length
+                            imageCount: sorted.length,
+                            debugInfo: debugInfo.slice(0, 5),  // 디버그용 (상위 5개만)
+                            filterReasons: filterReasons.slice(0, 5)  // 필터링 이유 (상위 5개만)
                         };
                     }
                     return {
                         src: null,
                         totalImages: imgs.length,
                         excludedCount: excludedCount,
-                        candidateCount: validImgs.length
+                        candidateCount: validImgs.length,
+                        debugInfo: debugInfo.slice(0, 10),  // 이미지 0개일 때 더 많은 디버그 정보
+                        filterReasons: filterReasons
                     };
                 """, already_downloaded)
 
@@ -2274,6 +2410,22 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                 # 🔴 이미지 0개 체크 - 정책 위반/생성 실패로 간주하고 재시도
                 if not scene_image or not scene_image.get('src') or scene_image.get('candidateCount', 0) == 0:
                     print(f"   ⚠️ 이미지를 찾을 수 없습니다 - 정책 위반 가능성", flush=True)
+
+                    # 🔴 디버그: 필터링 탈락 이유 출력
+                    debug_info = scene_image.get('debugInfo', [])
+                    filter_reasons = scene_image.get('filterReasons', [])
+
+                    if debug_info:
+                        print(f"   🔍 페이지 이미지 정보 (상위 {len(debug_info)}개):", flush=True)
+                        for idx, img_info in enumerate(debug_info[:5]):
+                            print(f"      [{idx+1}] {img_info.get('width')}x{img_info.get('height')} "
+                                  f"(natural: {img_info.get('naturalWidth')}x{img_info.get('naturalHeight')}) "
+                                  f"src: {img_info.get('src', '')[:50]}...", flush=True)
+
+                    if filter_reasons:
+                        print(f"   🚫 필터링 탈락 이유:", flush=True)
+                        for reason in filter_reasons[:5]:
+                            print(f"      - {reason.get('reason')}: {reason.get('src', '')[:40]}...", flush=True)
 
                     # 추가 정책 위반 체크
                     violation_after = detect_policy_violation(driver)
