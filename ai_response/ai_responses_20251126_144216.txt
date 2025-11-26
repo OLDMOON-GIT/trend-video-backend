@@ -1,0 +1,79 @@
+{
+  "title": "22222222222",
+  "version": "shortform-4.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 갈등 → 몰입 → 반전 → 여운 → CTA",
+    "key_themes": [
+      "믿음의 파괴",
+      "선의의 역풍"
+    ],
+    "total_word_count": 650,
+    "estimated_duration_seconds": 95,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "f731db23-ee98-417d-9f0c-a2aea3965e33"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 충격적 시작",
+      "duration_seconds": 5,
+      "word_count": 40,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of emotional face or dramatic reveal, centered subject, vibrant saturated colors, high contrast lighting, intense eye contact, mobile-optimized, NO TEXT",
+      "narration": "충격! 절대 잊을 수 없는 3년 전의 사건이었습니다. 그가 저를 '사기죄'로 고소했습니다. (40자)"
+    },
+    {
+      "scene_id": "scene_01_conflict",
+      "scene_name": "갈등 - 상황+갈등 빠르게",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, tense moment, conflict visualization, worried or stressed expressions, dramatic shadows, building tension atmosphere, contextual environment, mobile-optimized, NO TEXT",
+      "narration": "3년 전, 그는 사업에 실패했습니다. \"제발 300만원만 빌려주십시오. 한 달 안에 갚겠습니다.\" 그는 무릎까지 꿇었습니다. 저는 망설였어요. \"친구야, 너 돈 때문에 우리 사이 망치는 거 싫다.\" 제가 말했습니다. \"걱정 마십시오. 제 명예를 걸겠습니다!\" 그가 간절하게 대답했습니다. 저는 그를 믿었습니다. (160자)"
+    },
+    {
+      "scene_id": "scene_02_immersion",
+      "scene_name": "몰입 - 감정 극대화",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, deep empathy scene, touching gesture or meaningful glance, warm cinematic lighting, intimate connection atmosphere, detailed expressions, mobile-optimized, NO TEXT",
+      "narration": "300만원을 송금했습니다. 하지만 한 달 후, 그는 연락을 피했습니다. \"도대체 왜 연락 안 하는 거야?\" 제가 문자를 보냈습니다. 일주일 뒤, 변호사 명함과 함께 등기가 도착했습니다. '사기 피해자 변호인'이라고 적혀 있었습니다. 그때부터 소름이 돋기 시작했습니다. (160자)"
+    },
+    {
+      "scene_id": "scene_03_twist",
+      "scene_name": "반전 - WTF 예상 못한 전개",
+      "duration_seconds": 20,
+      "word_count": 140,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking revelation, unexpected twist moment, surprised or amazed expressions, dramatic lighting shift, mind-blowing atmosphere, mobile-optimized, NO TEXT",
+      "narration": "경찰서에서 그를 만났습니다. 그는 전혀 미안해하지 않았습니다. \"돈을 빌려준 증거 없지 않습니까?\" 그는 저를 비웃었습니다. \"통장 이체 내역 있잖아요!\" 제가 소리쳤습니다. \"저는 빌린 적 없어요. 3년 전부터 당신이 저한테 준 선물 아닙니까?\" 그는 뻔뻔하게 말했습니다. 그는 저에게 돈을 빌렸던 사실 자체를 부인했습니다. (140자)"
+    },
+    {
+      "scene_id": "scene_04_ending",
+      "scene_name": "여운 + CTA",
+      "duration_seconds": 20,
+      "word_count": 150,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, open ending visualization, meaningful symbolic action, dramatic final lighting, lingering emotional mood, mobile-optimized, NO TEXT",
+      "narration": "놀랍게도 증거 불충분으로 그는 무죄를 받았습니다. 단지 '친구에게 준 선물'이라는 그의 주장을 뒤집지 못했습니다. 300만원보다 더 큰 것은 인간에 대한 신뢰였습니다. 그날, 저는 10년 우정의 마침표를 찍었습니다. 이런 충격적인 배신 이야기에 대해 더 알고 싶으시다면 구독과 좋아요 부탁드립니다. (150자)"
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 5,
+    "total_duration": 95,
+    "hook_effectiveness": "strong",
+    "double_twist_structure": true,
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "cta_naturally_integrated": true,
+    "no_moral_preaching": true,
+    "concrete_details": true,
+    "dialogue_rich": true,
+    "unpredictable": true,
+    "emotion_driven": true,
+    "story_arc_complete": true,
+    "realistic_setting": true,
+    "no_cliche_patterns": true
+  }
+}

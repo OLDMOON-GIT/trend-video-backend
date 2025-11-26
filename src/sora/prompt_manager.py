@@ -290,7 +290,7 @@ class PromptManager:
 
                 if "llm_provider" in metadata:
                     provider = metadata["llm_provider"]
-                    valid_providers = ["openai", "groq", "ollama"]
+                    valid_providers = ["openai", "groq", "grok", "ollama"]
                     if provider not in valid_providers:
                         warnings.append(f"Unknown LLM provider: {provider}")
 

@@ -1,0 +1,79 @@
+{
+  "title": "22222222222",
+  "version": "shortform-4.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 갈등 → 몰입 → 반전 → 여운 → CTA",
+    "key_themes": [
+      "SNS의 이면",
+      "선의의 역풍"
+    ],
+    "total_word_count": 650,
+    "estimated_duration_seconds": 95,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "시니어사연",
+    "scriptId": "f3048fac-01d1-467a-b040-4ec105a49c71"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 충격적 시작",
+      "duration_seconds": 5,
+      "word_count": 40,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of emotional face or dramatic reveal of a legal document on a tablet screen, centered subject, vibrant saturated colors, high contrast lighting, intense eye contact, mobile-optimized, NO TEXT",
+      "narration": "절대 비밀로 지키려고 했는데... 결국 고소장이 날아왔습니다. 이 모든 일의 시작은 댓글 하나였습니다."
+    },
+    {
+      "scene_id": "scene_01_conflict",
+      "scene_name": "갈등 - 상황+갈등 빠르게",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, tense moment, conflict visualization of a person furiously typing a comment on a glowing phone screen in a dark room, worried or stressed expressions, dramatic shadows, building tension atmosphere, contextual environment, mobile-optimized, NO TEXT",
+      "narration": "유명 유튜버의 허위 광고 논란이 터졌습니다. 피해자들이 속출했습니다. 제가 아는 분도 큰돈을 잃었습니다. 저는 분노했습니다. \"양심이 있습니까? 당장 사과하세요.\" 딱 이 두 문장을 댓글로 달았습니다. 며칠 뒤 유튜버에게서 DM이 왔습니다. \"혹시 그쪽도 피해자세요?\" 저는 답했습니다. \"아닙니다. 하지만 정의롭지 못하다고 생각합니다.\""
+    },
+    {
+      "scene_id": "scene_02_immersion",
+      "scene_name": "몰입 - 감정 극대화",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, deep empathy scene of a person looking exhausted and defeated while scrolling through hundreds of aggressive hate comments and threats on their phone, warm cinematic lighting, intimate connection atmosphere, detailed expressions, mobile-optimized, NO TEXT",
+      "narration": "그때부터 지옥이었습니다. 유튜버가 제 댓글을 박제했습니다. \"이 사람은 피해자도 아니면서 저를 공격합니다.\" 순식간에 수많은 악플이 달리기 시작했습니다. \"관종이네\", \"너나 잘해라\" 등 인신공격이 난무했습니다. 저는 두려워졌습니다. 유튜버에게 메시지를 보냈습니다. \"댓글을 삭제하겠습니다. 정말 죄송합니다.\" 그는 답이 없었습니다. 모든 댓글을 지웠지만 소용없었습니다."
+    },
+    {
+      "scene_id": "scene_03_twist",
+      "scene_name": "반전 - WTF 예상 못한 전개",
+      "duration_seconds": 20,
+      "word_count": 140,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking revelation, unexpected twist moment of a person receiving a registered mail and opening it to find a thick court document inside, surprised or amazed expressions, dramatic lighting shift, mind-blowing atmosphere, mobile-optimized, NO TEXT",
+      "narration": "그러던 어느 날, 등기가 도착했습니다. 변호사 사무실에서 보낸 내용증명이었습니다. 명예훼손에 따른 손해배상 청구 소송. 원고는 그 유튜버였습니다. 소름 돋았습니다. 제가 달았던 댓글은 단지 '양심이 있냐'는 것이었습니다. 이성적으로 대응하려는데, 지인이 충격적인 사실을 알려주었습니다. \"걔, 사실 법대 출신이래. 악플러들한테 일부러 고소해서 돈 번대.\" (1차 반전 + 2차 반전)"
+    },
+    {
+      "scene_id": "scene_04_ending",
+      "scene_name": "여운 + CTA",
+      "duration_seconds": 20,
+      "word_count": 150,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, open ending visualization of a person sitting alone in front of a computer screen, looking haunted by the screen's light, dramatic final lighting, lingering emotional mood, mobile-optimized, NO TEXT",
+      "narration": "그는 선의로 댓글을 단 저를 이용해 돈을 벌고 있었습니다. '정의롭지 못하다'는 한 마디가 500만 원짜리 고소장으로 돌아왔습니다. 인터넷에서 '착한 일'을 하고 싶었던 저는, 결국 그의 먹잇감이 된 것입니다. 그 후로 저는 다시는 댓글을 달지 않았습니다. 이런 충격적인 인간 심리의 어두운 면이 담긴 이야기가 더 보고 싶으시다면, 구독과 좋아요 부탁드립니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 5,
+    "total_duration": 95,
+    "hook_effectiveness": "strong",
+    "double_twist_structure": true,
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "cta_naturally_integrated": true,
+    "no_moral_preaching": true,
+    "concrete_details": true,
+    "dialogue_rich": true,
+    "unpredictable": true,
+    "emotion_driven": true,
+    "story_arc_complete": true,
+    "realistic_setting": true,
+    "no_cliche_patterns": true
+  }
+}

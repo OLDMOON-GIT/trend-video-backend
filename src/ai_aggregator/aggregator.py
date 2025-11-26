@@ -105,15 +105,12 @@ class ResponseAggregator:
         import json
         from pathlib import Path
 
-        # Get the project root directory (where main.py is executed)
-        project_root = Path.cwd()
-
-        # Create src/scripts directory if it doesn't exist
-        scripts_dir = project_root / "src" / "scripts"
-        scripts_dir.mkdir(parents=True, exist_ok=True)
+        # Save responses under repo-local ai_response directory (stable across environments)
+        ai_response_dir = Path(__file__).resolve().parents[2] / "ai_response"
+        ai_response_dir.mkdir(parents=True, exist_ok=True)
 
         # Full path to save file
-        full_path = scripts_dir / filename
+        full_path = ai_response_dir / filename
 
         # Find the first valid JSON response
         valid_json = None

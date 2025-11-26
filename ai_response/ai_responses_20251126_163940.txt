@@ -1,0 +1,79 @@
+{
+  "title": "2222222222211",
+  "version": "shortform-4.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 갈등 → 몰입 → 반전 → 여운 → CTA",
+    "key_themes": [
+      "인간 심리의 어두운 면",
+      "선의의 역풍"
+    ],
+    "total_word_count": 650,
+    "estimated_duration_seconds": 95,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "심리극",
+    "scriptId": "a65634bc-7fef-41b4-a59c-d1b71f15ca1b"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 충격적 시작",
+      "duration_seconds": 5,
+      "word_count": 40,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking moment, extreme close-up of emotional face or dramatic reveal, centered subject, vibrant saturated colors, high contrast lighting, intense eye contact, mobile-optimized, NO TEXT",
+      "narration": "절대 건드리지 말아야 할 상사의 \"비밀 폴더\"를 실수로 열었습니다."
+    },
+    {
+      "scene_id": "scene_01_conflict",
+      "scene_name": "갈등 - 상황+갈등 빠르게",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, tense moment, conflict visualization, worried or stressed expressions, dramatic shadows, building tension atmosphere, contextual environment, mobile-optimized, NO TEXT",
+      "narration": "저는 신입사원이고, 상사 A는 늘 저를 괴롭혔습니다. 어느 날, A가 급히 외근을 나갔습니다. \"이거 잠깐만 맡아줘.\" A는 제게 노트북을 넘겼습니다. 바탕화면에 '절대 열지 마시오'라는 폴더가 보였습니다. 호기심을 이기지 못하고 클릭했습니다. 안에 엄청난 내용이 있었습니다. \"팀장님, 이거 사실인가요?\" 제가 떨리는 목소리로 물었습니다. \"쉿, 비밀이야. 신경 꺼.\" A는 소름 끼치게 웃었습니다."
+    },
+    {
+      "scene_id": "scene_02_immersion",
+      "scene_name": "몰입 - 감정 극대화",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, emotional moment, deep empathy scene, touching gesture or meaningful glance, warm cinematic lighting, intimate connection atmosphere, detailed expressions, mobile-optimized, NO TEXT",
+      "narration": "폴더 안에는 A가 거래처의 기밀 정보를 빼돌린 증거 파일들이 있었습니다. 저는 이 사실을 익명으로 인사팀에 제보했습니다. 회사는 곧바로 감사를 시작했습니다. \"저를 믿으십시오. 저는 누명을 썼습니다.\" A는 오히려 저를 의심하며 협박했습니다. 저는 결백을 주장했습니다. 하지만 A는 제게 \"신입이 실수한 걸로 하자. 응?\"이라고 속삭였습니다. 저는 너무 무서워서 잠을 이룰 수 없었습니다."
+    },
+    {
+      "scene_id": "scene_03_twist",
+      "scene_name": "반전 - WTF 예상 못한 전개",
+      "duration_seconds": 20,
+      "word_count": 140,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, shocking revelation, unexpected twist moment, surprised or amazed expressions, dramatic lighting shift, mind-blowing atmosphere, mobile-optimized, NO TEXT",
+      "narration": "며칠 뒤, A는 해고되었습니다. 저는 정의가 승리했다고 생각했습니다. 그런데 인사팀에서 저를 불렀습니다. 인사팀장은 차가운 표정으로 말했습니다. \"자네가 보낸 익명 제보, 우리가 증거로 쓰지 않았네. 왜냐하면...\" 그는 저를 바라보았습니다. \"그 폴더 파일들은, 사실 A가 자네에게 덮어씌우려고 미리 만든 가짜였네.\" (1차 반전) 그리고 놀랍게도, \"자네의 컴퓨터에서만 발견되도록 세팅된\" 파일이었습니다. (2차 반전)"
+    },
+    {
+      "scene_id": "scene_04_ending",
+      "scene_name": "여운 + CTA",
+      "duration_seconds": 20,
+      "word_count": 150,
+      "image_prompt": "Photorealistic professional photograph, Korean people, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, powerful closing shot, open ending visualization, meaningful symbolic action, dramatic final lighting, lingering emotional mood, mobile-optimized, NO TEXT",
+      "narration": "A는 본인이 해고될 경우, 제가 그 파일을 열어 제보하도록 유도하고 저에게 모든 책임을 뒤집어씌우려 했던 것입니다. (여운) \"자네의 선의가 독이 될 뻔했네.\" 인사팀장이 말했습니다. 저는 등골에 소름이 돋았습니다. 그 후로 저는 퇴사했습니다. 이런 충격적이고 예측 불가능한 인간 심리에 대한 이야기가 더 보고 싶으시다면, 구독과 좋아요 부탁드립니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 5,
+    "total_duration": 95,
+    "hook_effectiveness": "strong",
+    "double_twist_structure": true,
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "cta_naturally_integrated": true,
+    "no_moral_preaching": true,
+    "concrete_details": true,
+    "dialogue_rich": true,
+    "unpredictable": true,
+    "emotion_driven": true,
+    "story_arc_complete": true,
+    "realistic_setting": true,
+    "no_cliche_patterns": true
+  }
+}

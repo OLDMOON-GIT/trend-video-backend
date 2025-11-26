@@ -1,5 +1,0 @@
-ChatGPT의 말:
-
-상품 링크({product_link})를 직접 열 수 없었습니다.
-상품 설명({product_description})과 썸네일({thumbnail}) 내용을 실제로 제공해주시면,
-그 정보를 기반으로 바로 30초짜리 시네마틱 상품 소개 JSON 대본을 완성해드릴 수 있습니다.

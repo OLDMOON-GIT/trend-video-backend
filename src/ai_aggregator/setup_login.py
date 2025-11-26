@@ -41,6 +41,21 @@ async def setup_login(agents_list: list = None):
         automation_profile = os.path.join(project_root, '.chrome-automation-profile')
         pathlib.Path(automation_profile).mkdir(exist_ok=True)
 
+        # Clean up stale Chrome profile locks to prevent immediate crashes
+        lock_files = [
+            os.path.join(automation_profile, 'SingletonLock'),
+            os.path.join(automation_profile, 'SingletonCookie'),
+            os.path.join(automation_profile, 'SingletonSocket'),
+            os.path.join(automation_profile, 'lockfile'),
+        ]
+        for lock_file in lock_files:
+            try:
+                if os.path.exists(lock_file):
+                    os.remove(lock_file)
+                    print(f"{Fore.YELLOW}[INFO] Removed stale lock file: {os.path.basename(lock_file)}{Style.RESET_ALL}")
+            except Exception as e:
+                print(f"{Fore.YELLOW}[WARN] Could not remove lock file {lock_file}: {e}{Style.RESET_ALL}")
+
         print(f"{Fore.YELLOW}[INFO] 프로젝트 루트: {project_root}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}[INFO] Chrome 프로필 경로: {automation_profile}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}[INFO] This profile will save your login sessions{Style.RESET_ALL}\n")

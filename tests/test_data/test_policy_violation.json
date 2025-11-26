@@ -1,0 +1,19 @@
+{
+  "title": "정책 위반 재시도 테스트",
+  "metadata": {
+    "format": "shortform",
+    "aspect_ratio": "9:16"
+  },
+  "scenes": [
+    {
+      "scene_number": "scene_00",
+      "image_prompt": "Korean celebrity holding a beauty product, before and after dramatic transformation, famous person endorsement",
+      "text": "정책 위반 가능성이 높은 프롬프트"
+    },
+    {
+      "scene_number": "scene_01",
+      "image_prompt": "Professional product photography of skincare items on white background, clean commercial style",
+      "text": "정상 프롬프트"
+    }
+  ]
+}

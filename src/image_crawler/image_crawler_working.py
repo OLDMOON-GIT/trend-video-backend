@@ -2681,8 +2681,18 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         # 상태 업데이트는 main() 종료 후 __main__에서 처리
 
         if driver:
-            print("\n✅ 작업 완료. 브라우저를 닫습니다.", flush=True)
-            driver.quit()
+            try:
+                print("\n✅ 작업 완료. 브라우저를 닫습니다.", flush=True)
+                driver.quit()
+                print("✅ 브라우저 종료 완료", flush=True)
+            except Exception as e:
+                print(f"⚠️ 브라우저 종료 실패: {e}", flush=True)
+                try:
+                    # 강제 종료 시도
+                    driver.service.process.kill()
+                    print("✅ 브라우저 프로세스 강제 종료 완료", flush=True)
+                except:
+                    pass
 
 def update_queue_task_status(queue_db_path, task_id, status, error=None):
     """queue_tasks 테이블의 작업 상태를 업데이트합니다."""

@@ -1,6 +1,7 @@
 """
 Database logging handler for Python logging module.
-Saves logs to job_logs table in SQLite database.
+Saves logs to contents_logs table in SQLite database.
+(v3: job_logs → contents_logs 통합)
 """
 import logging
 import sqlite3
@@ -37,13 +38,13 @@ class DatabaseLogHandler(logging.Handler):
             self.connection = sqlite3.connect(self.db_path, check_same_thread=False)
             self.cursor = self.connection.cursor()
 
-            # job_logs 테이블이 없으면 생성
+            # contents_logs 테이블이 없으면 생성 (v3: job_logs → contents_logs 통합)
             self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS job_logs (
+                CREATE TABLE IF NOT EXISTS contents_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    job_id TEXT NOT NULL,
+                    content_id TEXT NOT NULL,
                     log_message TEXT NOT NULL,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    created_at TEXT DEFAULT (datetime('now'))
                 )
             ''')
             self.connection.commit()
@@ -61,10 +62,10 @@ class DatabaseLogHandler(logging.Handler):
             # 로그 메시지 포맷팅
             log_message = self.format(record)
 
-            # DB에 저장
+            # DB에 저장 (v3: job_logs → contents_logs)
             if self.connection and self.cursor:
                 self.cursor.execute(
-                    'INSERT INTO job_logs (job_id, log_message) VALUES (?, ?)',
+                    'INSERT INTO contents_logs (content_id, log_message) VALUES (?, ?)',
                     (self.job_id, log_message)
                 )
                 self.connection.commit()

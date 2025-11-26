@@ -1,3 +1,0 @@
-I need to search for the product information referenced in the prompt since the placeholders {thumbnail}, {product_link}, and {product_description} are not filled in. Let me search for information about this specific product title.
-
-웹 검색 중

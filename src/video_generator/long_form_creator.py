@@ -92,19 +92,21 @@ class LongFormStoryCreator:
         """Initialize LLM client based on configured provider."""
         llm_config = self.config.get("ai", {}).get("llm", {})
         provider = llm_config.get("provider", "openai")
+        provider_normalized = "groq" if provider in ("groq", "grok") else provider
 
-        if provider == "groq":
-            # Groq provider (FREE)
+        if provider_normalized == "groq":
+            # Groq/Grok provider (FREE)
             api_key = os.getenv("GROQ_API_KEY")
             if not api_key:
-                raise ValueError("GROQ_API_KEY required when using Groq provider. Get free API key at: https://console.groq.com")
+                raise ValueError("GROQ_API_KEY required when using Groq/Grok provider. Get free API key at: https://console.groq.com")
 
             self.client = OpenAI(
                 api_key=api_key,
                 base_url="https://api.groq.com/openai/v1"
             )
-            self.llm_provider = "groq"
-            self.llm_model = llm_config.get("groq", {}).get("model", "llama-3.3-70b-versatile")
+            provider_config = llm_config.get(provider, llm_config.get("groq", {}))
+            self.llm_provider = "grok" if provider == "grok" else "groq"
+            self.llm_model = provider_config.get("model", "llama-3.3-70b-versatile")
             self.vision_model = "gpt-4o"  # Groq doesn't have vision, fallback to OpenAI for image analysis
 
             # Check if OpenAI key is available for vision tasks
@@ -114,8 +116,9 @@ class LongFormStoryCreator:
                 self.openai_client = OpenAI(api_key=openai_key)
                 self.logger.info("OpenAI client also initialized for vision tasks")
 
-            self.logger.info(f"Using Groq (FREE): {self.llm_model}")
-            print(f"[LLM Provider] Groq (FREE) - Model: {self.llm_model}")
+            provider_label = self.llm_provider.capitalize()
+            self.logger.info(f"Using {provider_label} (FREE): {self.llm_model}")
+            print(f"[LLM Provider] {provider_label} (FREE) - Model: {self.llm_model}")
 
         elif provider == "ollama":
             # Ollama provider (LOCAL, FREE)
@@ -156,7 +159,7 @@ class LongFormStoryCreator:
             print(f"[LLM Provider] OpenAI - Model: {self.llm_model}")
 
         else:
-            raise ValueError(f"Unsupported LLM provider: {provider}. Supported: openai, groq, ollama")
+            raise ValueError(f"Unsupported LLM provider: {provider}. Supported: openai, groq/grok, ollama")
 
     def _save_last_project(self, project_dir: Path):
         """Save the last project directory for easy resume."""

@@ -134,3 +134,6 @@ docs/_build/
 
 # FFmpeg temp files
 *TEMP_MPY_wvf_snd.mp4
+
+# AI response logs (auto-generated)
+src/scripts/
