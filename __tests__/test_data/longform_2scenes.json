@@ -1,0 +1,19 @@
+{
+  "title": "테스트 롱폼 비디오",
+  "metadata": {
+    "format": "longform",
+    "aspect_ratio": "16:9"
+  },
+  "scenes": [
+    {
+      "scene_number": 1,
+      "image_prompt": "테스트 이미지 1",
+      "text": "안녕하세요. 이것은 테스트용 롱폼 비디오입니다. 첫 번째 씬입니다."
+    },
+    {
+      "scene_number": 2,
+      "image_prompt": "테스트 이미지 2",
+      "text": "두 번째 씬입니다. 이것으로 기본 기능을 테스트합니다."
+    }
+  ]
+}
