@@ -101,7 +101,16 @@ async def run_multi_agent_query(question: str, agents: list, context) -> str:
     """Run a query across multiple agents and collect responses"""
     aggregator = ResponseAggregator()
 
-    print(f"\n{Fore.CYAN}Question:{Style.RESET_ALL} {question}")
+    # 프롬프트 전체 대신 요약만 출력
+    import re
+    prompt_type = "일반"
+    if "상품 마케팅" in question or "상품 소개" in question:
+        prompt_type = "상품 대본"
+    elif "Sora2" in question or "sora" in question.lower():
+        prompt_type = "Sora2 프롬프트"
+    title_match = re.search(r'- 제목[:\s]*(.+?)(?:\n|$)', question)
+    prompt_title = title_match.group(1).strip()[:50] if title_match else ""
+    print(f"\n{Fore.CYAN}Question:{Style.RESET_ALL} [{prompt_type}] {prompt_title} ({len(question)}자)")
     print(f"{Fore.CYAN}Agents:{Style.RESET_ALL} {', '.join([a.get_name() for a in agents])}\n")
 
     # Phase 1: Send questions sequentially

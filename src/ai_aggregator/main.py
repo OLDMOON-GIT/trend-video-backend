@@ -66,7 +66,23 @@ async def main(question: str, headless: bool = False, agents_to_use: list = None
     print(f"{Fore.YELLOW}{Style.BRIGHT}Multi-AI Aggregator{Style.RESET_ALL}")
     print(f"{Fore.YELLOW}{Style.BRIGHT}{'='*80}{Style.RESET_ALL}\n")
 
-    print(f"{Fore.GREEN}Question:{Style.RESET_ALL} {question}\n")
+    # 프롬프트 전체 대신 요약만 출력
+    prompt_type = "일반"
+    prompt_title = ""
+    if "상품 마케팅" in question or "상품 소개" in question:
+        prompt_type = "상품 대본"
+    elif "Sora2" in question or "sora" in question.lower():
+        prompt_type = "Sora2 프롬프트"
+    elif "숏폼" in question or "shortform" in question.lower():
+        prompt_type = "숏폼 대본"
+
+    # 제목 추출 시도
+    import re
+    title_match = re.search(r'- 제목[:\s]*(.+?)(?:\n|$)', question)
+    if title_match:
+        prompt_title = title_match.group(1).strip()[:50]
+
+    print(f"{Fore.GREEN}Question:{Style.RESET_ALL} [{prompt_type}] {prompt_title} ({len(question)}자)\n")
     print(f"{Fore.CYAN}Mode:{Style.RESET_ALL} {'Headless' if headless else 'Headful (visible browser)'}\n")
 
     aggregator = ResponseAggregator()

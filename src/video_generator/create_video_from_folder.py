@@ -69,7 +69,7 @@ from PIL import Image as PILImage
 import numpy as np
 
 # 공통 유틸리티 모듈 import
-from app.utils import (
+from src.utils import (
     get_ffmpeg_path,
     get_video_duration,
     get_audio_duration,
@@ -640,12 +640,17 @@ class VideoFromFolderCreator:
                 if match:
                     return (int(match.group(1)), mtime)
 
-                # 2. _숫자. 또는 -숫자. 패턴: "image_01.jpg", "scene-02.png"
+                # 2. scene_XX_ 패턴: "scene_00_hook.jpeg", "scene_01_problem.jpeg" (Whisk/ImageFX)
+                match = re.match(r'scene_(\d+)_', filename)
+                if match:
+                    return (int(match.group(1)), mtime)
+
+                # 3. _숫자. 또는 -숫자. 패턴: "image_01.jpg", "scene-02.png"
                 match = re.search(r'[_-](\d{1,3})\.', filename)
                 if match:
                     return (int(match.group(1)), mtime)
 
-                # 3. (숫자) 패턴: "Image_fx (47).jpg"
+                # 4. (숫자) 패턴: "Image_fx (47).jpg"
                 # 단, 랜덤 ID가 없을 때만 (8자 이상의 영숫자 조합이 없을 때)
                 match = re.search(r'\((\d+)\)', filename)
                 if match and not re.search(r'[_-]\w{8,}', filename):

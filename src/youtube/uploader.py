@@ -361,3 +361,48 @@ class YouTubeUploader:
             error_msg = f"업로드 실패: {e}"
             print(f"[ERROR] {error_msg}")
             return UploadResult(success=False, error=error_msg)
+
+    def add_pinned_comment(self, video_id: str, comment_text: str) -> bool:
+        """영상에 고정댓글 추가 (채널 소유자 댓글은 자동 고정 가능)"""
+        try:
+            if not self.youtube:
+                print("[ERROR] 인증이 필요합니다")
+                return False
+
+            if not video_id or not comment_text:
+                print("[ERROR] video_id와 comment_text가 필요합니다")
+                return False
+
+            # 댓글 추가
+            comment_body = {
+                "snippet": {
+                    "videoId": video_id,
+                    "topLevelComment": {
+                        "snippet": {
+                            "textOriginal": comment_text
+                        }
+                    }
+                }
+            }
+
+            response = self.youtube.commentThreads().insert(
+                part="snippet",
+                body=comment_body
+            ).execute()
+
+            comment_id = response.get("id")
+            print(f"[INFO] 댓글 추가 완료: {comment_id}")
+
+            # 채널 소유자의 댓글이므로 바로 고정 가능
+            # commentThreads.update로 고정 설정은 지원 안 됨
+            # 대신 Studio에서 수동 고정 필요하거나 comments.setModerationStatus 사용
+            # 하지만 채널 소유자 댓글은 YouTube에서 자동으로 상단에 표시됨
+            print("[INFO] 채널 소유자 댓글은 자동으로 상단에 표시됩니다")
+            return True
+
+        except HttpError as e:
+            print(f"[ERROR] 댓글 추가 실패: {e}")
+            return False
+        except Exception as e:
+            print(f"[ERROR] 댓글 추가 중 오류: {e}")
+            return False

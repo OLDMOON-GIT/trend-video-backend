@@ -5,7 +5,7 @@ video_merge.py와 create_video_from_folder.py에서 공통으로 사용
 import subprocess
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,56 @@ def format_ass_timestamp(seconds: float) -> str:
     secs = int(seconds % 60)
     centisecs = int((seconds % 1) * 100)
     return f"{hours}:{minutes:02d}:{secs:02d}.{centisecs:02d}"
+
+
+# Alias for backward compatibility
+format_ass_time = format_ass_timestamp
+
+
+def detect_best_encoder() -> Tuple[str, str]:
+    """
+    Detect the best available video encoder (GPU or CPU).
+
+    Returns:
+        Tuple[str, str]: (encoder_name, encoder_type) where encoder_type is 'gpu' or 'cpu'
+    """
+    ffmpeg_path = get_ffmpeg_path()
+    if not ffmpeg_path:
+        logger.warning("FFmpeg not found, defaulting to libx264")
+        return ("libx264", "cpu")
+
+    # Check for NVIDIA GPU encoder
+    try:
+        result = subprocess.run(
+            [ffmpeg_path, "-hide_banner", "-encoders"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+            timeout=10
+        )
+
+        encoders = result.stdout
+
+        if "h264_nvenc" in encoders:
+            logger.info("Using NVIDIA GPU encoder (h264_nvenc)")
+            return ("h264_nvenc", "gpu")
+        elif "h264_qsv" in encoders:
+            logger.info("Using Intel Quick Sync encoder (h264_qsv)")
+            return ("h264_qsv", "gpu")
+        elif "h264_amf" in encoders:
+            logger.info("Using AMD AMF encoder (h264_amf)")
+            return ("h264_amf", "gpu")
+        elif "h264_videotoolbox" in encoders:
+            logger.info("Using Apple VideoToolbox encoder (h264_videotoolbox)")
+            return ("h264_videotoolbox", "gpu")
+        else:
+            logger.info("Using CPU encoder (libx264)")
+            return ("libx264", "cpu")
+
+    except Exception as e:
+        logger.warning(f"Failed to detect encoder, defaulting to libx264: {e}")
+        return ("libx264", "cpu")
 
 
 def concatenate_videos_with_fps_normalization(

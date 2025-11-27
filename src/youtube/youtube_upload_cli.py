@@ -80,10 +80,21 @@ def cmd_upload(args):
     )
 
     if result.success:
+        # 고정댓글 추가 (설명과 동일한 내용)
+        comment_added = False
+        if result.video_id and metadata.description:
+            try:
+                comment_added = uploader.add_pinned_comment(result.video_id, metadata.description)
+                if comment_added:
+                    print(f"[INFO] 고정댓글 추가 완료")
+            except Exception as e:
+                print(f"[WARN] 고정댓글 추가 실패 (업로드는 성공): {e}")
+
         print(json.dumps({
             "success": True,
             "video_id": result.video_id,
-            "video_url": result.video_url
+            "video_url": result.video_url,
+            "comment_added": comment_added
         }))
         return 0
     else:

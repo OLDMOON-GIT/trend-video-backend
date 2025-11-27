@@ -17,9 +17,19 @@ class ResponseAggregator:
 
     def display_responses(self):
         """Display all responses in a formatted way"""
-        # Just print the raw response without any decoration
+        # 응답 전체 대신 요약만 출력
+        import json
         for agent_name, response in self.responses.items():
-            print(response)
+            try:
+                # JSON인 경우 요약 정보 추출
+                data = json.loads(response)
+                title = data.get('title', '제목 없음')[:50]
+                scene_count = len(data.get('scenes', []))
+                version = data.get('version', 'unknown')
+                print(f"[{agent_name}] ✅ JSON 응답 ({len(response)}자) - 제목: {title}, 씬: {scene_count}개, 버전: {version}")
+            except:
+                # JSON이 아닌 경우 길이만 표시
+                print(f"[{agent_name}] 📝 텍스트 응답 ({len(response)}자)")
 
     def _display_single_response(self, agent_name: str, response: str):
         """Display a single agent's response"""

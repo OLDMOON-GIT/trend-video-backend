@@ -1069,6 +1069,40 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
     print(f"2️⃣ Whisk - {box_name} 이미지 업로드 (박스 {box_index + 1})", flush=True)
     print("="*80, flush=True)
 
+    def close_native_file_dialog():
+        """윈도우 파일 선택 창이 뜨면 닫는다."""
+        try:
+            titles = ['열기', 'Open', '파일 업로드', '파일 선택', '파일 열기']
+            for _ in range(3):
+                try:
+                    windows = []
+                    for t in titles:
+                        windows.extend(pyautogui.getWindowsWithTitle(t))
+                except Exception:
+                    windows = []
+
+                if windows:
+                    print(f"🪟 파일 선택 창 감지: {[w.title for w in windows[:3]]}", flush=True)
+                    for w in windows:
+                        try:
+                            w.activate()
+                            time.sleep(0.2)
+                        except Exception:
+                            pass
+                        pyautogui.press('escape')
+                        time.sleep(0.2)
+                        try:
+                            if getattr(w, 'isActive', False):
+                                pyautogui.hotkey('alt', 'f4')
+                        except Exception:
+                            pass
+                    time.sleep(0.3)
+                else:
+                    pyautogui.press('escape')
+                    time.sleep(0.2)
+        except Exception as e:
+            print(f"⚠️ 파일 선택 창 닫기 실패(무시): {e}", flush=True)
+
     # 🔴 Whisk로 이동 전 열려있는 모달/팝업 닫기
     try:
         closed_count = driver.execute_script("""
@@ -1419,32 +1453,11 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
             print(f"   텍스트: {subject_clicked.get('text')}", flush=True)
         if subject_clicked.get('rect'):
             print(f"   위치: {subject_clicked.get('rect')}", flush=True)
-
-        # pyautogui를 사용하여 실제 클릭 시도
-        rect = subject_clicked.get('rect')
-        if rect:
-            try:
-                # 브라우저 창 활성화
-                driver.switch_to.window(driver.current_window_handle)
-                time.sleep(1)
-
-                # 피사체 영역 중앙 클릭
-                center_x = rect['left'] + rect['width'] / 2
-                center_y = rect['top'] + rect['height'] / 2
-
-                print(f"🖱️ pyautogui로 실제 클릭: ({center_x}, {center_y})", flush=True)
-                pyautogui.click(center_x, center_y)
-                time.sleep(2)
-
-                # 파일 다이얼로그가 열렸으면 ESC로 닫기 (file input 방식 사용)
-                print("🔒 파일 다이얼로그 닫기 (ESC) - file input 방식으로 업로드 예정", flush=True)
-                pyautogui.press('escape')
-                time.sleep(1)
-
-                print("✅ pyautogui 클릭 완료 (file input으로 업로드 진행)", flush=True)
-            except Exception as e:
-                print(f"⚠️ pyautogui 사용 실패: {e}", flush=True)
-                print("   기존 방식으로 계속 진행...", flush=True)
+        print("✅ JavaScript 클릭 완료 (file input으로 업로드 진행)", flush=True)
+        # Whisk가 네이티브 파일 선택 창을 띄우면 이후 로직이 막히므로 즉시 닫는다
+        time.sleep(0.7)
+        print("🪟 네이티브 파일 선택 창 닫기 시도...", flush=True)
+        close_native_file_dialog()
     else:
         print("⚠️ 피사체 영역을 찾지 못했습니다", flush=True)
         # 디버그: 왼쪽 사이드바 구조 출력
@@ -1531,6 +1544,8 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
 
     # 파일 할당
     print(f"📤 파일 할당 중: {abs_path}", flush=True)
+    print("🪟 파일 선택 창 재확인 후 파일 할당", flush=True)
+    close_native_file_dialog()
     try:
         file_input.send_keys(abs_path)
         time.sleep(2)
@@ -1583,16 +1598,17 @@ def upload_image_to_whisk(driver, image_path, aspect_ratio=None, box_index=0, bo
                 hasImage: imgs.length > initialCount || newImages.length > 0,
                 imageCount: imgs.length,
                 newImageCount: newImages.length,
-                imageSrc: newImages.length > 0 ? newImages[0].src.substring(0, 80) : '',
+                imageSrc: newImages.length > 0 ? newImages[0].src : '',  // 전체 src 반환
                 imageSize: newImages.length > 0 ? `${newImages[0].offsetWidth}x${newImages[0].offsetHeight}` : ''
             };
         """, initial_img_count)
 
         if uploaded.get('hasImage') or uploaded.get('newImageCount', 0) > 0:
             print(f"✅ 이미지 업로드 확인 완료!", flush=True)
-            print(f"   이미지: {uploaded.get('imageSrc')}...", flush=True)
+            print(f"   이미지: {uploaded.get('imageSrc', '')[:80]}...", flush=True)
             print(f"   크기: {uploaded.get('imageSize')}", flush=True)
             upload_success = True
+            uploaded_src = uploaded.get('imageSrc', '')  # ⭐ 업로드된 이미지 src 저장
             break
         else:
             if i == 0:
@@ -2164,16 +2180,16 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                         product_thumbnail_path = None
 
                 if product_thumbnail_path and os.path.exists(product_thumbnail_path):
-                    # Whisk 전용 모드일 때만 썸네일을 업로드
-                    # ImageFX+Whisk 모드에서는 ImageFX 이미지만 사용
-                    if not args.use_imagefx:
-                        # 상품 카테고리는 항상 스타일 박스(2번)에 업로드
-                        if is_product:
-                            # 상품: 항상 스타일 박스(2번)에 업로드
-                            upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
-                                                  box_index=2, box_name="스타일(상품 썸네일)")
-                            print(f"✅ 상품 썸네일 Whisk 스타일 박스 업로드 완료 (카테고리: 상품)", flush=True)
-                        elif aspect_ratio == '16:9':
+                    # 상품 카테고리는 항상 스타일 박스(2번)에 업로드 (ImageFX 모드에서도)
+                    # 비상품은 Whisk 전용 모드에서만 업로드
+                    if is_product:
+                        # 상품: 항상 스타일 박스(2번)에 업로드 (ImageFX 모드 포함)
+                        upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
+                                              box_index=2, box_name="스타일(상품 썸네일)")
+                        print(f"✅ 상품 썸네일 Whisk 스타일 박스 업로드 완료 (카테고리: 상품)", flush=True)
+                    elif not args.use_imagefx:
+                        # 비상품 + Whisk 전용 모드
+                        if aspect_ratio == '16:9':
                             # 롱폼: 상품 썸네일을 피사체 박스(0번)에 업로드
                             upload_image_to_whisk(driver, product_thumbnail_path, aspect_ratio,
                                                   box_index=0, box_name="피사체(썸네일-롱폼)")
@@ -2184,7 +2200,7 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                                                   box_index=2, box_name="스타일(썸네일)")
                             print(f"✅ 썸네일 Whisk 스타일 박스 업로드 완료 (9:16)", flush=True)
                     else:
-                        print(f"ℹ️ ImageFX+Whisk 모드: 상품 썸네일 업로드 생략 (ImageFX 이미지 사용)", flush=True)
+                        print(f"ℹ️ ImageFX+Whisk 모드 (비상품): 썸네일 업로드 생략", flush=True)
                 else:
                     print(f"⚠️ 썸네일 파일이 존재하지 않음: {product_thumbnail_path}", flush=True)
             except Exception as e:
@@ -2199,6 +2215,26 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
 
         # 중복 방지용: 이미 다운로드한 이미지 src 추적 (Whisk variation 중복 방지)
         downloaded_image_srcs = set()
+
+        # ⭐ 업로드 박스에 있는 이미지 src를 미리 제외 목록에 추가 (상품 썸네일 중복 방지)
+        try:
+            uploaded_srcs = driver.execute_script("""
+                // 업로드 박스(dashed-box) 내부의 이미지 src 수집
+                const uploadBoxImgs = document.querySelectorAll('[class*="dashed-box"] img, [class*="upload"] img, [class*="input-area"] img');
+                const srcs = [];
+                uploadBoxImgs.forEach(img => {
+                    if (img.src && img.src.startsWith('http')) {
+                        srcs.push(img.src);
+                    }
+                });
+                return srcs;
+            """)
+            if uploaded_srcs:
+                for src in uploaded_srcs:
+                    downloaded_image_srcs.add(src)
+                print(f"🔒 업로드 박스 이미지 {len(uploaded_srcs)}개 제외 목록에 추가", flush=True)
+        except Exception as e:
+            print(f"⚠️ 업로드 박스 이미지 수집 실패 (무시): {e}", flush=True)
 
         # 모든 씬을 순차적으로 처리
         for i in range(len(scenes)):
@@ -2346,6 +2382,13 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                         // 7. 🔴 추가: 로고/아이콘 이미지 제외
                         if (src.includes('logo') || src.includes('icon') || src.includes('favicon')) {
                             filterReasons.push({src: src.substring(0, 50), reason: 'logo_icon'});
+                            return false;
+                        }
+
+                        // 8. 🔴 상품 썸네일 이미지 제외 (업로드된 외부 쇼핑몰 이미지)
+                        if (src.includes('coupangcdn.com') || src.includes('11st.co.kr') ||
+                            src.includes('gmarket.co.kr') || src.includes('auction.co.kr')) {
+                            filterReasons.push({src: src.substring(0, 50), reason: 'product_thumbnail'});
                             return false;
                         }
 
@@ -2502,6 +2545,20 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
 
                     # 🔴 중복 방지: 다운로드 성공 시 모든 variation src 기록
                     if download_success:
+                        # ⭐ 첫 번째 씬이고 상품 영상이면 썸네일과 파일 크기 비교
+                        if i == 0 and is_product and product_thumbnail_path and os.path.exists(product_thumbnail_path):
+                            thumbnail_size = os.path.getsize(product_thumbnail_path)
+                            downloaded_size = os.path.getsize(output_path)
+                            if thumbnail_size == downloaded_size:
+                                print(f"   ⚠️ 상품 썸네일과 동일한 이미지 감지! (크기: {downloaded_size} bytes)", flush=True)
+                                os.remove(output_path)
+                                # 현재 src를 제외 목록에 추가하고 다음 후보 시도
+                                downloaded_image_srcs.add(scene_image['src'])
+                                download_success = False
+                                print(f"   🔄 다른 이미지 후보로 재시도...", flush=True)
+                                time.sleep(2)
+                                continue  # 재시도 루프 다음 반복으로
+
                         all_srcs = scene_image.get('allSrcs', [scene_image['src']])
                         for src in all_srcs:
                             downloaded_image_srcs.add(src)
