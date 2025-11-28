@@ -485,8 +485,8 @@ def setup_chrome_driver():
 
     return driver
 
-def generate_image_with_imagefx(driver, prompt, aspect_ratio=None):
-    """ImageFX로 이미지 생성 및 다운로드"""
+def generate_image_with_imagefx(driver, prompt, aspect_ratio=None, max_retries=3):
+    """ImageFX로 이미지 생성 및 다운로드 (정책 위반 시 재시도)"""
     print("\n" + "="*80, flush=True)
     print("1️⃣ ImageFX - 첫 이미지 생성", flush=True)
     print("="*80, flush=True)
@@ -494,7 +494,10 @@ def generate_image_with_imagefx(driver, prompt, aspect_ratio=None):
     print(f"📝 프롬프트 내용: {prompt}", flush=True)
     if aspect_ratio:
         print(f"📐 목표 비율: {aspect_ratio}", flush=True)
+    print(f"🔄 최대 재시도: {max_retries}회", flush=True)
     print("="*80, flush=True)
+
+    current_prompt = prompt  # 현재 사용할 프롬프트 (재시도 시 수정될 수 있음)
 
     # 창 크기 최대화 (입력창이 보이도록)
     try:
@@ -840,58 +843,130 @@ def generate_image_with_imagefx(driver, prompt, aspect_ratio=None):
 
     time.sleep(3)
 
-    # 이미지 생성 대기
-    print("⏳ 이미지 생성 대기 중... (최대 120초)", flush=True)
+    # === 재시도 루프 시작 ===
     image_generated = False
-    for i in range(120):
-        result = driver.execute_script("""
-            const imgs = Array.from(document.querySelectorAll('img'));
-            const largeImgs = imgs.filter(img => img.offsetWidth > 100 && img.offsetHeight > 100);
-            const allImgs = imgs.map(img => ({
-                src: (img.src || '').substring(0, 50),
-                width: img.offsetWidth,
-                height: img.offsetHeight
-            }));
-            const text = document.body.innerText;
-            return {
-                hasLargeImage: largeImgs.length > 0,
-                largeCount: largeImgs.length,
-                totalCount: imgs.length,
-                generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading'),
-                sampleImages: allImgs.slice(0, 3)
-            };
-        """)
+    for attempt in range(max_retries):
+        print(f"\n🔄 ImageFX 이미지 생성 시도 {attempt + 1}/{max_retries}", flush=True)
+        print(f"   📝 현재 프롬프트: {current_prompt[:100]}...", flush=True)
 
-        if result['hasLargeImage']:
-            print(f"✅ 이미지 생성 완료! ({i+1}초) - 큰 이미지 {result['largeCount']}개 발견", flush=True)
-            image_generated = True
+        # 재시도 시 프롬프트 재입력 필요
+        if attempt > 0:
+            print("   🔄 프롬프트 재입력 중...", flush=True)
+            # 입력창 찾아서 내용 지우고 새 프롬프트 입력
+            try:
+                # 입력창 클리어
+                driver.execute_script("""
+                    const editables = document.querySelectorAll('[contenteditable="true"]');
+                    for (const el of editables) {
+                        if (el.offsetParent !== null) {
+                            el.innerHTML = '';
+                            el.focus();
+                            break;
+                        }
+                    }
+                """)
+                time.sleep(0.5)
+
+                # 새 프롬프트 붙여넣기
+                pyperclip.copy(current_prompt)
+                actions = ActionChains(driver)
+                actions.key_down(Keys.CONTROL).send_keys('v').key_up(Keys.CONTROL).perform()
+                time.sleep(1)
+
+                # Enter 또는 생성 버튼 클릭
+                actions = ActionChains(driver)
+                actions.send_keys(Keys.ENTER).perform()
+                time.sleep(3)
+                print("   ✅ 프롬프트 재입력 완료", flush=True)
+            except Exception as e:
+                print(f"   ⚠️ 프롬프트 재입력 실패: {e}", flush=True)
+
+        # 이미지 생성 대기
+        print("⏳ 이미지 생성 대기 중... (최대 60초)", flush=True)
+        need_retry = False
+        retry_reason = ""
+
+        for i in range(60):  # 재시도 시에는 60초로 단축
+            result = driver.execute_script("""
+                const imgs = Array.from(document.querySelectorAll('img'));
+                const largeImgs = imgs.filter(img => img.offsetWidth > 100 && img.offsetHeight > 100);
+                const allImgs = imgs.map(img => ({
+                    src: (img.src || '').substring(0, 50),
+                    width: img.offsetWidth,
+                    height: img.offsetHeight
+                }));
+                const text = document.body.innerText;
+                return {
+                    hasLargeImage: largeImgs.length > 0,
+                    largeCount: largeImgs.length,
+                    totalCount: imgs.length,
+                    generating: text.includes('Generating') || text.includes('생성 중') || text.includes('Loading'),
+                    sampleImages: allImgs.slice(0, 3)
+                };
+            """)
+
+            if result['hasLargeImage']:
+                print(f"✅ 이미지 생성 완료! ({i+1}초) - 큰 이미지 {result['largeCount']}개 발견", flush=True)
+                image_generated = True
+                break
+
+            # 5초, 10초에 정책 위반 체크
+            if i == 5 or i == 10:
+                violation_check = detect_policy_violation(driver)
+                if violation_check.get('violation_detected'):
+                    print(f"⚠️ ImageFX 정책 위반 감지! ({i}초)", flush=True)
+                    print(f"   매칭 키워드: {violation_check.get('matched_keywords', [])}", flush=True)
+                    if violation_check.get('message'):
+                        print(f"   메시지: {violation_check['message'][:150]}...", flush=True)
+                    # 스크린샷 저장
+                    try:
+                        import tempfile
+                        violation_screenshot = os.path.join(tempfile.gettempdir(), f'imagefx_violation_{attempt}_{i}s.png')
+                        driver.save_screenshot(violation_screenshot)
+                        print(f"   📸 위반 스크린샷: {violation_screenshot}", flush=True)
+                    except:
+                        pass
+                    need_retry = True
+                    retry_reason = f"정책 위반: {violation_check.get('matched_keywords', [])}"
+                    break  # 내부 루프 탈출, 재시도
+
+            if i % 15 == 0 and i > 0:
+                print(f"   대기 중... ({i}초) - 큰 이미지: {result['largeCount']}개, 전체: {result['totalCount']}개, 생성 중: {result['generating']}", flush=True)
+
+            time.sleep(1)
+
+        # 이미지 생성 성공 시 재시도 루프 탈출
+        if image_generated:
             break
 
-        if i % 15 == 0 and i > 0:
-            print(f"   대기 중... ({i}초) - 큰 이미지: {result['largeCount']}개, 전체: {result['totalCount']}개, 생성 중: {result['generating']}", flush=True)
-            if i == 15:
-                print(f"   샘플 이미지: {result['sampleImages']}", flush=True)
-                # 중간 스크린샷
-                try:
-                    import tempfile
-                    mid_screenshot = os.path.join(tempfile.gettempdir(), 'imagefx_gen_' + str(i) + 's.png')
-                    driver.save_screenshot(mid_screenshot)
-                    print(f"   📸 중간 스크린샷: {mid_screenshot}", flush=True)
-                except:
-                    pass
+        # 타임아웃 (이미지 없음) - 재시도 필요
+        if not need_retry:
+            final_violation = detect_policy_violation(driver)
+            if final_violation.get('violation_detected'):
+                need_retry = True
+                retry_reason = f"정책 위반: {final_violation.get('matched_keywords', [])}"
+            else:
+                need_retry = True
+                retry_reason = "60초 내 이미지 미생성"
 
-        time.sleep(1)
-
-    if not image_generated:
-        # 최종 스크린샷
-        try:
-            import tempfile
-            final_screenshot = os.path.join(tempfile.gettempdir(), 'imagefx_gen_failed.png')
-            driver.save_screenshot(final_screenshot)
-            print(f"📸 실패 스크린샷: {final_screenshot}", flush=True)
-        except:
-            pass
-        raise Exception("❌ 이미지 생성 실패 - 120초 내에 이미지가 생성되지 않았습니다")
+        # 재시도 처리
+        if need_retry and attempt < max_retries - 1:
+            print(f"   🔄 재시도 필요: {retry_reason}", flush=True)
+            # 프롬프트 수정 (aggressive 모드는 2번째 시도부터)
+            current_prompt = sanitize_prompt_for_google(current_prompt, aggressive=(attempt > 0))
+            print(f"   📝 프롬프트 수정됨 (aggressive={attempt > 0})", flush=True)
+            time.sleep(2)
+            continue
+        elif need_retry and attempt >= max_retries - 1:
+            # 최대 재시도 초과
+            try:
+                import tempfile
+                final_screenshot = os.path.join(tempfile.gettempdir(), 'imagefx_gen_failed_final.png')
+                driver.save_screenshot(final_screenshot)
+                print(f"📸 최종 실패 스크린샷: {final_screenshot}", flush=True)
+            except:
+                pass
+            raise Exception(f"❌ ImageFX 이미지 생성 실패 (최대 재시도 {max_retries}회 초과): {retry_reason}")
 
     time.sleep(3)
 
@@ -1835,8 +1910,12 @@ def download_images(driver, images, output_folder, scenes):
     print(f"\n✅ 다운로드 완료: 총 {downloaded_count}/{len(scenes)}개 파일 저장됨.", flush=True)
     return downloaded_count
 
-def main(scenes_json_file, use_imagefx=False, output_dir=None):
-    """메인 실행 함수"""
+def main(scenes_json_file, use_imagefx=False, output_dir=None, cli_aspect_ratio=None):
+    """메인 실행 함수
+
+    Args:
+        cli_aspect_ratio: 커맨드라인에서 전달된 비율 (최우선, 16:9 또는 9:16)
+    """
     print("=" * 80, flush=True)
     if use_imagefx:
         print("🚀 ImageFX + Whisk 자동화 시작", flush=True)
@@ -1860,7 +1939,8 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             # metadata에서 aspect_ratio 및 category 추출
             metadata = data.get('metadata', {})
             aspect_ratio_raw = metadata.get('aspect_ratio', '')
-            format_type = metadata.get('format', '')
+            # ⭐ promptFormat 우선, format 폴백
+            format_type = metadata.get('promptFormat', '') or metadata.get('format', '')
             category = metadata.get('category', '')  # 카테고리 확인
 
             # aspect_ratio 정규화: "9:16 (portrait)" -> "9:16", "16:9 horizontal" -> "16:9"
@@ -1888,6 +1968,11 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             # 최종 기본값 설정 (위에서 결정되지 않은 경우)
             if not aspect_ratio:
                 aspect_ratio = '9:16'  # 기본값은 세로형
+
+            # ⭐ CLI에서 전달된 비율이 있으면 최우선 적용
+            if cli_aspect_ratio:
+                aspect_ratio = cli_aspect_ratio
+                print(f"📐 CLI에서 비율 지정됨: {cli_aspect_ratio}", flush=True)
 
             print(f"📐 비디오 형식: {format_type or 'unknown'}, 비율: {aspect_ratio}", flush=True)
             print(f"📂 카테고리: {category or 'unknown'}", flush=True)
@@ -2237,6 +2322,7 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
             print(f"⚠️ 업로드 박스 이미지 수집 실패 (무시): {e}", flush=True)
 
         # 모든 씬을 순차적으로 처리
+        skipped_scenes = 0  # ⭐ 실패(스킵)한 씬 카운터
         for i in range(len(scenes)):
             scene = scenes[i]
             scene_number = scene.get('scene_number') or scene.get('scene_id') or f"scene_{str(i).zfill(2)}"
@@ -2485,6 +2571,7 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                     else:
                         print(f"   ❌ 최대 재시도 횟수({max_retries}회) 초과 - 이 씬은 건너뜁니다", flush=True)
                         print(f"   💡 팁: 프롬프트에서 'Korean person', '유명인' 관련 단어를 제거해보세요", flush=True)
+                        skipped_scenes += 1  # ⭐ 실패한 씬 카운터 증가
                         break  # 재시도 루프 탈출, 다음 씬으로
 
                 # 이미지 발견됨 - 다운로드 진행
@@ -2601,38 +2688,66 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
         print("✅ 모든 프롬프트 입력 완료!", flush=True)
         print(f"{ '='*80}", flush=True)
 
-        # === 이미지 생성 대기 ===
+        # === 이미지 생성 완료 확인 ===
         print("\n" + "="*80, flush=True)
-        print("🕐 이미지 생성 대기", flush=True)
+        print("🕐 이미지 생성 완료 확인", flush=True)
         print("="*80, flush=True)
 
-        # 씬 개수에 비례한 타임아웃 설정 (씬당 90초 - Whisk는 생성이 느림)
-        max_wait_time = max(120, len(scenes) * 90)  # 최소 120초
-        print(f"⏳ 이미지 생성 중... (최대 {max_wait_time}초, 씬 {len(scenes)}개)", flush=True)
+        # ⭐ 폴더 기반 성공 체크: scene_*.jpeg 파일 개수 확인
+        output_folder = os.path.dirname(os.path.abspath(scenes_json_file))
+        saved_files = [f for f in os.listdir(output_folder) if f.endswith('.jpeg') and 'scene_' in f]
+        expected_images = len(scenes) - skipped_scenes  # ⭐ 실패한 씬 제외
+        if skipped_scenes > 0:
+            print(f"📂 폴더에 저장된 이미지: {len(saved_files)}개 (필요: {expected_images}개, 스킵: {skipped_scenes}개)", flush=True)
+        else:
+            print(f"📂 폴더에 저장된 이미지: {len(saved_files)}개 (필요: {expected_images}개)", flush=True)
 
-        # 디버그: 초기 페이지 상태 확인
-        page_info = driver.execute_script("""
-            return {
-                url: window.location.href,
-                title: document.title,
-                bodyText: document.body.innerText.substring(0, 200)
-            };
-        """)
-        print(f"📋 페이지 정보:", flush=True)
-        print(f"   URL: {page_info['url']}", flush=True)
-        print(f"   제목: {page_info['title']}", flush=True)
-        print(f"   본문 일부: {page_info['bodyText'][:100]}...", flush=True)
+        # 제외된 파일 목록 확인 (디버그용)
+        all_image_files = [f for f in os.listdir(output_folder) if f.endswith(('.png', '.jpg', '.jpeg'))]
+        excluded_files = [f for f in all_image_files if f not in saved_files]
+        if excluded_files:
+            print(f"   ⚠️ 제외된 이미지 파일: {excluded_files}", flush=True)
 
-        # 스크린샷 저장
-        try:
-            screenshot_path = os.path.join(os.path.dirname(os.path.abspath(scenes_json_file)), 'whisk_debug.png')
-            driver.save_screenshot(screenshot_path)
-            print(f"📸 스크린샷 저장: {screenshot_path}", flush=True)
-        except Exception as e:
-            print(f"⚠️ 스크린샷 저장 실패: {e}", flush=True)
+        # ✅ 이미 모든 이미지가 저장됐으면 성공!
+        if len(saved_files) >= expected_images:
+            print(f"✅ 모든 이미지가 이미 저장됨! ({len(saved_files)}/{expected_images}개)", flush=True)
+            print(f"   저장된 파일: {saved_files}", flush=True)
+        else:
+            # 부족한 경우에만 대기 루프 실행
+            # 씬 개수에 비례한 타임아웃 설정 (씬당 90초 - Whisk는 생성이 느림)
+            max_wait_time = max(120, expected_images * 90)  # 최소 120초
+            print(f"⏳ 이미지 생성 중... (최대 {max_wait_time}초, 필요 이미지 {expected_images}개)", flush=True)
 
-        for i in range(max_wait_time):
-            result = driver.execute_script("""
+            # 디버그: 초기 페이지 상태 확인
+            page_info = driver.execute_script("""
+                return {
+                    url: window.location.href,
+                    title: document.title,
+                    bodyText: document.body.innerText.substring(0, 200)
+                };
+            """)
+            print(f"📋 페이지 정보:", flush=True)
+            print(f"   URL: {page_info['url']}", flush=True)
+            print(f"   제목: {page_info['title']}", flush=True)
+            print(f"   본문 일부: {page_info['bodyText'][:100]}...", flush=True)
+
+            # 스크린샷 저장
+            try:
+                screenshot_path = os.path.join(output_folder, 'whisk_debug.png')
+                driver.save_screenshot(screenshot_path)
+                print(f"📸 스크린샷 저장: {screenshot_path}", flush=True)
+            except Exception as e:
+                print(f"⚠️ 스크린샷 저장 실패: {e}", flush=True)
+
+            for i in range(max_wait_time):
+                # ⭐ 매 10초마다 폴더 체크 (페이지 체크보다 정확)
+                if i % 10 == 0:
+                    saved_files = [f for f in os.listdir(output_folder) if f.endswith('.jpeg') and 'scene_' in f]
+                    if len(saved_files) >= expected_images:
+                        print(f"✅ 폴더 체크 성공! ({i}초) - {len(saved_files)}/{expected_images}개 이미지 저장됨", flush=True)
+                        break
+
+                result = driver.execute_script("""
                 const text = document.body.innerText;
                 const imgs = Array.from(document.querySelectorAll('img'));
 
@@ -2665,31 +2780,31 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None):
                 };
             """)
 
-            # 모든 씬의 이미지가 생성될 때까지 대기
-            # Whisk는 씬당 여러 배리에이션을 생성할 수 있으므로, 최소 씬 개수만큼만 확인
-            expected_count = len(scenes)
-            if result['imageCount'] >= expected_count:
-                # Generating 상태가 아니면 완료
-                if not result['generating']:
-                    print(f"✅ 생성 완료! ({i+1}초) - 이미지 {result['imageCount']}/{expected_count}개 발견", flush=True)
+                # 모든 씬의 이미지가 생성될 때까지 대기
+                # Whisk는 씬당 여러 배리에이션을 생성할 수 있으므로, 최소 씬 개수만큼만 확인
+                expected_count = expected_images  # ⭐ 스킵된 씬 제외
+                if result['imageCount'] >= expected_count:
+                    # Generating 상태가 아니면 완료
+                    if not result['generating']:
+                        print(f"✅ 생성 완료! ({i+1}초) - 이미지 {result['imageCount']}/{expected_count}개 발견", flush=True)
+                        break
+                    else:
+                        # 이미지는 있지만 아직 생성 중
+                        if i % 20 == 0 and i > 0:
+                            print(f"   생성 진행 중... ({i}초) - 이미지 {result['imageCount']}개 발견, 추가 생성 대기 중", flush=True)
+                elif i >= max_wait_time - 1:
+                    # 타임아웃 (현재까지 생성된 만큼만 사용)
+                    print(f"⚠️ 타임아웃 ({i+1}초/{max_wait_time}초) - 이미지 {result['imageCount']}/{expected_count}개 발견", flush=True)
+                    if result['imageCount'] < expected_count:
+                        print(f"⚠️ 경고: {expected_count - result['imageCount']}개 이미지가 생성되지 않았습니다!", flush=True)
+                        print(f"   샘플 이미지 (최대 5개): {result['sampleImages']}", flush=True)
                     break
-                else:
-                    # 이미지는 있지만 아직 생성 중
-                    if i % 20 == 0 and i > 0:
-                        print(f"   생성 진행 중... ({i}초) - 이미지 {result['imageCount']}개 발견, 추가 생성 대기 중", flush=True)
-            elif i >= max_wait_time - 1:
-                # 타임아웃 (현재까지 생성된 만큼만 사용)
-                print(f"⚠️ 타임아웃 ({i+1}초/{max_wait_time}초) - 이미지 {result['imageCount']}/{expected_count}개 발견", flush=True)
-                if result['imageCount'] < expected_count:
-                    print(f"⚠️ 경고: {expected_count - result['imageCount']}개 이미지가 생성되지 않았습니다!", flush=True)
-                    print(f"   샘플 이미지 (최대 5개): {result['sampleImages']}", flush=True)
-                break
 
-            if i % 15 == 0 and i > 0:
-                print(f"   대기 중... ({i}초) - Whisk 이미지: {result['imageCount']}개, 전체: {result['allImagesCount']}개", flush=True)
-                if i == 15:
-                    print(f"   샘플 (최대 5개): {result['sampleImages']}", flush=True)
-            time.sleep(1)
+                if i % 15 == 0 and i > 0:
+                    print(f"   대기 중... ({i}초) - Whisk 이미지: {result['imageCount']}개, 전체: {result['allImagesCount']}개", flush=True)
+                    if i == 15:
+                        print(f"   샘플 (최대 5개): {result['sampleImages']}", flush=True)
+                time.sleep(1)
 
         time.sleep(5)
 
@@ -2805,13 +2920,14 @@ if __name__ == '__main__':
     parser.add_argument('scenes_file', help='씬 데이터 JSON 파일')
     parser.add_argument('--use-imagefx', action='store_true', help='ImageFX로 첫 이미지 생성')
     parser.add_argument('--output-dir', help='이미지를 저장할 기본 디렉토리 (지정하지 않으면 scenes_file 경로 기준)')
+    parser.add_argument('--aspect-ratio', help='이미지 비율 (16:9 또는 9:16)')
     parser.add_argument('--queue-task-id', help='큐 작업 ID (완료 시 상태 업데이트용)')
     parser.add_argument('--queue-db-path', help='큐 DB 경로')
 
     args = parser.parse_args()
     print(f"--- ARGS: {args} ---", flush=True)
 
-    exit_code = main(args.scenes_file, use_imagefx=args.use_imagefx, output_dir=args.output_dir)
+    exit_code = main(args.scenes_file, use_imagefx=args.use_imagefx, output_dir=args.output_dir, cli_aspect_ratio=args.aspect_ratio)
 
     # 큐 상태 업데이트
     if args.queue_task_id and args.queue_db_path:
