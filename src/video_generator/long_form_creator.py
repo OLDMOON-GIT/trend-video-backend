@@ -351,9 +351,9 @@ class LongFormStoryCreator:
             if 'seq' in scene and scene['seq'] is not None:
                 return (0, scene['seq'])
             # created_at이 있으면 (1, timestamp) - 그 다음
-            elif 'created_at' in scene and scene['created_at']:
+            elif 'created_at' in scene and scene['createdAt']:
                 try:
-                    timestamp = datetime.fromisoformat(scene['created_at'].replace('Z', '+00:00'))
+                    timestamp = datetime.fromisoformat(scene['createdAt'].replace('Z', '+00:00'))
                     return (1, timestamp.timestamp())
                 except:
                     return (2, 0)
@@ -597,7 +597,7 @@ class LongFormStoryCreator:
             if story_data['scenes']:
                 with open(first_scene_path, 'w', encoding='utf-8') as f:
                     first_scene = story_data['scenes'][0]
-                    f.write(f"씬 번호: {first_scene.get('scene_number', 1)}\n")
+                    f.write(f"씬 번호: {first_scene.get('sceneNumber', 1)}\n")
                     f.write(f"제목: {first_scene.get('title', 'N/A')}\n")
                     f.write(f"시간대: {first_scene.get('time_of_day', 'N/A')}\n")
                     f.write(f"장소: {first_scene.get('location', 'N/A')}\n")
@@ -1719,7 +1719,7 @@ JSON만 출력하세요:"""
 {json.dumps(story_data.get('synopsis', {}), ensure_ascii=False, indent=2)}
 
 ## 이 씬 정보
-씬 번호: {scene['scene_number']}/{len(story_data['scenes'])}
+씬 번호: {scene['sceneNumber']}/{len(story_data['scenes'])}
 제목: {scene['title']}
 시간대: {scene.get('time_of_day', 'N/A')}
 장소: {scene.get('location', 'N/A')}
@@ -2214,11 +2214,11 @@ This is Scene {scene_num} with the SAME CHARACTERS. Keep them IDENTICAL."""
 
         # Get visual description (fallback to image_prompt if not available)
         # Note: sora_prompt is for Sora video generation, NOT for image generation
-        visual_desc = scene.get('visual_description', scene.get('image_prompt', ''))
+        visual_desc = scene.get('visual_description', scene.get('imagePrompt', ''))
 
         # sora_prompt만 있고 image_prompt가 없으면, 이 장면의 이미지 생성 건너뜀
         # (sora_prompt는 Sora 직접 비디오 생성용이며, 이미지 생성용이 아님)
-        if not visual_desc and scene.get('sora_prompt'):
+        if not visual_desc and scene.get('soraPrompt'):
             self.logger.info(f"씬 {scene_num}: sora_prompt만 있음 - 이미지 생성 건너뜀 (Sora 비디오 생성 사용)")
             return None, None  # None 반환 = 이미지 생성 안함
 
