@@ -65,6 +65,8 @@ nul
 *.wav
 *.aac
 *.ogg
+# Exception: voice samples for TTS preview
+!voice_samples/*.mp3
 
 # Image files (except sample)
 *.jpg
