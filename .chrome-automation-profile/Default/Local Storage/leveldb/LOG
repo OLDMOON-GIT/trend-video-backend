@@ -1,3 +1,5 @@
-2025/11/26-16:55:10.371 2de1c Reusing MANIFEST C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\Local Storage\leveldb/MANIFEST-000001
-2025/11/26-16:55:10.380 2de1c Recovering log #452
-2025/11/26-16:55:10.385 2de1c Reusing old log C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\Local Storage\leveldb/000452.log 
+2025/11/30-14:22:53.999 20a68 Creating DB C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\Local Storage\leveldb since it was missing.
+2025/11/30-14:22:54.063 20a68 Reusing MANIFEST C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\Local Storage\leveldb/MANIFEST-000001
+2025/11/30-14:24:14.210 24908 Level-0 table #5: started
+2025/11/30-14:24:14.220 24908 Level-0 table #5: 20016 bytes OK
+2025/11/30-14:24:14.224 24908 Delete type=0 #3
