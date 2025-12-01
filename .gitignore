@@ -139,3 +139,4 @@ docs/_build/
 
 # AI response logs (auto-generated)
 src/scripts/
+.chrome-automation-profile/
