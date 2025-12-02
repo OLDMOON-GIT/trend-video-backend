@@ -1,0 +1,80 @@
+{
+  "title": "📝 “잔액이 이게 다예요?” 비아냥 듣던 노인, 통장 내밀자 분위기 급변했다. 2700억...",
+  "version": "shortform-4.0",
+  "metadata": {
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "10-40대 모바일 사용자",
+    "emotional_arc": "훅 → 갈등 → 몰입 → 반전 → 여운 → CTA",
+    "key_themes": [
+      "범죄 스릴러",
+      "심리전",
+      "복수"
+    ],
+    "total_word_count": 650,
+    "estimated_duration_seconds": 95,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "막장드라마",
+    "scriptId": "scene_bank_revenge_270b"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 충격적 시작",
+      "duration_seconds": 5,
+      "word_count": 40,
+      "image_prompt": "Photorealistic professional photograph, Korean bank setting, realistic photography style, DSLR camera, high resolution, Vertical 9:16 format, portrait orientation, shocking moment, close-up of an old man's sinister smile while holding a bank book, blurred bank teller in background looking terrified, cinematic lighting, intense atmosphere, mobile-optimized, NO TEXT",
+      "narration": "\"2,700억을 전액 이체해주세요.\" 직원이 비웃자 노인은 작게 속삭였습니다. \"수취인은, 내 아들을 죽인 놈입니다.\""
+    },
+    {
+      "scene_id": "scene_01_conflict",
+      "scene_name": "갈등 - 상황+갈등 빠르게",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean bank interior, realistic photography style, DSLR camera, Vertical 9:16 format, portrait orientation, tense conflict scene, annoyed young male bank teller pushing back a bank book, shabby old man looking determined, sharp focus on expressions, realistic office lighting, mobile-optimized, NO TEXT",
+      "narration": "\"어르신, 잔액 5천 원뿐이라니까요?\" 직원은 짜증 섞인 목소리로 통장을 거칠게 밀어냈습니다. \"자꾸 이러시면 경찰 부릅니다.\" 노인은 굴하지 않고 품에서 꼬깃꼬깃한 서류 한 장을 더 꺼냈습니다. \"제대로 확인해봐. 내 아들 앞으로 된 사망 보험금이야.\" 직원이 코웃음 쳤습니다. \"아드님은 자살이잖아요.\""
+    },
+    {
+      "scene_id": "scene_02_immersion",
+      "scene_name": "몰입 - 감정 극대화",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean bank VIP room, realistic photography style, Vertical 9:16 format, portrait orientation, psychological horror atmosphere, extreme close-up of the bank teller's sweating face, eyes widening in fear, old man's hand pointing at a name tag, dramatic shadows, high tension, mobile-optimized, NO TEXT",
+      "narration": "\"자살 아니야.\" 노인이 직원의 명찰을 뚫어지게 쳐다봤습니다. '김민수 대리'. \"네가 그 돈, 차명 계좌로 빼돌렸잖아.\" 민수의 얼굴이 순식간에 사색이 되었습니다. 그는 10년 전, 노인의 아들과 동업했던 친구였습니다. 손이 미친 듯이 떨리기 시작했습니다. \"어떻게... 그걸 알고...\""
+    },
+    {
+      "scene_id": "scene_03_twist",
+      "scene_name": "반전 - WTF 예상 못한 전개",
+      "duration_seconds": 20,
+      "word_count": 140,
+      "image_prompt": "Photorealistic professional photograph, Korean bank setting, realistic photography style, Vertical 9:16 format, portrait orientation, plot twist moment, old man holding a black USB drive, bank teller looking defeated and kneeling, dark moody lighting, cinematic composition, shocking revelation vibe, mobile-optimized, NO TEXT",
+      "narration": "노인이 차갑게 웃으며 USB를 꺼냈습니다. \"사고 난 날, 네가 브레이크 오일 건드리는 거 블랙박스에 다 찍혔거든.\" 민수가 다급히 무릎을 꿇으며 빌려 하자 노인이 막아섰습니다. \"신고 안 했어. 감옥 가면 내 돈 못 받잖아?\""
+    },
+    {
+      "scene_id": "scene_04_ending",
+      "scene_name": "여운 + CTA",
+      "duration_seconds": 20,
+      "word_count": 150,
+      "image_prompt": "Photorealistic professional photograph, Korean street view through bank window, realistic photography style, Vertical 9:16 format, portrait orientation, ending scene, old man walking away with a satisfied back view, bank teller slumped on the floor in background, emotional aftermath, bittersweet lighting, mobile-optimized, NO TEXT",
+      "narration": "\"지난 10년간 네가 불린 돈 2,700억. 이자 쳐서 다 내놓으라고 살려둔 거야.\" 노인은 이체 확인증을 챙겨 유유히 사라졌습니다. 민수는 바닥에 주저앉아 오열했습니다. 인간의 탐욕과 소름 돋는 반전 이야기가 더 보고 싶으시다면 구독과 좋아요 부탁드립니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 5,
+    "total_duration": 95,
+    "hook_effectiveness": "strong",
+    "double_twist_structure": true,
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "cta_naturally_integrated": true,
+    "no_moral_preaching": true,
+    "concrete_details": true,
+    "dialogue_rich": true,
+    "unpredictable": true,
+    "emotion_driven": true,
+    "story_arc_complete": true,
+    "realistic_setting": true,
+    "no_cliche_patterns": true
+  }
+}

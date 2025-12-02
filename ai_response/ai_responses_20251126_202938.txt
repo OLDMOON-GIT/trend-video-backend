@@ -1,0 +1,25 @@
+Decoded Korean input and identified user inquiry.
+
+The user is asking "kfWkr ekfmek?" which appears to be Korean typed on an English keyboard. Let me decode this:
+
+kfWkr ekfmek = 뭐하는 거야? (What are you doing?)
+
+This is a casual Korean phrase asking what I'm doing or what this is about. The user seems to be asking about the document they uploaded - it's a comprehensive prompt template for creating product video scripts for YouTube/TikTok in JSON format.
+
+Let me respond naturally in Korean since that's what they're communicating in.
+
+ㅋㅋㅋ 영타로 치셨네요. "뭐하는 거야?"
+
+업로드하신 문서는 Sora2 상품 영상 대본 자동 생성 프롬프트예요. 쿠팡 파트너스용 숏폼 상품 소개 영상 만들 때 쓰는 거죠.
+
+핵심 구성:
+
+4개 씬 구조 (훅 3초 → 문제 9초 → 해결 9초 → CTA 9초)
+JSON 단일 출력 (코드펜스 없이)
+image_prompt (Whisk용 정적) + sora_prompt (Sora2용 시네마틱)
+YouTube 설명란까지 자동 생성
+한국인 캐릭터 + 동일 로케이션 연속성 유지
+
+상품 정보 넣으면 바로 JSON 대본 뽑아주는 시스템 프롬프트인데, 지금 예시로 올린 건 나이키 러닝 글러브네요. 근데 썸네일이랑 상품링크, 상세정보가 비어있어서 실제로 돌리려면 그 정보 채워서 요청하시면 돼요.
+
+상품 정보 채워서 대본 생성할까요?

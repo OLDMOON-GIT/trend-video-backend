@@ -1,9 +1,20 @@
 """
-AI Aggregator Package
-여러 AI (Claude, ChatGPT, Gemini, Grok)에 동시에 질문하고 답변을 수집
+AI Aggregator package
+- Provides helpers to run multiple AI agents and collect responses.
 """
 
-from .main import main, interactive_mode
+# Avoid eagerly importing main to prevent runpy RuntimeWarning when
+# executing `python -m src.ai_aggregator.main`.
+def main(*args, **kwargs):
+    from .main import main as _main
+    return _main(*args, **kwargs)
+
+
+def interactive_mode(*args, **kwargs):
+    from .main import interactive_mode as _interactive_mode
+    return _interactive_mode(*args, **kwargs)
+
+
 from .aggregator import ResponseAggregator
 from .queue_manager import QueueManager
 

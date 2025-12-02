@@ -58,6 +58,8 @@ def cmd_upload(args):
             privacy_status=metadata_dict.get("privacy_status", "unlisted"),
             publish_at=metadata_dict.get("publish_at"),
         )
+        # ✅ pinned_comment 필드 별도 저장
+        pinned_comment = metadata_dict.get("pinned_comment")
     except Exception as e:
         print(json.dumps({"success": False, "error": f"메타데이터 로드 실패: {e}"}))
         return 1
@@ -80,15 +82,30 @@ def cmd_upload(args):
     )
 
     if result.success:
-        # 고정댓글 추가 (설명과 동일한 내용)
+        # ✅ 고정댓글 추가 (pinned_comment 우선, 없으면 description 사용)
         comment_added = False
-        if result.video_id and metadata.description:
+        comment_text = pinned_comment if pinned_comment else metadata.description
+
+        # 디버그 로그
+        print(f"[DEBUG] video_id: {result.video_id}")
+        print(f"[DEBUG] pinned_comment 길이: {len(pinned_comment) if pinned_comment else 0}")
+        print(f"[DEBUG] metadata.description 길이: {len(metadata.description) if metadata.description else 0}")
+        print(f"[DEBUG] comment_text 길이: {len(comment_text) if comment_text else 0}")
+
+        if result.video_id and comment_text:
             try:
-                comment_added = uploader.add_pinned_comment(result.video_id, metadata.description)
+                print(f"[INFO] 댓글 추가 시도 중... (텍스트 길이: {len(comment_text)}자)")
+                comment_added = uploader.add_pinned_comment(result.video_id, comment_text)
                 if comment_added:
+                    print(f"[INFO] 댓글 추가 완료")
+                    print(f"[INFO] 채널 소유자 댓글은 자동으로 상단에 표시됩니다")
                     print(f"[INFO] 고정댓글 추가 완료")
+                else:
+                    print(f"[WARN] 댓글 추가 실패 (add_pinned_comment returned False)")
             except Exception as e:
                 print(f"[WARN] 고정댓글 추가 실패 (업로드는 성공): {e}")
+        else:
+            print(f"[WARN] 댓글 추가 조건 불충족 - video_id={bool(result.video_id)}, comment_text={bool(comment_text)}")
 
         print(json.dumps({
             "success": True,
@@ -102,9 +119,28 @@ def cmd_upload(args):
         return 1
 
 
+def cmd_delete(args):
+    """비디오 삭제"""
+    uploader = YouTubeUploader(
+        credentials_path=Path(args.credentials),
+        token_path=Path(args.token)
+    )
+
+    if not uploader.authenticate():
+        print(json.dumps({"success": False, "error": "인증 실패"}))
+        return 1
+
+    if uploader.delete_video(args.video_id):
+        print(json.dumps({"success": True, "message": "비디오 삭제 완료"}))
+        return 0
+    else:
+        print(json.dumps({"success": False, "error": "비디오 삭제 실패"}))
+        return 1
+
+
 def main():
     parser = argparse.ArgumentParser(description="YouTube 업로드 CLI")
-    parser.add_argument("--action", required=True, choices=["auth", "channel-info", "upload"])
+    parser.add_argument("--action", required=True, choices=["auth", "channel-info", "upload", "delete"])
     parser.add_argument("--credentials", default="config/youtube_client_secret.json")
     parser.add_argument("--token", default="config/youtube_token.json")
     parser.add_argument("--video", help="비디오 파일 경로")
@@ -112,6 +148,7 @@ def main():
     parser.add_argument("--thumbnail", help="썸네일 이미지")
     parser.add_argument("--captions", help="자막 파일")
     parser.add_argument("--cancel-flag", help="취소 플래그 파일 경로")
+    parser.add_argument("--video-id", help="삭제할 비디오 ID")
     args = parser.parse_args()
 
     if args.action == "auth":
@@ -123,6 +160,11 @@ def main():
             print(json.dumps({"success": False, "error": "--video와 --metadata 필수"}))
             return 1
         return cmd_upload(args)
+    elif args.action == "delete":
+        if not args.video_id:
+            print(json.dumps({"success": False, "error": "--video-id 필수"}))
+            return 1
+        return cmd_delete(args)
 
 
 if __name__ == "__main__":

@@ -60,58 +60,18 @@ class YouTubeUploader:
 
             if not creds or not creds.valid:
                 if creds and creds.expired and creds.refresh_token:
+                    # 토큰 갱신
                     creds.refresh(Request())
+                    # 갱신된 토큰 저장
+                    self.token_path.parent.mkdir(parents=True, exist_ok=True)
+                    self.token_path.write_text(creds.to_json(), encoding="utf-8")
                 else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        str(self.credentials_path), SCOPES
-                    )
-                    # OAuth 완료 후 창을 닫고 opener 새로고침
-                    success_html = '''
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>YouTube 연결 완료</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #1e293b; color: white; }
-                            .container { max-width: 500px; margin: 0 auto; }
-                            h1 { color: #10b981; margin-bottom: 20px; }
-                            p { font-size: 18px; margin: 20px 0; }
-                            .spinner { border: 4px solid #374151; border-top: 4px solid #8b5cf6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-                            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <h1>✅ YouTube 채널 연결 성공!</h1>
-                            <p>인증이 완료되었습니다.</p>
-                            <div class="spinner"></div>
-                            <p>이 창은 자동으로 닫힙니다...</p>
-                        </div>
-                        <script>
-                            // opener가 있으면 (새 창으로 열린 경우) opener 새로고침 후 창 닫기
-                            if (window.opener) {
-                                window.opener.location.reload();
-                                setTimeout(function() {
-                                    window.close();
-                                }, 1000);
-                            } else {
-                                // opener가 없으면 (직접 접근한 경우) 리디렉션
-                                setTimeout(function() {
-                                    window.location.href = 'http://localhost:3000/settings/youtube?success=true';
-                                }, 2000);
-                            }
-                        </script>
-                    </body>
-                    </html>
-                    '''
-                    creds = flow.run_local_server(
-                        port=0,
-                        success_message=success_html,
-                        open_browser=True
-                    )
-
-                self.token_path.parent.mkdir(parents=True, exist_ok=True)
-                self.token_path.write_text(creds.to_json(), encoding="utf-8")
+                    # ✅ BTS-0000024: 웹 앱 OAuth 사용 (run_local_server 제거)
+                    # 토큰이 없거나 만료된 경우 웹에서 인증 필요
+                    print("[ERROR] YouTube 토큰이 없거나 만료되었습니다.")
+                    print("[INFO] 웹 애플리케이션(http://localhost:2000)에서 YouTube 채널을 연결해주세요.")
+                    print("[INFO] 설정 > YouTube 채널 > '채널 추가' 버튼을 클릭하세요.")
+                    return False
 
             self.youtube = build("youtube", "v3", credentials=creds)
             return True
@@ -405,4 +365,27 @@ class YouTubeUploader:
             return False
         except Exception as e:
             print(f"[ERROR] 댓글 추가 중 오류: {e}")
+            return False
+
+    def delete_video(self, video_id: str) -> bool:
+        """YouTube 비디오 삭제"""
+        try:
+            if not self.youtube:
+                print("[ERROR] 인증이 필요합니다")
+                return False
+
+            if not video_id:
+                print("[ERROR] video_id가 필요합니다")
+                return False
+
+            print(f"[INFO] YouTube 비디오 삭제 시작: {video_id}")
+            self.youtube.videos().delete(id=video_id).execute()
+            print(f"[INFO] YouTube 비디오 삭제 완료: {video_id}")
+            return True
+
+        except HttpError as e:
+            print(f"[ERROR] 비디오 삭제 실패: {e}")
+            return False
+        except Exception as e:
+            print(f"[ERROR] 비디오 삭제 중 오류: {e}")
             return False

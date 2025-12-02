@@ -13,7 +13,7 @@ from PIL import Image, ImageOps
 import io
 from tqdm import tqdm
 import time
-n# 공통 유틸리티 모듈 import
+# 공통 유틸리티 모듈 import
 from app.utils import (
     get_ffmpeg_path,
     get_video_duration,

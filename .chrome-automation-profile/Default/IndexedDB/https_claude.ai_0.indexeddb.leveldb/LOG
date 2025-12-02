@@ -1,33 +1,5 @@
-2025/11/30-14:24:09.278 20180 Reusing MANIFEST C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\IndexedDB\https_claude.ai_0.indexeddb.leveldb/MANIFEST-000001
-2025/11/30-14:24:09.280 20180 Recovering log #3
-2025/11/30-14:24:09.281 20180 Reusing old log C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\IndexedDB\https_claude.ai_0.indexeddb.leveldb/000003.log 
-2025/11/30-14:24:09.289 247bc Level-0 table #5: started
-2025/11/30-14:24:09.294 247bc Level-0 table #5: 1572 bytes OK
-2025/11/30-14:24:09.300 247bc Delete type=0 #3
-2025/11/30-14:24:09.300 247bc Manual compaction at level-0 from '\x00\x02\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x03\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/11/30-14:24:09.304 247bc Level-0 table #7: started
-2025/11/30-14:24:09.310 247bc Level-0 table #7: 660 bytes OK
-2025/11/30-14:24:09.314 247bc Delete type=0 #4
-2025/11/30-14:24:09.315 247bc Manual compaction at level-0 from '\x00\x03\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x04\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/11/30-14:24:09.498 247bc Level-0 table #9: started
-2025/11/30-14:24:09.503 247bc Level-0 table #9: 1654 bytes OK
-2025/11/30-14:24:09.506 247bc Delete type=0 #6
-2025/11/30-14:24:09.507 5fe4 Manual compaction at level-0 from '\x00\x05\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x06\x00\x00\x00' @ 0 : 0; will stop at '\x00\x05\x00\x00\x05' @ 149 : 1
-2025/11/30-14:24:09.507 5fe4 Compacting 1@0 + 1@1 files
-2025/11/30-14:24:09.511 5fe4 Generated table #10@0: 44 keys, 1261 bytes
-2025/11/30-14:24:09.511 5fe4 Compacted 1@0 + 1@1 files => 1261 bytes
-2025/11/30-14:24:09.513 5fe4 compacted to: files[ 0 1 1 0 0 0 0 ]
-2025/11/30-14:24:09.514 5fe4 Delete type=2 #9
-2025/11/30-14:24:09.514 5fe4 Manual compaction at level-0 from '\x00\x05\x00\x00\x05' @ 149 : 1 .. '\x00\x06\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/11/30-14:24:09.631 247bc Level-0 table #12: started
-2025/11/30-14:24:09.635 247bc Level-0 table #12: 660 bytes OK
-2025/11/30-14:24:09.639 247bc Delete type=2 #7
-2025/11/30-14:24:09.639 247bc Delete type=0 #8
-2025/11/30-14:24:09.639 247bc Manual compaction at level-0 from '\x00\x06\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x07\x00\x00\x00' @ 0 : 0; will stop at '\x00\x06\x00\x00\x05' @ 168 : 1
-2025/11/30-14:24:09.640 247bc Compacting 1@0 + 1@1 files
-2025/11/30-14:24:09.643 247bc Generated table #13@0: 48 keys, 1285 bytes
-2025/11/30-14:24:09.643 247bc Compacted 1@0 + 1@1 files => 1285 bytes
-2025/11/30-14:24:09.646 247bc compacted to: files[ 0 1 1 0 0 0 0 ]
-2025/11/30-14:24:09.647 247bc Delete type=2 #12
-2025/11/30-14:24:09.647 20180 Manual compaction at level-0 from '\x00\x06\x00\x00\x05' @ 168 : 1 .. '\x00\x07\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/11/30-14:24:11.460 17de0 Manual compaction at level-0 from '\x00\x07\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x08\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/12/02-18:12:30.521 1a478 Reusing MANIFEST C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\IndexedDB\https_claude.ai_0.indexeddb.leveldb/MANIFEST-000001
+2025/12/02-18:12:30.522 1a478 Recovering log #295
+2025/12/02-18:12:30.523 1a478 Reusing old log C:\Users\oldmoon\workspace\trend-video-backend\.chrome-automation-profile\Default\IndexedDB\https_claude.ai_0.indexeddb.leveldb/000295.log 
+2025/12/02-18:12:30.523 1a478 Delete type=2 #294
+2025/12/02-18:12:30.533 93e4 Manual compaction at level-0 from '\x00\x84\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x85\x00\x00\x00' @ 0 : 0; will stop at (end)

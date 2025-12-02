@@ -1,0 +1,1 @@
+SKILL.md 파일을 확인하여 best practices 확인

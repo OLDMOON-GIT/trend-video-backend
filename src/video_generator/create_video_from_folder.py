@@ -147,12 +147,13 @@ class VideoFromFolderCreator:
     """story.json과 이미지로 영상을 생성하는 클래스"""
 
     def __init__(self, folder_path: str, voice: str = "ko-KR-SoonBokNeural",
-                 aspect_ratio: str = "16:9", add_subtitles: bool = False,
+                 speed: float = 1.0, aspect_ratio: str = "16:9", add_subtitles: bool = False,
                  image_source: str = "none", image_provider: str = "openai", is_admin: bool = False):
         """
         Args:
             folder_path: story.json과 이미지가 있는 폴더 경로
             voice: TTS 음성 (기본: ko-KR-SoonBokNeural)
+            speed: TTS 속도 (기본: 1.0)
             aspect_ratio: 비디오 비율 (기본: 16:9)
             add_subtitles: 자막 추가 여부 (기본: False)
             image_source: 이미지 소스 ("none", "dalle", "imagen3")
@@ -163,6 +164,7 @@ class VideoFromFolderCreator:
 
         # TTS 제공자 결정
         self.voice = voice
+        self.speed = speed
         if voice.startswith('google-'):
             self.tts_provider = 'google'
             if not GOOGLE_TTS_AVAILABLE:
@@ -1522,8 +1524,10 @@ Return ONLY the refined prompt without any explanation or additional text."""
         # ============================================================
 
         # Edge TTS로 생성하면서 타임스탬프 수집
-        # rate: -15%로 설정하여 약간 천천히 말하게 함
-        communicate = edge_tts.Communicate(tts_text, self.voice, rate='-15%')
+        # speed에 따라 rate 설정 (1.0 = +0%, 1.2 = +20%, 0.8 = -20%)
+        rate_percent = int((self.speed - 1.0) * 100)
+        rate_str = f"{rate_percent:+d}%" if rate_percent != 0 else "+0%"
+        communicate = edge_tts.Communicate(tts_text, self.voice, rate=rate_str)
 
         word_timings = []
         sentence_timings = []
@@ -1654,8 +1658,10 @@ Return ONLY the refined prompt without any explanation or additional text."""
         for idx, chunk in enumerate(chunks):
             logger.info(f"[CHUNKED TTS] 청크 {idx+1}/{len(chunks)} 처리 중... ({len(chunk)}자)")
 
-            # Edge TTS 생성
-            communicate = edge_tts.Communicate(chunk, self.voice, rate='-15%')
+            # Edge TTS 생성 (speed에 따라 rate 설정)
+            rate_percent = int((self.speed - 1.0) * 100)
+            rate_str = f"{rate_percent:+d}%" if rate_percent != 0 else "+0%"
+            communicate = edge_tts.Communicate(chunk, self.voice, rate=rate_str)
 
             word_timings = []
             audio_data = b""
@@ -2557,7 +2563,6 @@ Return ONLY the refined prompt without any explanation or additional text."""
         # 1단계: TTS 생성 (병렬 처리)
         logger.info("=" * 70)
         logger.info("1단계: TTS 음성 생성 (병렬 처리)")
-        logger.info("=" * 70)
 
         tts_tasks = []
         scene_data_list = []
@@ -2650,7 +2655,6 @@ Return ONLY the refined prompt without any explanation or additional text."""
         # 3단계: 비디오 생성 + 자막 추가 (병렬 처리)
         logger.info("=" * 70)
         logger.info("3단계: 비디오 생성 및 자막 추가")
-        logger.info("=" * 70)
 
         # 인코더 정보 표시
         encoder_type = "GPU 가속" if self.video_codec != 'libx264' else "CPU"
@@ -2661,7 +2665,6 @@ Return ONLY the refined prompt without any explanation or additional text."""
         cpu_count = multiprocessing.cpu_count()
         max_workers = max(2, min(3, (cpu_count * 3) // 4))
         logger.info(f"⚡ 병렬 처리: {max_workers}개 워커 (CPU 코어: {cpu_count}개)")
-        logger.info("=" * 70)
 
         scene_videos = []
         all_narrations = []
@@ -3317,6 +3320,8 @@ def main():
     parser.add_argument("--folder", "-f", required=True, help="story.json과 이미지가 있는 폴더 경로")
     parser.add_argument("--voice", "-v", default="ko-KR-SoonBokNeural",
                        help="TTS 음성 (기본: ko-KR-SoonBokNeural)")
+    parser.add_argument("--speed", type=float, default=1.0,
+                       help="TTS 속도 (기본: 1.0)")
     parser.add_argument("--aspect-ratio", "-a", default="9:16", choices=["9:16", "16:9"],
                        help="비디오 비율 (기본: 9:16)")
     parser.add_argument("--add-subtitles", "-s", action="store_true", default=True,
@@ -3350,7 +3355,6 @@ def main():
 
     print("=" * 70)
     print("VideoFromFolder Creator")
-    print("=" * 70)
     if args.task_id:
         print(f"🆔 Task ID: {args.task_id}")
     print(f"폴더: {args.folder}")
@@ -3364,6 +3368,7 @@ def main():
     creator = VideoFromFolderCreator(
         folder_path=args.folder,
         voice=args.voice,
+        speed=args.speed,
         aspect_ratio=args.aspect_ratio,
         add_subtitles=args.add_subtitles,
         image_source=args.image_source,
@@ -3377,7 +3382,6 @@ def main():
     if result:
         print("=" * 70)
         print("✓ 성공!")
-        print("=" * 70)
         if args.task_id:
             print(f"🆔 Task ID: {args.task_id}")
         print(f"출력: {result}")

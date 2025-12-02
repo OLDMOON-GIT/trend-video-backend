@@ -1,0 +1,77 @@
+{
+  "title": "도시로 간 자녀들이 10년간 재산을 물려받았다, 숨겨진 비밀",
+  "version": "shortform-4.0",
+  "metadata": {
+    "promptFormat": "shortform",
+    "genre": "숏폼 (쇼츠/릴스/틱톡)",
+    "format": "세로형 9:16",
+    "target_audience": "20-40대 모바일 사용자",
+    "emotional_arc": "환희 → 기대 → 충격 → 공포 → 절망",
+    "key_themes": ["탐욕", "불법폐기물", "현실적공포"],
+    "total_word_count": 650,
+    "estimated_duration_seconds": 95,
+    "aspect_ratio": "9:16 (portrait)",
+    "category": "미스터리/스릴러",
+    "scriptId": "scene_inheritance_waste_001"
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_00_hook",
+      "scene_name": "훅 - 충격적 시작",
+      "duration_seconds": 5,
+      "word_count": 40,
+      "image_prompt": "Photorealistic professional photograph, Korean man in his 30s, realistic photography style, DSLR camera, high resolution, natural skin texture, Vertical 9:16 format, portrait orientation, screaming in horror while holding a paper document, chaotic background with garbage blurred, centered subject, vibrant saturated colors, high contrast lighting, extreme emotional expression, mobile-optimized, NO TEXT",
+      "narration": "\"아버지가 남긴 유산, 100억 대 땅.\" 저는 등기 권리증을 품에 안고 춤을 췄습니다. 하지만 그게 지옥행 티켓이었습니다."
+    },
+    {
+      "scene_id": "scene_01_conflict",
+      "scene_name": "갈등 - 상황과 기대",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean countryside scenery vs Seoul city life split or transition, realistic photography style, DSLR camera, high resolution, Vertical 9:16 format, portrait orientation, father talking on phone in rural setting holding cash, son in city suit looking happy, distinct contrast between rustic and modern, warm lighting for father scene, subject filling vertical frame, mobile-friendly scale, NO TEXT",
+      "narration": "\"아들아, 땅 샀다. 나중에 다 네 거야.\" 아버지는 매달 사진을 보냈습니다. 푸른 과수원이었죠. \"아버지, 제가 나중에 크게 효도할게요!\" 저는 서울에서 친구들에게 자랑했습니다. \"야, 나 내려가면 건물주야.\" 아버지는 돈을 보내주시며 \"절대 내려오지 말고 본업에 충실해라\"고만 하셨습니다. 저는 그 말을 철석같이 믿었습니다."
+    },
+    {
+      "scene_id": "scene_02_immersion",
+      "scene_name": "몰입 - 현장 방문",
+      "duration_seconds": 25,
+      "word_count": 160,
+      "image_prompt": "Photorealistic professional photograph, Korean man driving luxury car, realistic photography style, DSLR camera, high resolution, Vertical 9:16 format, portrait orientation, view through windshield of a car on a rough dirt road, tension building, hands gripping steering wheel tightly, dusty atmosphere, foreshadowing danger, clear focal point, cinematic lighting, mobile-optimized, NO TEXT",
+      "narration": "장례식이 끝나자마자 그 땅으로 달려갔습니다. 심장이 터질 것 같았어요. '여기다 카페를 지을까? 펜션을 할까?' 상상만으로도 행복했습니다. 내비게이션이 종료되었습니다. 차 문을 열고 내리는데, 역겨운 썩은 냄새가 코를 찔렀습니다. 눈앞에 펼쳐진 건... 사진 속 그 푸른 과수원이 아니었습니다."
+    },
+    {
+      "scene_id": "scene_03_twist",
+      "scene_name": "반전 - 쓰레기 산과 공범",
+      "duration_seconds": 20,
+      "word_count": 140,
+      "image_prompt": "Photorealistic professional photograph, mountain of garbage and waste, realistic photography style, DSLR camera, high resolution, Vertical 9:16 format, portrait orientation, government officials or police confronting the man, shocked expression, dramatic revelation, harsh lighting, gritty texture, realistic environment details, mobile-optimized, NO TEXT",
+      "narration": "끝도 없는 쓰레기 산이었습니다. \"당신이 아들이야?\" 공무원들이 들이닥쳤습니다. \"아버지가 10년간 불법 폐기물을 매립하고 기업들에게 뒷돈을 챙겼습니다.\" \"네? 전 몰랐어요!\" \"몰랐다고? 매달 당신 계좌로 입금된 300만 원, 그게 폐기물 관리 명목이었습니다.\""
+    },
+    {
+      "scene_id": "scene_04_ending",
+      "scene_name": "여운 + CTA",
+      "duration_seconds": 20,
+      "word_count": 150,
+      "image_prompt": "Photorealistic professional photograph, Korean man in despair, realistic photography style, DSLR camera, high resolution, Vertical 9:16 format, portrait orientation, hands handcuffed behind back, looking at the pile of trash, sunset lighting creating long shadows, melancholic and hopeless atmosphere, strong visual storytelling, mobile-optimized, NO TEXT",
+      "narration": "제 통장은 범죄 수익 은닉 계좌로 즉시 동결되었습니다. 아버지가 물려준 건 100억 대 땅이 아니라, 치워야 할 쓰레기 20만 톤과 벌금 50억, 그리고 전과자라는 꼬리표였습니다. 억울함에 눈물이 났지만 수갑은 차가웠습니다. 소름 돋는 현실 반전 이야기가 더 궁금하다면 구독과 좋아요 부탁드립니다."
+    }
+  ],
+  "quality_check": {
+    "word_count_pass": true,
+    "scene_count": 5,
+    "total_duration": 95,
+    "hook_effectiveness": "strong",
+    "double_twist_structure": true,
+    "vertical_format_optimized": true,
+    "mobile_friendly": true,
+    "cta_naturally_integrated": true,
+    "no_moral_preaching": true,
+    "concrete_details": true,
+    "dialogue_rich": true,
+    "unpredictable": true,
+    "emotion_driven": true,
+    "story_arc_complete": true,
+    "realistic_setting": true,
+    "no_cliche_patterns": true
+  }
+}
