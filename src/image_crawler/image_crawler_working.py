@@ -1910,14 +1910,17 @@ def download_images(driver, images, output_folder, scenes):
     print(f"\n✅ 다운로드 완료: 총 {downloaded_count}/{len(scenes)}개 파일 저장됨.", flush=True)
     return downloaded_count
 
-def main(scenes_json_file, use_imagefx=False, output_dir=None, cli_aspect_ratio=None):
+def main(scenes_json_file, use_imagefx=False, use_flow=False, output_dir=None, cli_aspect_ratio=None):
     """메인 실행 함수
 
     Args:
         cli_aspect_ratio: 커맨드라인에서 전달된 비율 (최우선, 16:9 또는 9:16)
+        use_flow: Flow로 이미지 생성 (BTS-0000034)
     """
     print("=" * 80, flush=True)
-    if use_imagefx:
+    if use_flow:
+        print("🚀 Flow 자동화 시작 (BTS-0000034)", flush=True)
+    elif use_imagefx:
         print("🚀 ImageFX + Whisk 자동화 시작", flush=True)
     else:
         print("🚀 Whisk 자동화 시작", flush=True)
@@ -2012,8 +2015,19 @@ def main(scenes_json_file, use_imagefx=False, output_dir=None, cli_aspect_ratio=
     try:
         driver = setup_chrome_driver()
 
+        # BTS-0000034: Flow 모드 (TODO: 실제 구현 필요)
+        if use_flow:
+            print("⚠️ Flow 모드는 아직 구현되지 않았습니다.", flush=True)
+            print("📋 구현 예정: https://labs.google/fx/ko/tools/flow/project/", flush=True)
+            print("💡 현재는 Whisk 모드로 진행합니다...", flush=True)
+            # TODO: Flow UI 자동화 로직 추가
+            # 1. driver.get('https://labs.google/fx/ko/tools/flow/project/')
+            # 2. Flow 프롬프트 입력 및 이미지 생성
+            # 3. 이미지 다운로드
+            pass  # 일단 Whisk와 동일하게 진행
+
         # ImageFX 사용 시 첫 이미지 생성 및 업로드
-        if use_imagefx:
+        if use_imagefx and not use_flow:
             # 백업 처리 (ImageFX+Whisk 모드, 이미지 생성 전에 실행)
             backup_folder = os.path.join(output_folder, 'backup')
             backup_files = []
@@ -2919,6 +2933,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='이미지 크롤링 자동화')
     parser.add_argument('scenes_file', help='씬 데이터 JSON 파일')
     parser.add_argument('--use-imagefx', action='store_true', help='ImageFX로 첫 이미지 생성')
+    parser.add_argument('--use-flow', action='store_true', help='Flow로 이미지 생성 (BTS-0000034)')
     parser.add_argument('--output-dir', help='이미지를 저장할 기본 디렉토리 (지정하지 않으면 scenes_file 경로 기준)')
     parser.add_argument('--aspect-ratio', help='이미지 비율 (16:9 또는 9:16)')
     parser.add_argument('--queue-task-id', help='큐 작업 ID (완료 시 상태 업데이트용)')
@@ -2927,7 +2942,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(f"--- ARGS: {args} ---", flush=True)
 
-    exit_code = main(args.scenes_file, use_imagefx=args.use_imagefx, output_dir=args.output_dir, cli_aspect_ratio=args.aspect_ratio)
+    # BTS-0000034: use_flow 파라미터 추가
+    exit_code = main(args.scenes_file, use_imagefx=args.use_imagefx, use_flow=args.use_flow, output_dir=args.output_dir, cli_aspect_ratio=args.aspect_ratio)
 
     # 큐 상태 업데이트
     if args.queue_task_id and args.queue_db_path:
