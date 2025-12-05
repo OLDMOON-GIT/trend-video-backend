@@ -8,6 +8,8 @@ from playwright.async_api import async_playwright
 from colorama import Fore, Style, init
 import os
 import pathlib
+import subprocess
+import time
 
 init(autoreset=True)
 
@@ -48,6 +50,7 @@ async def setup_login(agents_list: list = None):
             os.path.join(automation_profile, 'SingletonSocket'),
             os.path.join(automation_profile, 'lockfile'),
         ]
+        lock_remove_failed = False
         for lock_file in lock_files:
             try:
                 if os.path.exists(lock_file):
@@ -55,6 +58,18 @@ async def setup_login(agents_list: list = None):
                     print(f"{Fore.YELLOW}[INFO] Removed stale lock file: {os.path.basename(lock_file)}{Style.RESET_ALL}")
             except Exception as e:
                 print(f"{Fore.YELLOW}[WARN] Could not remove lock file {lock_file}: {e}{Style.RESET_ALL}")
+                lock_remove_failed = True
+
+        # BTS-3156: lockfile 삭제 실패 = 다른 프로세스(main.py)가 이미 Chrome 프로필 사용 중
+        # 이 경우 새 브라우저를 열지 않고 종료하여 TargetClosedError 방지
+        if lock_remove_failed:
+            print(f"\n{Fore.YELLOW}{'='*60}{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}[INFO] Chrome 프로필이 이미 다른 프로세스에서 사용 중입니다.{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}[INFO] 이미 열려 있는 Chrome 브라우저 창에서 직접 로그인해주세요.{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}[INFO] 로그인 완료 후 자동화가 재개됩니다.{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}{'='*60}{Style.RESET_ALL}\n")
+            # 새 브라우저를 열지 않고 정상 종료 (exit code 0으로 에러 방지)
+            return
 
         print(f"{Fore.YELLOW}[INFO] 프로젝트 루트: {project_root}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}[INFO] Chrome 프로필 경로: {automation_profile}{Style.RESET_ALL}")
@@ -62,51 +77,122 @@ async def setup_login(agents_list: list = None):
 
         print(f"{Fore.YELLOW}[INFO] Launching Chrome...{Style.RESET_ALL}")
 
-        try:
-            context = await p.chromium.launch_persistent_context(
-                automation_profile,
-                headless=False,
-                channel='chrome',
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--no-first-run',
-                    '--no-default-browser-check',
-                    '--disable-features=IsolateOrigins,site-per-process',
-                    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-                ],
-                accept_downloads=True,
-                timeout=60000,  # 60 second timeout
-            )
+        # BTS-3149, BTS-3170: 재시도 로직 강화 - TargetClosedError 대응 (exponential backoff 적용)
+        max_launch_retries = 3
+        context = None
+        last_launch_error = None
 
-            # Remove navigator.webdriver flag
-            await context.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                });
-            """)
-        except Exception as e:
-            print(f"{Fore.RED}[ERROR] Could not launch Chrome: {e}{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}[INFO] Trying with Chromium instead...{Style.RESET_ALL}")
-            context = await p.chromium.launch_persistent_context(
-                automation_profile,
-                headless=False,
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--no-first-run',
-                    '--no-default-browser-check',
-                    '--disable-features=IsolateOrigins,site-per-process',
-                    '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-                ],
-                accept_downloads=True,
-                timeout=60000,
-            )
+        for launch_attempt in range(max_launch_retries):
+            try:
+                if launch_attempt > 0:
+                    # BTS-3149: exponential backoff (2초, 4초, 8초...)
+                    wait_time = 2 * (2 ** launch_attempt)
+                    print(f"{Fore.YELLOW}[INFO] 브라우저 실행 재시도 ({launch_attempt + 1}/{max_launch_retries}), {wait_time}초 대기...{Style.RESET_ALL}")
+                    time.sleep(wait_time)
 
-            # Remove navigator.webdriver flag
-            await context.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                });
-            """)
+                    # 재시도 전 lock 파일 다시 정리
+                    for lock_file in lock_files:
+                        try:
+                            if os.path.exists(lock_file):
+                                os.remove(lock_file)
+                                print(f"{Fore.GREEN}[INFO] 재시도 시 잠금 파일 제거: {os.path.basename(lock_file)}{Style.RESET_ALL}")
+                        except:
+                            pass
+
+                    # 재시도 전 Chrome 프로세스 정리 추가
+                    try:
+                        subprocess.run(
+                            ['powershell', '-Command',
+                             "Get-Process chrome -ErrorAction SilentlyContinue | Where-Object {$_.CommandLine -like '*chrome-automation-profile*'} | Stop-Process -Force -ErrorAction SilentlyContinue"],
+                            capture_output=True, timeout=10
+                        )
+                        time.sleep(1)  # 프로세스 종료 대기
+                    except:
+                        pass
+
+                print(f"{Fore.CYAN}[INFO] Chrome 브라우저 실행 시도 (channel='chrome')...{Style.RESET_ALL}")
+                context = await p.chromium.launch_persistent_context(
+                    automation_profile,
+                    headless=False,
+                    channel='chrome',
+                    args=[
+                        '--disable-blink-features=AutomationControlled',
+                        '--no-first-run',
+                        '--no-default-browser-check',
+                        '--disable-features=IsolateOrigins,site-per-process',
+                        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                    ],
+                    accept_downloads=True,
+                    timeout=60000,
+                )
+                # Remove navigator.webdriver flag
+                await context.add_init_script("""
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    });
+                """)
+                print(f"{Fore.GREEN}[INFO] ✅ Chrome 브라우저 실행 성공!{Style.RESET_ALL}")
+                break  # 성공 시 루프 탈출
+
+            except Exception as e:
+                error_str = str(e)
+                last_launch_error = e
+
+                # "Target page, context or browser has been closed" 에러 체크
+                if "has been closed" in error_str or "closed" in error_str.lower():
+                    print(f"{Fore.RED}[ERROR] 브라우저가 예기치 않게 종료됨: {error_str}{Style.RESET_ALL}")
+                    if launch_attempt < max_launch_retries - 1:
+                        print(f"{Fore.YELLOW}[INFO] 브라우저 프로세스 정리 후 재시도합니다...{Style.RESET_ALL}")
+                        try:
+                            subprocess.run(
+                                ['powershell', '-Command',
+                                 "Get-Process chrome -ErrorAction SilentlyContinue | Where-Object {$_.CommandLine -like '*chrome-automation-profile*'} | Stop-Process -Force -ErrorAction SilentlyContinue"],
+                                capture_output=True, timeout=10
+                            )
+                        except:
+                            pass
+                        continue  # 재시도
+                    else:
+                        print(f"{Fore.RED}[ERROR] 브라우저 실행 재시도 횟수 초과.{Style.RESET_ALL}")
+
+                # Chrome 실행 실패 시 Chromium으로 대체 시도
+                print(f"{Fore.RED}[ERROR] Could not launch Chrome: {e}{Style.RESET_ALL}")
+                print(f"{Fore.YELLOW}[INFO] Trying with Chromium instead...{Style.RESET_ALL}")
+                try:
+                    context = await p.chromium.launch_persistent_context(
+                        automation_profile,
+                        headless=False,
+                        args=[
+                            '--disable-blink-features=AutomationControlled',
+                            '--no-first-run',
+                            '--no-default-browser-check',
+                            '--disable-features=IsolateOrigins,site-per-process',
+                            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                        ],
+                        accept_downloads=True,
+                        timeout=60000,
+                    )
+                    # Remove navigator.webdriver flag
+                    await context.add_init_script("""
+                        Object.defineProperty(navigator, 'webdriver', {
+                            get: () => undefined
+                        });
+                    """)
+                    print(f"{Fore.GREEN}[INFO] ✅ Chromium 브라우저 실행 성공!{Style.RESET_ALL}")
+                    break  # Chromium 성공 시 루프 탈출
+                except Exception as e2:
+                    chromium_error = str(e2)
+                    if "has been closed" in chromium_error or "closed" in chromium_error.lower():
+                        print(f"{Fore.RED}[ERROR] Chromium도 예기치 않게 종료됨: {chromium_error}{Style.RESET_ALL}")
+                        if launch_attempt < max_launch_retries - 1:
+                            continue  # 재시도
+                    last_launch_error = e2
+                    if launch_attempt == max_launch_retries - 1:
+                        print(f"{Fore.RED}[ERROR] Could not launch Chromium either: {e2}{Style.RESET_ALL}")
+                        raise e2
+
+        if context is None:
+            raise Exception(f"Failed to launch browser after {max_launch_retries} attempts: {last_launch_error}")
 
         # Open all AI services in tabs
         pages = []
@@ -117,19 +203,12 @@ async def setup_login(agents_list: list = None):
                 page = await context.new_page()
 
                 # Try to load page with retries
-                max_retries = 3
-                for attempt in range(max_retries):
-                    try:
-                        print(f"{Fore.YELLOW}  [Attempt {attempt + 1}/{max_retries}] Loading {url}...{Style.RESET_ALL}")
-                        await page.goto(url, wait_until='load', timeout=60000)
-                        print(f"{Fore.GREEN}  [SUCCESS] {agent_name.upper()} loaded successfully{Style.RESET_ALL}")
-                        break
-                    except Exception as e:
-                        if attempt < max_retries - 1:
-                            print(f"{Fore.YELLOW}  [WARNING] Loading failed, retrying... ({e}){Style.RESET_ALL}")
-                            await asyncio.sleep(3)
-                        else:
-                            print(f"{Fore.RED}  [ERROR] {agent_name.upper()} failed to load (please login manually): {e}{Style.RESET_ALL}")
+                try:
+                    print(f"{Fore.YELLOW}  Loading {url}...{Style.RESET_ALL}")
+                    await page.goto(url, wait_until='load', timeout=60000)
+                    print(f"{Fore.GREEN}  [SUCCESS] {agent_name.upper()} loaded successfully{Style.RESET_ALL}")
+                except Exception as e:
+                    print(f"{Fore.RED}  [ERROR] {agent_name.upper()} failed to load: {e}{Style.RESET_ALL}")
 
                 pages.append((agent_name, page))
                 await asyncio.sleep(2)

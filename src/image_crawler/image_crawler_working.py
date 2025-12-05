@@ -392,12 +392,41 @@ def sanitize_prompt_for_google(prompt, aggressive=False):
 
     return sanitized
 
-def setup_chrome_driver():
-    """Chrome 드라이버 설정 - 실행 중인 Chrome에 연결"""
+def setup_chrome_driver(headless=False):
+    """Chrome 드라이버 설정 - 실행 중인 Chrome에 연결
+
+    Args:
+        headless: True면 headless 모드로 실행 (UI 없이 백그라운드 처리)
+    """
     import subprocess
     import requests
 
     service = Service(ChromeDriverManager().install())
+
+    # headless 모드: UI 없이 실행 (BTS-3121)
+    if headless:
+        print("🔇 Headless 모드로 Chrome 시작...", flush=True)
+        chrome_options = Options()
+        chrome_options.add_argument("--headless=new")  # Chrome 109+ 새로운 headless 모드
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option("useAutomationExtension", False)
+
+        # 기존 프로필 사용 (로그인 세션 유지 시도)
+        import tempfile
+        profile_dir = os.path.join(tempfile.gettempdir(), 'chrome_headless_profile')
+        chrome_options.add_argument(f"--user-data-dir={profile_dir}")
+
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+
+        # 자동화 감지 우회
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        print("✅ Headless Chrome 시작 완료!", flush=True)
+        return driver
 
     # 1단계: 실행 중인 Chrome의 디버깅 포트에 연결 시도
     print("🔍 실행 중인 Chrome 찾는 중...", flush=True)
@@ -1910,20 +1939,27 @@ def download_images(driver, images, output_folder, scenes):
     print(f"\n✅ 다운로드 완료: 총 {downloaded_count}/{len(scenes)}개 파일 저장됨.", flush=True)
     return downloaded_count
 
-def main(scenes_json_file, use_imagefx=False, use_flow=False, output_dir=None, cli_aspect_ratio=None):
+def main(scenes_json_file, use_imagefx=False, use_flow=False, output_dir=None, cli_aspect_ratio=None, headless=False):
     """메인 실행 함수
 
     Args:
         cli_aspect_ratio: 커맨드라인에서 전달된 비율 (최우선, 16:9 또는 9:16)
         use_flow: Flow로 이미지 생성 (BTS-0000034)
+        headless: headless 모드로 실행 (UI 없이 백그라운드 처리) (BTS-3121)
     """
     print("=" * 80, flush=True)
+    mode_str = ""
     if use_flow:
-        print("🚀 Flow 자동화 시작 (BTS-0000034)", flush=True)
+        mode_str = "Flow 자동화"
     elif use_imagefx:
-        print("🚀 ImageFX + Whisk 자동화 시작", flush=True)
+        mode_str = "ImageFX + Whisk 자동화"
     else:
-        print("🚀 Whisk 자동화 시작", flush=True)
+        mode_str = "Whisk 자동화"
+
+    if headless:
+        mode_str += " (Headless 모드)"
+
+    print(f"🚀 {mode_str} 시작", flush=True)
     print("=" * 80, flush=True)
 
     # JSON 파일 읽기
@@ -2013,7 +2049,7 @@ def main(scenes_json_file, use_imagefx=False, use_flow=False, output_dir=None, c
 
     driver = None
     try:
-        driver = setup_chrome_driver()
+        driver = setup_chrome_driver(headless=headless)
 
         # BTS-0000034: Flow 모드 (TODO: 실제 구현 필요)
         if use_flow:
@@ -2938,12 +2974,13 @@ if __name__ == '__main__':
     parser.add_argument('--aspect-ratio', help='이미지 비율 (16:9 또는 9:16)')
     parser.add_argument('--queue-task-id', help='큐 작업 ID (완료 시 상태 업데이트용)')
     parser.add_argument('--queue-db-path', help='큐 DB 경로')
+    parser.add_argument('--headless', action='store_true', help='Headless 모드 (UI 없이 백그라운드 실행) (BTS-3121)')
 
     args = parser.parse_args()
     print(f"--- ARGS: {args} ---", flush=True)
 
-    # BTS-0000034: use_flow 파라미터 추가
-    exit_code = main(args.scenes_file, use_imagefx=args.use_imagefx, use_flow=args.use_flow, output_dir=args.output_dir, cli_aspect_ratio=args.aspect_ratio)
+    # BTS-0000034: use_flow 파라미터 추가, BTS-3121: headless 파라미터 추가
+    exit_code = main(args.scenes_file, use_imagefx=args.use_imagefx, use_flow=args.use_flow, output_dir=args.output_dir, cli_aspect_ratio=args.aspect_ratio, headless=args.headless)
 
     # 큐 상태 업데이트
     if args.queue_task_id and args.queue_db_path:

@@ -313,50 +313,60 @@ def create_hooking_text(story_data: dict) -> dict:
 
 
 def get_font(size: int, bold: bool = True) -> ImageFont.FreeTypeFont:
-    """Load Korean font"""
+    """Load Korean font - FIXED: Always use Aggro font for consistency"""
     script_dir = Path(__file__).parent
+    backend_root = script_dir.parent.parent  # Go up to backend root
 
-    font_dir = script_dir / "fonts"
-    font_candidates: list[str] = []
+    # 우선순위: backend_root/fonts → src/video_generator/fonts
+    font_dir = backend_root / "fonts"
+    if not font_dir.exists():
+        font_dir = script_dir / "fonts"
 
     if bold:
-        local_bold = sorted(font_dir.glob('*Aggro*B*.ttf')) + sorted(font_dir.glob('SB*B*.ttf'))
-        font_candidates.extend(str(p) for p in local_bold)
-        font_candidates.extend([
+        # ⭐ 고정: Aggro 폰트만 사용 (일관성 보장)
+        # 우선순위 1: fonts/*Aggro*B*.ttf 또는 SB*B*.ttf (로컬)
+        aggro_fonts = sorted(font_dir.glob('*Aggro*B*.ttf'))
+        if not aggro_fonts:
+            aggro_fonts = sorted(font_dir.glob('*어그로*B*.ttf'))
+        if not aggro_fonts:
+            aggro_fonts = sorted(font_dir.glob('SB*B*.ttf'))
+        if aggro_fonts:
+            logger.info(f"사용 고정 Aggro 폰트: {aggro_fonts[0].name}")
+            return ImageFont.truetype(str(aggro_fonts[0]), size)
+
+        # 우선순위 2: 시스템 SBAggroB.ttf
+        system_aggro_paths = [
             'C:/Windows/Fonts/SBAggroB.ttf',
             'C:/Windows/Fonts/SB 어그로 B.ttf',
-            'C:/Windows/Fonts/Aggravo.ttf',
-            'C:/Windows/Fonts/NanumGothicExtraBold.ttf',
-            'C:/Windows/Fonts/NanumGothicBold.ttf',
-            'C:/Windows/Fonts/malgunbd.ttf',
-            '/usr/share/fonts/truetype/nanum/NanumGothicExtraBold.ttf',
-            '/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf',
-        ])
+        ]
+        for font_path in system_aggro_paths:
+            if Path(font_path).exists():
+                logger.info(f"✅ Using system Aggro font: {font_path}")
+                return ImageFont.truetype(font_path, size)
+
+        # 폰트 없으면 에러 발생 (일관성 보장)
+        raise FileNotFoundError(
+            "❌ Aggro 폰트를 찾을 수 없습니다!\n"
+            f"다음 경로에 폰트를 설치하세요:\n"
+            f"  - {font_dir}/*Aggro*B*.ttf\n"
+            f"  - C:/Windows/Fonts/SBAggroB.ttf"
+        )
     else:
+        # Regular font (not used in thumbnail)
         local_regular = sorted(font_dir.glob('*.ttf'))
-        font_candidates.extend(str(p) for p in local_regular if 'Aggro' not in p.stem)
-        font_candidates.extend([
+        if local_regular:
+            return ImageFont.truetype(str(local_regular[0]), size)
+
+        fallback_paths = [
             'C:/Windows/Fonts/NanumGothic.ttf',
             'C:/Windows/Fonts/malgun.ttf',
             '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
-            '/System/Library/Fonts/AppleGothic.ttf',
-        ])
+        ]
+        for font_path in fallback_paths:
+            if Path(font_path).exists():
+                return ImageFont.truetype(font_path, size)
 
-    tried: set[str] = set()
-    for font_path in font_candidates:
-        if not font_path or font_path in tried:
-            continue
-        tried.add(font_path)
-        try:
-            candidate = Path(font_path)
-            if candidate.exists():
-                return ImageFont.truetype(str(candidate), size)
-            return ImageFont.truetype(font_path, size)
-        except OSError:
-            continue
-
-    logger.warning('Korean font not found, falling back to default font')
-    return ImageFont.load_default()
+        return ImageFont.load_default()
 
 
 def create_thumbnail(image_path: Path, text_lines: list, output_path: Path):
