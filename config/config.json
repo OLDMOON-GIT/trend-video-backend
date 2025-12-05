@@ -1,0 +1,21 @@
+{
+  "logging": {
+    "file": "sora_extend.log",
+    "level": "INFO"
+  },
+  "api": {
+    "base_url": "https://api.openai.com/v1",
+    "max_retries": 3,
+    "timeout": 60
+  },
+  "output": {
+    "directory": "output",
+    "segment_format": "segment_{:02d}.mp4",
+    "final_filename": "final_video.mp4",
+    "frame_format": "frame_{:02d}.png"
+  },
+  "video": {
+    "supported_durations": [4, 8, 12],
+    "supported_sizes": ["1280x720", "1920x1080"]
+  }
+}
